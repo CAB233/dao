@@ -2,4 +2,14 @@
 <resources>
 
     <style name="Theme.Dao" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+      Android 12+ 标准启动图（低版本由 core-splashscreen 提供同样效果）。
+      只负责冷启动第一帧，postSplashScreenTheme 再切回真正的应用主题。
+    -->
+    <style name="Theme.Dao.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Dao</item>
+    </style>
 </resources>

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +71,23 @@ fun TemplateEditorDialog(
     // 开始 / 结束共用一个切换框，下面那组滚轮编辑当前选中的那一头
     var editingEnd by remember(existing) { mutableStateOf(false) }
     var showColorDialog by remember(existing) { mutableStateOf(false) }
+
+    // 每次打开都按 existing 重新初始化一次。弹窗为了退出动画是常驻组合的，
+    // 只靠 remember(existing) 会在"新建 → 关闭 → 再新建"时留下上一次填的内容
+    // （existing 一直是 null，key 没变），也会留下上次取消掉的编辑。
+    LaunchedEffect(show, existing) {
+        if (!show) return@LaunchedEffect
+        name = existing?.name ?: ""
+        startH = existing?.let { it.startMinute / 60 } ?: 8
+        startM = existing?.let { it.startMinute % 60 } ?: 0
+        endH = existing?.let { it.endMinute / 60 } ?: 15
+        endM = existing?.let { it.endMinute % 60 } ?: 0
+        color = existing?.colorArgb
+            ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+            ?: ShiftPalette.presets.first()
+        editingEnd = false
+        showColorDialog = false
+    }
 
     OverlayDialog(
         show = show,
@@ -174,7 +192,11 @@ private fun ColorDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit,
 ) {
-    var draft by remember(show, current) { mutableStateOf(Color(current)) }
+    // 同主弹窗：每次打开都从当前颜色重新开始，别让上次取消的改动留在里面
+    var draft by remember(current) { mutableStateOf(Color(current)) }
+    LaunchedEffect(show, current) {
+        if (show) draft = Color(current)
+    }
 
     OverlayDialog(
         show = show,

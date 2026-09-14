@@ -430,9 +430,15 @@ internal fun AnchorDialog(
     onDismiss: () -> Unit,
     onConfirm: (Ymd) -> Unit,
 ) {
-    // 每次打开都从当前锚点重新开始
-    var month by remember(show, anchor) { mutableIntStateOf(anchor.month) }
-    var day by remember(show, anchor) { mutableIntStateOf(anchor.day) }
+    // 每次打开都从当前锚点重新开始（弹窗常驻组合，不能只靠 remember 的 key）
+    var month by remember(anchor) { mutableIntStateOf(anchor.month) }
+    var day by remember(anchor) { mutableIntStateOf(anchor.day) }
+    LaunchedEffect(show, anchor) {
+        if (show) {
+            month = anchor.month
+            day = anchor.day
+        }
+    }
     val maxDay = Ymd.daysInMonth(anchor.year, month)
 
     OverlayDialog(

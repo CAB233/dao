@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,18 +33,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -52,8 +57,10 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
@@ -72,6 +79,8 @@ import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.common.TemplateEditorDialog
 import win.zuoye.dao.ui.common.rememberHoldDownSource
+import win.zuoye.dao.ui.scheme.AnchorDialog
+import win.zuoye.dao.ui.scheme.formatYmd
 
 private enum class Step(val label: String) {
     TEMPLATES("班次模板"), CYCLE_ASSIGN("周期与指派"), ANCHOR("开始日期")
@@ -116,6 +125,7 @@ fun OnboardingScreen(
     var showEditor by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<ShiftTemplate?>(null) }
     var pickingDay by remember { mutableIntStateOf(-1) }
+    var showAnchorDialog by remember { mutableStateOf(false) }
     // 弹层关闭后还要播退出动画，所以记住最后一次打开的是哪一天，动画期间继续渲染
     var shownPickDay by remember { mutableIntStateOf(-1) }
     LaunchedEffect(pickingDay) { if (pickingDay >= 0) shownPickDay = pickingDay }
@@ -175,44 +185,32 @@ fun OnboardingScreen(
                 },
             )
         },
-    ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            StepIndicator(step)
-            Box(Modifier.weight(1f)) {
-                when (step) {
-                    Step.TEMPLATES -> TemplatesStep(
-                        templates = userTemplates,
-                        onAdd = { editingTemplate = null; showEditor = true },
-                        onEdit = { editingTemplate = it; showEditor = true },
-                        onDelete = { deleted ->
-                            userTemplates = userTemplates.filterNot { it.id == deleted.id }.toPersistentList()
-                            // 指向已删班次的指派一并清空，避免存下悬空 id
-                            assignments = assignments
-                                .map { if (it == deleted.id) null else it }
-                                .toPersistentList()
-                        },
-                        addHoldDown = showEditor && editingTemplate == null,
-                        editHoldDown = { showEditor && editingTemplate?.id == it.id },
-                    )
-                    Step.CYCLE_ASSIGN -> CycleAssignStep(
-                        cycleText = cycleText,
-                        onCycleChange = { input ->
-                            val filtered = input.filter(Char::isDigit).take(2)
-                            cycleText = filtered
-                            filtered.toIntOrNull()?.let { syncAssignments(it) }
-                        },
-                        cycleDays = cycleDays,
-                        assignments = assignments,
-                        templates = userTemplates,
-                        pickingDay = pickingDay,
-                        onPick = { pickingDay = it },
-                        scrollBehavior = scrollBehavior,
-                    )
-                    Step.ANCHOR -> AnchorStep(anchor) { anchor = it }
+        floatingActionButton = {
+            // 和方案页一样：加号在右下角（只在「班次模板」这一步出现）
+            if (step == Step.TEMPLATES) {
+                Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
+                    FloatingActionButton(
+                        onClick = { editingTemplate = null; showEditor = true },
+                        shadowElevation = 0.dp,
+                        minWidth = 54.dp,
+                        minHeight = 54.dp,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Regular.Add,
+                            contentDescription = "新增班次",
+                            tint = MiuixTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
+        },
+        // 底栏自己吃导航栏内边距，别再让内容重复算
+        bottomBar = {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when {
@@ -239,7 +237,61 @@ fun OnboardingScreen(
                     Text(if (step == Step.ANCHOR) "完成" else "下一步")
                 }
             }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            StepIndicator(step)
+            Box(Modifier.weight(1f)) {
+                when (step) {
+                    Step.TEMPLATES -> TemplatesStep(
+                        templates = userTemplates,
+                        // 小标题和行内加号都不要，加号在右下角 FAB
+                        onAdd = null,
+                        title = null,
+                        onEdit = { editingTemplate = it; showEditor = true },
+                        onDelete = { deleted ->
+                            userTemplates = userTemplates.filterNot { it.id == deleted.id }.toPersistentList()
+                            // 指向已删班次的指派一并清空，避免存下悬空 id
+                            assignments = assignments
+                                .map { if (it == deleted.id) null else it }
+                                .toPersistentList()
+                        },
+                        editHoldDown = { showEditor && editingTemplate?.id == it.id },
+                    )
+                    Step.CYCLE_ASSIGN -> CycleAssignStep(
+                        cycleText = cycleText,
+                        onCycleChange = { input ->
+                            val filtered = input.filter(Char::isDigit).take(2)
+                            cycleText = filtered
+                            filtered.toIntOrNull()?.let { syncAssignments(it) }
+                        },
+                        cycleDays = cycleDays,
+                        assignments = assignments,
+                        templates = userTemplates,
+                        pickingDay = pickingDay,
+                        onPick = { pickingDay = it },
+                        scrollBehavior = scrollBehavior,
+                    )
+                    Step.ANCHOR -> AnchorPickerStep(
+                        anchor = anchor,
+                        holdDown = showAnchorDialog,
+                        onOpen = { showAnchorDialog = true },
+                    )
+                }
+            }
         }
+
+        // 开始日期的日期设置弹窗（和方案页共用同一个）
+        AnchorDialog(
+            anchor = anchor,
+            show = showAnchorDialog,
+            onDismiss = { showAnchorDialog = false },
+            onConfirm = { date ->
+                anchor = date
+                showAnchorDialog = false
+            },
+        )
 
         // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）
         TemplateEditorDialog(
@@ -320,33 +372,40 @@ private fun StepIndicator(step: Step) {
     }
 }
 
-/** 第 1 步：定义班次模板（名称 + 时间 + 颜色），后续逐日指派时点选复用。方案页复用同一组件。 */
+/**
+ * 第 1 步：定义班次模板（名称 + 时间 + 颜色），后续逐日指派时点选复用。方案页复用同一组件。
+ *
+ * [title] 传 null 就不渲染表头；方案页的加号挪到了右下角 FAB，所以那边 [onAdd] 也传 null。
+ */
 @Composable
 internal fun TemplatesStep(
     templates: ImmutableList<ShiftTemplate>,
-    onAdd: () -> Unit,
+    onAdd: (() -> Unit)?,
     onEdit: (ShiftTemplate) -> Unit,
     onDelete: (ShiftTemplate) -> Unit,
-    title: String = "我的班次",
-    hint: String? = "在这里定义好每个班次，下一步安排周期时直接点选即可，无需重复输入时间。",
+    title: String? = "我的班次",
     addHoldDown: Boolean = false,
     editHoldDown: (ShiftTemplate) -> Boolean = { false },
     deleteHoldDown: (ShiftTemplate) -> Boolean = { false },
 ) {
     Column(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SmallTitle(text = title, modifier = Modifier.weight(1f))
-            IconButton(onClick = onAdd, holdDownState = addHoldDown) {
-                Icon(MiuixIcons.Regular.Add, contentDescription = "新增班次")
+        if (title != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SmallTitle(text = title, modifier = Modifier.weight(1f))
+                if (onAdd != null) {
+                    IconButton(onClick = onAdd, holdDownState = addHoldDown) {
+                        Icon(MiuixIcons.Regular.Add, contentDescription = "新增班次")
+                    }
+                }
             }
         }
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
             if (templates.isEmpty()) {
                 Text(
-                    "还没有班次。点右上角 + 添加一栏，例如：早班 08:00–15:00",
+                    "还没有班次。点 + 添加一栏，例如：早班 08:00–15:00",
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -377,14 +436,6 @@ internal fun TemplatesStep(
                     }
                 }
             }
-        }
-        if (hint != null) {
-            Text(
-                hint,
-                fontSize = 13.sp,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
         }
     }
 }
@@ -459,6 +510,8 @@ private fun CycleAssignStep(
                 onValueChange = onCycleChange,
                 label = "1–99 天，如 4",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                // 和方案页的周期天数表单一样高（纵向 26dp）
+                insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
@@ -486,66 +539,39 @@ private fun CycleAssignStep(
     }
 }
 
-/** 第 3 步：锚点日期（周期第 1 天是哪天）。方案页复用同一组件。 */
+/**
+ * 第 3 步：开始日期。和方案页的「排班设置」一样是**点击行 + 月/日 弹窗**，
+ * 不再内联年/月/日 三列滚轮。
+ */
 @Composable
-internal fun AnchorStep(
+private fun AnchorPickerStep(
     anchor: Ymd,
-    title: String = "周期第 1 天从哪天开始算？",
-    hint: String? = "设置后，日历会按周期自动推导任意日期的班次。",
-    onChange: (Ymd) -> Unit,
+    holdDown: Boolean,
+    onOpen: () -> Unit,
 ) {
-    var year by remember(anchor) { mutableIntStateOf(anchor.year) }
-    var month by remember(anchor) { mutableIntStateOf(anchor.month) }
-    var day by remember(anchor) { mutableIntStateOf(anchor.day) }
-    val maxDay = Ymd.daysInMonth(year, month)
     Column(Modifier.fillMaxWidth()) {
-        SmallTitle(text = title)
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                top.yukonga.miuix.kmp.basic.NumberPicker(
-                    value = year,
-                    onValueChange = {
-                        year = it
-                        onChange(Ymd(it, month, day.coerceAtMost(Ymd.daysInMonth(it, month))))
-                    },
-                    range = 2000..2100,
-                    label = { "${it}年" },
-                    modifier = Modifier.weight(1.2f).height(150.dp),
-                )
-                top.yukonga.miuix.kmp.basic.NumberPicker(
-                    value = month,
-                    onValueChange = {
-                        month = it
-                        onChange(Ymd(year, it, day.coerceAtMost(Ymd.daysInMonth(year, it))))
-                    },
-                    range = 1..12,
-                    wrapAround = true,
-                    label = { "${it}月" },
-                    modifier = Modifier.weight(1f).height(150.dp),
-                )
-                top.yukonga.miuix.kmp.basic.NumberPicker(
-                    value = day.coerceIn(1..maxDay),
-                    onValueChange = { day = it; onChange(Ymd(year, month, it)) },
-                    range = 1..maxDay,
-                    wrapAround = true,
-                    label = { "${it}日" },
-                    modifier = Modifier.weight(1f).height(150.dp),
-                )
-            }
-        }
-        TextButton(
-            text = "重置为今天",
-            onClick = { onChange(Ymd.today()) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
-        )
-        if (hint != null) {
-            Text(
-                hint,
-                fontSize = 13.sp,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.padding(horizontal = 16.dp),
+            BasicComponent(
+                title = "开始日期",
+                summary = "周期第 1 天：${formatYmd(anchor)}",
+                endActions = {
+                    Icon(
+                        imageVector = MiuixIcons.Basic.ArrowRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp, 18.dp),
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                },
+                holdDownState = holdDown,
+                onClick = onOpen,
             )
         }
+        Text(
+            "周期第 1 天对应这一天，日历会按周期自动推导其它日期的班次。",
+            fontSize = 13.sp,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
     }
 }
 
@@ -577,11 +603,15 @@ internal fun TemplatePickDialog(
                     selected = template.id == currentId,
                     onClick = { onPick(template.id) },
                     icon = { iconModifier ->
-                        Box(
-                            iconModifier
-                                .size(14.dp)
-                                .background(ShiftPalette.color(template.colorArgb), CircleShape)
-                        )
+                        // 组件给的 icon 槽是 sizeIn(min 26dp) + 右边距，直接 size 会被它撑成矩形、
+                        // CircleShape 就画成椭圆了——所以外面套一层把圆点居中画
+                        Box(iconModifier, contentAlignment = Alignment.Center) {
+                            Box(
+                                Modifier
+                                    .size(14.dp)
+                                    .background(ShiftPalette.color(template.colorArgb), CircleShape),
+                            )
+                        }
                     },
                 )
             },
@@ -618,7 +648,7 @@ internal fun DeleteTemplateDialog(
             TextButton(
                 text = "删除",
                 onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColorsPrimary(),
+                colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),
             )
         }

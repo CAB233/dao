@@ -6,18 +6,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,9 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +42,7 @@ import win.zuoye.dao.domain.importPlan
 import win.zuoye.dao.ui.home.HomeScreen
 import win.zuoye.dao.ui.common.MainTab
 import win.zuoye.dao.ui.common.MainBottomBar
+import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.about.AboutScreen
 import win.zuoye.dao.ui.onboarding.OnboardingScreen
 import win.zuoye.dao.ui.scheme.PlanEditScreen
@@ -54,8 +50,6 @@ import win.zuoye.dao.ui.share.SharePlanScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.ui.settings.SettingsScreen
 import win.zuoye.dao.ui.theme.AppTheme
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlin.math.roundToInt
 
 private sealed interface Screen {
     /** 二级页面（卡片推入；null = 停在底栏页面） */
@@ -157,7 +151,7 @@ class MainActivity : ComponentActivity() {
                             if (pushedPage != null) cardRoute = pushedPage
                         }
                         PageCardStack(
-                            pushed = pushedPage != null,
+                            visible = pushedPage != null,
                             base = {
                                 MainTabs(
                                     doc = doc,
@@ -189,77 +183,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * 二级页面的进入 / 退出：卡片式推入，对齐 miuix 导航的默认过渡（`NavTransitions.MiuixDefault`）。
- *
- * - 底层页面（含底栏）**留在原地**，只做 1/4 宽度的视差 + 轻微压暗——不会整页滑走，也不会淡出；
- * - 二级页面作为一张圆角卡片从右侧整页滑入，滑到位时圆角收成 0、贴合屏幕；
- * - 卡片完全移出后才停止组合它（`cardComposed`），避免它的 BackHandler 等在收起后仍然生效。
- */
-@Composable
-private fun PageCardStack(
-    pushed: Boolean,
-    modifier: Modifier = Modifier,
-    base: @Composable () -> Unit,
-    card: @Composable () -> Unit,
-) {
-    // 1f = 完全露出底层，0f = 卡片完全贴合屏幕
-    val progress = remember { Animatable(if (pushed) 0f else 1f) }
-    var cardComposed by remember { mutableStateOf(pushed) }
-
-    LaunchedEffect(pushed) {
-        if (pushed) {
-            cardComposed = true
-            progress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 320, easing = EaseInOut),
-            )
-        } else {
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 280, easing = EaseInOut),
-            )
-            cardComposed = false
-        }
-    }
-
-    val surface = MiuixTheme.colorScheme.surface
-    val maxCorner = with(LocalDensity.current) { 32.dp.toPx() }
-
-    Box(modifier.fillMaxSize().background(surface)) {
-        // 底层页面（含底栏）完全不动，只被上面的遮罩压暗
-        // （miuix 默认还会给底层加 1/4 宽度的视差，这里按需求去掉了）
-        Box(Modifier.fillMaxSize()) { base() }
-
-        if (cardComposed) {
-            // 底层压暗；过渡中顺便吃掉落在底层的点击
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.5f * (1f - progress.value) }
-                    .background(MiuixTheme.colorScheme.windowDimming)
-                    .pointerInput(Unit) { detectTapGestures { } },
-            )
-
-            // 卡片本体：从右侧滑入，前段保持圆角，贴合时圆角归零
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        val p = progress.value
-                        translationX = (p * size.width).roundToInt().toFloat()
-                        // 卡片圆角逐帧跟着进度收放（贴合时归零），只能在 draw 阶段读进度，
-                        // 所以这里用 graphicsLayer 的 shape 而不是 Dp 驱动的 squircle 修饰符
-                        val corner = maxCorner * (p / 0.15f).coerceIn(0f, 1f)
-                        shape = RoundedCornerShape(corner, 0f, 0f, corner)
-                        clip = true
-                    }
-                    .background(surface),
-            ) { card() }
         }
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -44,10 +46,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -59,6 +62,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import kotlinx.coroutines.launch
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
@@ -81,6 +85,7 @@ private const val MONTH_COUNT = 101 * 12
 fun HomeScreen(
     doc: PlanDocument,
     onExportPlan: () -> Unit,
+    onOpenPlan: () -> Unit,
 ) {
     val today = remember { Ymd.today() }
     val initialPage = (today.year - BASE_YEAR) * 12 + today.month - 1
@@ -93,7 +98,6 @@ fun HomeScreen(
     val viewMonth = settledIndex % 12 + 1
     val isCurrentMonth = viewYear == today.year && viewMonth == today.month
 
-    val todayShift = resolveShift(doc, today.epochDay)
     // 排班索引整个页面共用一份，预组合的三页不会各建一份
     val roster = remember(doc) { Roster.of(doc) }
     // 文字测量缓存也整页共用：相邻月份的日期/班次名高度重合，命中率很高
@@ -103,9 +107,6 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.app_name),
-                subtitle = todayShift?.let {
-                    "今天·${it.template.name}" + if (!it.template.isRest) " ${it.template.timeRangeText()}" else ""
-                } ?: "尚未配置方案",
                 actions = {
                     IconButton(onClick = onExportPlan) {
                         Icon(MiuixIcons.Regular.Share, contentDescription = "分享排班方案")
@@ -144,6 +145,12 @@ fun HomeScreen(
         Column(
             Modifier.padding(padding).fillMaxSize(),
         ) {
+            RosterStatusCard(
+                doc = doc,
+                today = today,
+                onClick = onOpenPlan,
+            )
+
             // 左对齐月份标题（小米日历式）：大字月份 + 相对今天的天数
             val targetDay = minOf(today.day, Ymd.daysInMonth(viewYear, viewMonth))
             val diffDays = (Ymd(viewYear, viewMonth, targetDay).epochDay - today.epochDay).toInt()
@@ -170,7 +177,6 @@ fun HomeScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                // 提前把相邻月份也组合好，滑动时不会在第一帧才去算新月份
                 beyondViewportPageCount = 1,
             ) { page ->
                 val year = BASE_YEAR + page / 12
@@ -213,6 +219,75 @@ fun HomeScreen(
     }
 }
 
+/** 主页上的当前倒班状态卡片；点击后进入方案列表，可切换使用中的方案。 */
+@Composable
+private fun RosterStatusCard(
+    doc: PlanDocument,
+    today: Ymd,
+    onClick: () -> Unit,
+) {
+    val activeScheme = doc.activeScheme()
+    val todayShift = resolveShift(doc, today.epochDay)
+    val cardColor = if (isSystemInDarkTheme()) {
+        ShiftPalette.statusCardDarkBackground
+    } else {
+        ShiftPalette.statusCardLightBackground
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(top = 4.dp, bottom = 12.dp),
+        colors = CardDefaults.defaultColors(
+            color = cardColor,
+        ),
+        // 按压位置决定倾斜方向：左侧与右侧按压会产生不同的反馈。
+        pressFeedbackType = PressFeedbackType.Tilt,
+        showIndication = true,
+        onClick = onClick,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(112.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset(x = 27.dp, y = 31.dp),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
+                Text("🏝", fontSize = 92.sp)
+            }
+
+            Column(
+                modifier = Modifier.padding(start = 16.dp, top = 14.dp),
+            ) {
+                Text(
+                    text = "倒班中",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    text = "方案：${activeScheme?.name ?: "未选择"}",
+                    fontSize = 15.sp,
+                )
+            }
+
+            Text(
+                text = todayShift?.template?.name ?: "暂无班次",
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 10.dp),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
 @Composable
 private fun MonthGrid(
     roster: Roster,
@@ -224,7 +299,6 @@ private fun MonthGrid(
     onDayClick: (Ymd) -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
-    // 一屏 42 格的日期/班次/淡化系数只算一次：滚动时的重组不再重复做日期与班次推导
     val slots = remember(roster, year, month, today) { buildMonthSlots(roster, year, month, today) }
     val colors = remember(colorScheme) {
         GridColors(
@@ -237,19 +311,11 @@ private fun MonthGrid(
     val baseTextStyle = MiuixTheme.textStyles.main
     val cellText = remember(colors, baseTextStyle) { CellTextStyles(colors, baseTextStyle) }
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
-        Row(Modifier.fillMaxWidth()) {
-            WEEKDAY_LABELS.forEach { label ->
-                Text(
-                    label,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    color = colors.onSurfaceVariantSummary,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        Spacer(Modifier.height(3.dp))
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+    ) {
         repeat(CELL_ROWS) { row ->
             Row(Modifier.fillMaxWidth()) {
                 repeat(7) { col ->
@@ -269,8 +335,8 @@ private fun MonthGrid(
                     )
                 }
             }
-            Spacer(Modifier.height(3.dp))
         }
+        Spacer(Modifier.height(3.dp))
     }
 }
 
@@ -299,7 +365,7 @@ private class GridColors(
 /**
  * 单元格文字样式（含淡化变体），随主题预生成。
  * 直接画文字（而不是放 Text 组合项）能把每页 84 次文字排版压到一次，
- * 让文字测量缓存能跨月份复用。
+ * 让文字测量缓存能跨格/跨月复用缓存。
  */
 private class CellTextStyles(colors: GridColors, base: TextStyle) {
     val surfaceVariant = colors.surfaceVariant
@@ -315,9 +381,14 @@ private class CellTextStyles(colors: GridColors, base: TextStyle) {
 
 private val CELL_RADIUS = 14.dp
 
-private fun buildMonthSlots(roster: Roster, year: Int, month: Int, today: Ymd): List<DaySlot> {
+private fun buildMonthSlots(
+    roster: Roster,
+    year: Int,
+    month: Int,
+    today: Ymd,
+): List<DaySlot> {
     val daysInMonth = Ymd.daysInMonth(year, month)
-    val firstOffset = Ymd(year, month, 1).weekdayIndex // 0=周一
+    val firstOffset = Ymd(year, month, 1).weekdayIndex
     val slots = ArrayList<DaySlot>(CELL_ROWS * 7)
     for (index in 0 until CELL_ROWS * 7) {
         val y: Int
@@ -355,8 +426,6 @@ private fun buildMonthSlots(roster: Roster, year: Int, month: Int, today: Ymd): 
     }
     return slots
 }
-
-/** 班次色加深，用于浅色块上的小字 */
 private fun darken(c: androidx.compose.ui.graphics.Color, f: Float = 0.62f) =
     androidx.compose.ui.graphics.Color(c.red * f, c.green * f, c.blue * f, 1f)
 

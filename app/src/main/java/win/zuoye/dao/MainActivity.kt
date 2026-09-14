@@ -234,7 +234,11 @@ private fun MainTabs(
             overscrollEffect = null,
         ) { page ->
             when (tabs[page]) {
-                MainTab.Home -> HomeScreen(doc = doc, onExportPlan = onExportPlan)
+                MainTab.Home -> HomeScreen(
+                    doc = doc,
+                    onExportPlan = onExportPlan,
+                    onOpenPlan = onOpenPlan,
+                )
                 MainTab.Settings -> SettingsScreen(
                     doc = doc,
                     onBack = { onSelectTab(MainTab.Home) },

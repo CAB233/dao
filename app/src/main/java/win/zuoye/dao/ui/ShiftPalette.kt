@@ -5,6 +5,9 @@ import androidx.compose.ui.graphics.Color
 
 /** 班次颜色预设色板（数据色，独立于主题色）。 */
 object ShiftPalette {
+    val statusCardLightBackground: Color = Color(0xFFDFFAE4)
+    val statusCardDarkBackground: Color = Color(0xFF1A3825)
+
     val presets: List<Int> = listOf(
         0xFFE53935.toInt(), // 红
         0xFFFB8C00.toInt(), // 橙

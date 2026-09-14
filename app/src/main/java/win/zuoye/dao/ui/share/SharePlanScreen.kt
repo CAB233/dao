@@ -176,7 +176,7 @@ fun SharePlanScreen(
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "对方打开「$appName → 设置 → 导入方案 → 扫码」，对着这张码扫一下即可导入。",
+                        "扫码即可导入。",
                         fontSize = 13.sp,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )

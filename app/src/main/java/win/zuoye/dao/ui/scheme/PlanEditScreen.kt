@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,6 +88,14 @@ fun PlanEditScreen(
     var pickingDay by remember { mutableIntStateOf(-1) }
     var showSchemes by remember { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
+    // 弹层"关掉"和"从屏幕上消失"是两件事：关闭后还要播退出动画，
+    // 所以下面几个 shown* 记住最后一次打开的内容，动画播完前继续渲染。
+    var shownPickDay by remember { mutableIntStateOf(-1) }
+    var shownDeleteTemplate by remember { mutableStateOf<ShiftTemplate?>(null) }
+    var shownDeleteScheme by remember { mutableStateOf<Scheme?>(null) }
+    LaunchedEffect(pickingDay) { if (pickingDay >= 0) shownPickDay = pickingDay }
+    LaunchedEffect(deleteTemplate) { deleteTemplate?.let { shownDeleteTemplate = it } }
+    LaunchedEffect(deleteScheme) { deleteScheme?.let { shownDeleteScheme = it } }
 
     fun updateScheme(transform: (Scheme) -> Scheme) {
         val current = scheme ?: return
@@ -254,11 +263,12 @@ fun PlanEditScreen(
             },
         )
 
-        if (pickingDay >= 0) {
-            val day = pickingDay
+        if (shownPickDay >= 0) {
+            val day = shownPickDay
             TemplatePickDialog(
                 templates = doc.templates,
                 currentId = scheme?.dayTemplateIds?.getOrNull(day),
+                show = pickingDay >= 0,
                 onPick = { templateId ->
                     updateScheme { current ->
                         current.copy(
@@ -273,10 +283,11 @@ fun PlanEditScreen(
             )
         }
 
-        deleteTemplate?.let { template ->
+        shownDeleteTemplate?.let { template ->
             DeleteTemplateDialog(
                 template = template,
                 inUse = doc.schemes.any { template.id in it.dayTemplateIds },
+                show = deleteTemplate != null,
                 onDismiss = { deleteTemplate = null },
                 onConfirm = {
                     onMutate { plan ->
@@ -287,25 +298,24 @@ fun PlanEditScreen(
             )
         }
 
-        if (showSchemes) {
-            SchemeListDialog(
-                doc = doc,
-                onDismiss = { showSchemes = false },
-                onSelect = { item ->
-                    onMutate { plan -> plan.copy(activeSchemeId = item.id) }
-                    showSchemes = false
-                },
-                onDelete = { item -> deleteScheme = item },
-                onCreate = {
-                    createScheme()
-                    showSchemes = false
-                },
-            )
-        }
+        SchemeListDialog(
+            doc = doc,
+            show = showSchemes,
+            onDismiss = { showSchemes = false },
+            onSelect = { item ->
+                onMutate { plan -> plan.copy(activeSchemeId = item.id) }
+                showSchemes = false
+            },
+            onDelete = { item -> deleteScheme = item },
+            onCreate = {
+                createScheme()
+                showSchemes = false
+            },
+        )
 
-        deleteScheme?.let { target ->
+        shownDeleteScheme?.let { target ->
             OverlayDialog(
-                show = true,
+                show = deleteScheme != null,
                 title = "删除${target.name}？",
                 summary = "删除后无法恢复。",
                 onDismissRequest = { deleteScheme = null },
@@ -343,13 +353,14 @@ fun PlanEditScreen(
 @Composable
 private fun SchemeListDialog(
     doc: PlanDocument,
+    show: Boolean,
     onDismiss: () -> Unit,
     onSelect: (Scheme) -> Unit,
     onDelete: (Scheme) -> Unit,
     onCreate: () -> Unit,
 ) {
     OverlayDialog(
-        show = true,
+        show = show,
         title = "倒班方案",
         summary = "点一下切换启用，右侧可以删掉。",
         onDismissRequest = onDismiss,

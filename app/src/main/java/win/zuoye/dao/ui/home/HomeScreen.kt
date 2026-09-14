@@ -27,6 +27,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -197,11 +198,15 @@ fun HomeScreen(
             }
         }
 
-        // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）
-        selectedDate?.let { date ->
+        // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）。
+        // 常驻组合、用 show 驱动进出动画；退出动画期间还要继续渲染，所以记住最后点开的那一天。
+        var detailDate by remember { mutableStateOf<Ymd?>(null) }
+        LaunchedEffect(selectedDate) { selectedDate?.let { detailDate = it } }
+        detailDate?.let { date ->
             DayDetailDialog(
                 date = date,
                 doc = doc,
+                show = selectedDate != null,
                 onDismiss = { selectedDate = null },
             )
         }
@@ -438,10 +443,15 @@ private fun CalendarCell(
 }
 
 @Composable
-private fun DayDetailDialog(date: Ymd, doc: PlanDocument, onDismiss: () -> Unit) {
+private fun DayDetailDialog(
+    date: Ymd,
+    doc: PlanDocument,
+    show: Boolean,
+    onDismiss: () -> Unit,
+) {
     val resolved = resolveShift(doc, date.epochDay)
     OverlayDialog(
-        show = true,
+        show = show,
         title = "${date.year}年${date.month}月${date.day}日 · 周${WEEKDAY_LABELS[date.weekdayIndex]}",
         onDismissRequest = onDismiss,
     ) {

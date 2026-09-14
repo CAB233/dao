@@ -108,7 +108,7 @@ fun SettingsScreen(
                     onClick = onOpenPlan,
                 )
                 BasicComponent(
-                    title = "导入方案",
+                    title = "导入倒班方案",
                     summary = "从剪贴板、二维码或文件导入",
                     endActions = { Chevron() },
                     // 弹 Dialog 的入口行：打开期间保持按住高亮（MIUI 惯例）
@@ -130,51 +130,49 @@ fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
         }
 
-        // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）
-        if (showImport) {
-            OverlayDialog(
-                show = true,
-                title = "导入排班方案",
-                summary = "从剪贴板、二维码或 JSON 文件导入别人分享的配置；重复内容会自动跳过。",
-                onDismissRequest = { showImport = false },
+        // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）。
+        // 常驻组合、用 show 驱动：条件组合的话关闭时弹层会被直接拿走，退出动画来不及播。
+        OverlayDialog(
+            show = showImport,
+            title = "导入排班方案",
+            onDismissRequest = { showImport = false },
+        ) {
+            Column(
+                Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Column(
-                    Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                TextButton(
+                    text = "从剪贴板导入",
+                    onClick = { importFrom(context.clipboardText()) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    text = "从文件导入",
+                    onClick = { fileLauncher.launch(arrayOf("*/*")) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    text = "扫码导入",
+                    onClick = {
+                        scanLauncher.launch(
+                            ScanOptions().apply {
+                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                setBeepEnabled(false)
+                                // 钉住进入扫码页那一刻的屏幕方向（库自带页会强行横屏）
+                                setOrientationLocked(true)
+                                // 用我们自己的相机页：正方形取景框，其余流程不变
+                                setCaptureActivity(ScanCaptureActivity::class.java)
+                            },
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = { showImport = false },
+                    colors = ButtonDefaults.buttonColorsPrimary(),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    TextButton(
-                        text = "从剪贴板导入",
-                        onClick = { importFrom(context.clipboardText()) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    TextButton(
-                        text = "扫码导入",
-                        onClick = {
-                            scanLauncher.launch(
-                                ScanOptions().apply {
-                                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                    setBeepEnabled(false)
-                                    // 钉住进入扫码页那一刻的屏幕方向（库自带页会强行横屏）
-                                    setOrientationLocked(true)
-                                    // 用我们自己的相机页：正方形取景框，其余流程不变
-                                    setCaptureActivity(ScanCaptureActivity::class.java)
-                                },
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    TextButton(
-                        text = "从文件导入",
-                        onClick = { fileLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Button(
-                        onClick = { showImport = false },
-                        colors = ButtonDefaults.buttonColorsPrimary(),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("取消")
-                    }
+                    Text("取消")
                 }
             }
         }

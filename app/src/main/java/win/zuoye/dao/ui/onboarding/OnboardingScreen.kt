@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -115,6 +116,9 @@ fun OnboardingScreen(
     var showEditor by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<ShiftTemplate?>(null) }
     var pickingDay by remember { mutableIntStateOf(-1) }
+    // 弹层关闭后还要播退出动画，所以记住最后一次打开的是哪一天，动画期间继续渲染
+    var shownPickDay by remember { mutableIntStateOf(-1) }
+    LaunchedEffect(pickingDay) { if (pickingDay >= 0) shownPickDay = pickingDay }
 
     val cycleDays: Int? = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
 
@@ -268,13 +272,14 @@ fun OnboardingScreen(
             },
         )
 
-        if (pickingDay >= 0) {
+        if (shownPickDay >= 0) {
             TemplatePickDialog(
                 templates = userTemplates,
-                currentId = assignments.getOrNull(pickingDay),
+                currentId = assignments.getOrNull(shownPickDay),
+                show = pickingDay >= 0,
                 onPick = { id ->
-                    if (pickingDay < assignments.size) {
-                        assignments = assignments.set(pickingDay, id)
+                    if (shownPickDay < assignments.size) {
+                        assignments = assignments.set(shownPickDay, id)
                     }
                     pickingDay = -1
                 },
@@ -549,11 +554,12 @@ internal fun AnchorStep(
 internal fun TemplatePickDialog(
     templates: ImmutableList<ShiftTemplate>,
     currentId: Long?,
+    show: Boolean,
     onPick: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (templates.isEmpty()) {
-        OverlayDialog(show = true, title = "选择班次", onDismissRequest = onDismiss) {
+        OverlayDialog(show = show, title = "选择班次", onDismissRequest = onDismiss) {
             Text(
                 "请先在第一步添加班次。",
                 fontSize = 14.sp,
@@ -585,7 +591,7 @@ internal fun TemplatePickDialog(
         entry = entry,
         title = "选择班次",
         dialogButtonString = "取消",
-        show = true,
+        show = show,
         onDismiss = onDismiss,
         onDismissFinished = {},
         dropdownColors = DropdownDefaults.dropdownColors(),
@@ -597,11 +603,12 @@ internal fun TemplatePickDialog(
 internal fun DeleteTemplateDialog(
     template: ShiftTemplate,
     inUse: Boolean = false,
+    show: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     OverlayDialog(
-        show = true,
+        show = show,
         title = "删除班次「${template.name}」？",
         summary = if (inUse) "该班次正被方案使用，删除后相关日期会显示「未排班」。" else "确定删除该班次吗？",
         onDismissRequest = onDismiss,

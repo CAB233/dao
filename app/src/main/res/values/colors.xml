@@ -3,4 +3,8 @@
     <color name="ic_launcher_background">#FFFFFFFF</color>
     <!-- 启动图背景：与 miuix 浅色 surface 一致，撤下启动图时不会闪一下 -->
     <color name="splash_background">#FFF7F7F7</color>
+    <!-- 扫码页：相机预览前固定用浅色，不跟深浅色主题走 -->
+    <color name="scan_viewfinder_frame">#FFFFFFFF</color>
+    <color name="scan_viewfinder_mask">#66000000</color>
+    <color name="scan_overlay_content">#FFFFFFFF</color>
 </resources>

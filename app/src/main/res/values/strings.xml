@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">倒班表</string>
+    <!-- 扫码页 -->
+    <string name="scan_back">返回</string>
 </resources>

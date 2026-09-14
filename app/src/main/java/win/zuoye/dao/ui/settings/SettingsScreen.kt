@@ -48,6 +48,7 @@ import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.ui.about.appVersionName
+import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
 /** 设置：倒班方案（二级页面入口）、导入方案、关于。 */
 @Composable
@@ -79,7 +80,8 @@ fun SettingsScreen(
 
     // 扫码导入：zxing 自带的相机扫码页，扫到直接导入
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        importFrom(result.contents)
+        // 返回键 / 取消时 contents 为 null，别提示"没识别到方案数据"
+        result.contents?.let { importFrom(it) }
     }
 
     // 从文件导入：选一个分享出去的 .json
@@ -151,9 +153,11 @@ fun SettingsScreen(
                             scanLauncher.launch(
                                 ScanOptions().apply {
                                     setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                    setPrompt("对准对方的排班方案二维码")
                                     setBeepEnabled(false)
-                                    setOrientationLocked(false)
+                                    // 钉住进入扫码页那一刻的屏幕方向（库自带页会强行横屏）
+                                    setOrientationLocked(true)
+                                    // 用我们自己的相机页：正方形取景框，其余流程不变
+                                    setCaptureActivity(ScanCaptureActivity::class.java)
                                 },
                             )
                         },

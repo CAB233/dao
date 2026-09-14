@@ -30,6 +30,16 @@
             </intent-filter>
         </activity>
 
+        <!--
+          扫码页：zxing 自带的 CaptureActivity 被库声明成 sensorLandscape，
+          这里换成自己的 Activity（Compose 顶栏 + CaptureManager），
+          不写 screenOrientation，由运行时锁定为进入时的方向。
+        -->
+        <activity
+            android:name=".ui.scan.ScanCaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Dao" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

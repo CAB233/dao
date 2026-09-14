@@ -44,7 +44,7 @@ fun TemplateEditorDialog(
     onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    if (!show) return
+    // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
     var name by remember(existing) { mutableStateOf(existing?.name ?: "") }
     var startH by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
     var startM by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }

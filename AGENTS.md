@@ -185,7 +185,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 - miuix-icons（`MiuixIcons.Regular.*` 那套图标）与 miuix-preference（`WindowDropdownDialog` 单选弹窗）版本号跟 miuix 一致
 - kotlinx-collections-immutable 0.4.0（数据模型的不可变集合）+ lifecycle-runtime-compose 2.9.4（`collectAsStateWithLifecycle`）
 - minSdk 24，compileSdk/targetSdk 37；依赖一律走 `gradle/libs.versions.toml`
-- 应用版本：`app/build.gradle.kts` 的 `defaultConfig { versionCode / versionName }`（当前 1 / "0.0.1"）。
+- 应用版本：`app/build.gradle.kts` 的 `defaultConfig { versionCode / versionName }`（当前 2 / "0.0.2"）。
   发新版要**同时**改 `versionCode`（+1，否则装不上更新）和 `versionName`；关于页/设置页显示的版本是从 PackageManager 读的，不用手改。
 
 ## 构建与测试命令

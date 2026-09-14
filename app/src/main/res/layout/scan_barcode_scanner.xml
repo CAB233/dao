@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DecoratedBarcodeView 的内部布局（在 activity_scan_capture.xml 里用 app:zxing_scanner_layout 指定）。
+  三个 id 是 zxing 硬性要求的，缺了会抛 IllegalArgumentException，名字不能改：
+  zxing_barcode_surface / zxing_viewfinder_view / zxing_status_view。
+  取景框换成 ScanFrameView：在自带的"框外压暗"之上补一圈看得见的描边。
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <com.journeyapps.barcodescanner.BarcodeView
+        android:id="@+id/zxing_barcode_surface"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <win.zuoye.dao.ui.scan.ScanFrameView
+        android:id="@+id/zxing_viewfinder_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- zxing 会往这个 id 上写提示/错误文案，view 必须在（否则 setStatusText 空指针）；
+         文案统一由顶栏标题承担，所以这里隐藏 -->
+    <TextView
+        android:id="@+id/zxing_status_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:visibility="gone" />
+
+</merge>

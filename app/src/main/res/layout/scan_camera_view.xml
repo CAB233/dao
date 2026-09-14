@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  相机预览视图：由 ScanCaptureActivity 手动 inflate，再交给 Compose 的 AndroidView 托管，
+  所以根节点就是 DecoratedBarcodeView（framing rect / 内部布局这些属性只能从 XML 读）。
+  取景框固定成正方形（二维码是方的，方便对准），预览用 centerCrop 铺满。
+-->
+<com.journeyapps.barcodescanner.DecoratedBarcodeView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/zxing_barcode_scanner"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:zxing_framing_rect_height="240dp"
+    app:zxing_framing_rect_width="240dp"
+    app:zxing_preview_scaling_strategy="centerCrop"
+    app:zxing_scanner_layout="@layout/scan_barcode_scanner"
+    app:zxing_use_texture_view="false" />

@@ -51,7 +51,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.R
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShareCodec
-import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.toShare
 import win.zuoye.dao.share.ShareUtils
 import win.zuoye.dao.share.encodeQrCode
@@ -127,10 +126,9 @@ fun SharePlanScreen(
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 doc.schemes.sortedByDescending { it.createdAt }.forEach { scheme ->
                     val selected = scheme.id == selectedScheme?.id
-                    val anchor = Ymd.fromEpochDay(scheme.anchorEpochDay)
                     BasicComponent(
                         title = scheme.name,
-                        summary = "${scheme.cycleDays} 天周期 · ${anchor.year}-${anchor.month}-${anchor.day} 起",
+                        summary = "${scheme.cycleDays} 天周期",
                         endActions = {
                             if (selected) {
                                 Icon(

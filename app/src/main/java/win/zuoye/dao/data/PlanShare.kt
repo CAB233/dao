@@ -156,9 +156,8 @@ object PlanShareCodec {
             sb.append('\n')
         }
         payload.schemes.forEach { scheme ->
-            val anchor = Ymd.fromEpochDay(scheme.anchorEpochDay)
-            sb.append("\n「${scheme.name}」${scheme.cycleDays} 天周期，起始 ")
-            sb.append("${anchor.year}-${pad(anchor.month)}-${pad(anchor.day)}\n")
+            // 不写锚点日期：方案里不展示"从哪天开始"
+            sb.append("\n「${scheme.name}」${scheme.cycleDays} 天周期\n")
             sb.append(
                 scheme.dayTemplateIds.joinToString(" → ") { id ->
                     payload.templates.firstOrNull { it.id == id }?.name ?: "未排班"
@@ -170,8 +169,6 @@ object PlanShareCodec {
         sb.append(encodePayload(payload))
         return sb.toString()
     }
-
-    private fun pad(value: Int): String = if (value < 10) "0$value" else value.toString()
 
     private fun deflate(input: ByteArray): ByteArray {
         val deflater = Deflater(Deflater.BEST_COMPRESSION, true)

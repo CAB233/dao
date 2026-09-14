@@ -17,7 +17,9 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 fun encodeQrMatrix(content: String, sizePx: Int = 640): BitMatrix? = runCatching {
     val hints = mapOf(
         EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
-        EncodeHintType.MARGIN to 1,
+        // 静区（quiet zone）至少 4 个模块宽——二维码外面那圈白边就是靠它撑出来的。
+        // 之前给 1，浅色模式下底板≈白色还能凑合，深色模式底板是纯黑，扫码器直接找不到定位图案。
+        EncodeHintType.MARGIN to 4,
         EncodeHintType.CHARACTER_SET to "UTF-8",
     )
     QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, sizePx, sizePx, hints)

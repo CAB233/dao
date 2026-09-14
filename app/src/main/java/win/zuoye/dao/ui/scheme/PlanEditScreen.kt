@@ -354,7 +354,6 @@ private fun SchemeCard(
     onLongPress: () -> Unit,
     onToggleActive: (Boolean) -> Unit,
 ) {
-    val anchor = Ymd.fromEpochDay(scheme.anchorEpochDay)
     // 关闭的方案整体灰掉
     val nameColor = if (active) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSurface
     val summaryColor = if (active) {
@@ -400,7 +399,7 @@ private fun SchemeCard(
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${scheme.cycleDays} 天周期 · ${formatYmd(anchor)} 起",
+                    text = "${scheme.cycleDays} 天周期",
                     fontSize = 13.sp,
                     color = summaryColor,
                 )

@@ -172,6 +172,11 @@ fun SchemeEditScreen(
                     },
                     label = "方案名",
                     useLabelAsPlaceholder = true,
+                    // 它就是这一页的标题：不要灰底，点进去才出现主题色描边；字号跟页面标题一致
+                    colors = TextFieldDefaults.textFieldColors(
+                        backgroundColor = MiuixTheme.colorScheme.surface.copy(alpha = 0f),
+                    ),
+                    textStyle = MiuixTheme.textStyles.title3,
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 12.dp)

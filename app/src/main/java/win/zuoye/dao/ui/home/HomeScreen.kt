@@ -46,6 +46,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
@@ -74,10 +75,9 @@ import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.common.WEEKDAY_LABELS
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import kotlin.math.roundToInt
-
-private val WEEKDAY_LABELS = listOf("一", "二", "三", "四", "五", "六", "日")
 
 /** 可浏览的月份范围：2000-01 .. 2100-12 */
 private const val BASE_YEAR = 2000
@@ -100,6 +100,7 @@ fun HomeScreen(
     val viewYear = BASE_YEAR + settledIndex / 12
     val viewMonth = settledIndex % 12 + 1
     val isCurrentMonth = viewYear == today.year && viewMonth == today.month
+    val weekStartDay = doc.weekStartDay.coerceIn(0, WEEKDAY_LABELS.lastIndex)
 
     // 排班索引整个页面共用一份，预组合的三页不会各建一份
     val roster = remember(doc) { Roster.of(doc) }
@@ -191,6 +192,7 @@ fun HomeScreen(
                         year = year,
                         month = month,
                         today = today,
+                        weekStartDay = weekStartDay,
                         selected = selectedDate,
                         onDayClick = { selectedDate = it },
                     )
@@ -298,11 +300,14 @@ private fun MonthGrid(
     year: Int,
     month: Int,
     today: Ymd,
+    weekStartDay: Int,
     selected: Ymd?,
     onDayClick: (Ymd) -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
-    val slots = remember(roster, year, month, today) { buildMonthSlots(roster, year, month, today) }
+    val slots = remember(roster, year, month, today, weekStartDay) {
+        buildMonthSlots(roster, year, month, today, weekStartDay)
+    }
     val colors = remember(colorScheme) {
         GridColors(
             surfaceVariant = colorScheme.surfaceVariant,
@@ -318,6 +323,22 @@ private fun MonthGrid(
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
     ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(7) { column ->
+                Text(
+                    text = "周${WEEKDAY_LABELS[(weekStartDay + column) % WEEKDAY_LABELS.size]}",
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    fontSize = 13.sp,
+                    color = colorScheme.onSurfaceVariantSummary,
+                )
+            }
+        }
         repeat(CELL_ROWS) { row ->
             Row(Modifier.fillMaxWidth()) {
                 repeat(7) { col ->
@@ -388,9 +409,10 @@ private fun buildMonthSlots(
     year: Int,
     month: Int,
     today: Ymd,
+    weekStartDay: Int,
 ): List<DaySlot> {
     val daysInMonth = Ymd.daysInMonth(year, month)
-    val firstOffset = Ymd(year, month, 1).weekdayIndex
+    val firstOffset = Math.floorMod(Ymd(year, month, 1).weekdayIndex - weekStartDay, 7)
     val slots = ArrayList<DaySlot>(CELL_ROWS * 7)
     for (index in 0 until CELL_ROWS * 7) {
         val y: Int

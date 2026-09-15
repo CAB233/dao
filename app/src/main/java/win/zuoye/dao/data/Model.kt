@@ -56,6 +56,8 @@ data class PlanDocument(
     val overrides: ImmutableMap<String, Long> = persistentMapOf(),
     /** 用户跳过首次引导后置位，避免每次启动都进引导 */
     val onboardingDone: Boolean = false,
+    /** 一周第一天：0 = 周一，依次到 6 = 周日 */
+    val weekStartDay: Int = 0,
 ) {
     fun activeScheme(): Scheme? = schemes.firstOrNull { it.id == activeSchemeId }
 

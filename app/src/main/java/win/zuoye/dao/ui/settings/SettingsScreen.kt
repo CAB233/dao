@@ -43,11 +43,13 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.ui.about.appVersionName
+import win.zuoye.dao.ui.common.WEEKDAY_LABELS
 import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
 /** 设置：倒班方案（二级页面入口）、导入方案、关于。 */
@@ -58,12 +60,14 @@ fun SettingsScreen(
     onOpenPlan: () -> Unit,
     onOpenAbout: () -> Unit,
     onImportPlan: (PlanShare) -> Unit,
+    onWeekStartDayChange: (Int) -> Unit,
 ) {
     BackHandler { onBack() }
 
     val context = LocalContext.current
     var showImport by remember { mutableStateOf(false) }
     val versionName = remember(context) { context.appVersionName() }
+    val weekStartDay = doc.weekStartDay.coerceIn(0, WEEKDAY_LABELS.lastIndex)
 
     val activeScheme = doc.activeScheme() ?: doc.schemes.firstOrNull()
 
@@ -98,6 +102,17 @@ fun SettingsScreen(
         ) {
             // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
             Spacer(Modifier.height(12.dp))
+            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                OverlayDropdownPreference(
+                    title = "一周开始日",
+                    summary = "选择每周的起始星期",
+                    items = WEEKDAY_LABELS.map { "周$it" },
+                    selectedIndex = weekStartDay,
+                    onSelectedIndexChange = onWeekStartDayChange,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
                     title = "倒班方案",

@@ -245,6 +245,9 @@ private fun MainTabs(
                     onOpenPlan = onOpenPlan,
                     onOpenAbout = onOpenAbout,
                     onImportPlan = onImportPlan,
+                    onWeekStartDayChange = { weekStartDay ->
+                        onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
+                    },
                 )
             }
         }

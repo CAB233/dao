@@ -66,6 +66,7 @@ private class PlanDocumentSurrogate(
     val activeSchemeId: Long? = null,
     val overrides: Map<String, Long> = emptyMap(),
     val onboardingDone: Boolean = false,
+    val weekStartDay: Int = 0,
 )
 
 object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
@@ -82,6 +83,7 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
                 activeSchemeId = value.activeSchemeId,
                 overrides = value.overrides,
                 onboardingDone = value.onboardingDone,
+                weekStartDay = value.weekStartDay,
             ),
         )
     }
@@ -94,6 +96,7 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
             activeSchemeId = surrogate.activeSchemeId,
             overrides = surrogate.overrides.toImmutableMap(),
             onboardingDone = surrogate.onboardingDone,
+            weekStartDay = surrogate.weekStartDay,
         )
     }
 }

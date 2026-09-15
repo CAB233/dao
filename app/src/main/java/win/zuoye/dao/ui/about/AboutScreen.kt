@@ -59,7 +59,7 @@ import win.zuoye.dao.ui.common.PageCardStack
 /**
  * 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。
  * 视觉层级参考 InstallerX-Revived 的 MiuixAboutPage，并使用本项目的主题色实现。
- * “获取更新”入口目前是占位，查看源代码与开源许可均可直接使用。
+ * 查看源代码与开源许可均可直接使用。
  */
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -143,11 +143,6 @@ private fun AboutHomeContent(
                         summary = stringResource(R.string.about_licenses_summary),
                         onClick = onOpenLicenses,
                     )
-                    AboutEntry(
-                        title = stringResource(R.string.about_updates),
-                        summary = stringResource(R.string.about_updates_summary),
-                        onClick = { context.openReleases() },
-                    )
                 }
             }
             item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
@@ -212,7 +207,6 @@ private fun AboutEntry(
 }
 
 private const val repositoryUrl = "https://github.com/CAB233/dao"
-private const val releasesUrl = "https://github.com/CAB233/dao/releases"
 
 private fun Context.openUrl(url: String, failureName: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -225,8 +219,6 @@ private fun Context.openUrl(url: String, failureName: String) {
 }
 
 private fun Context.openRepository() = openUrl(repositoryUrl, getString(R.string.open_repository))
-
-private fun Context.openReleases() = openUrl(releasesUrl, getString(R.string.open_releases))
 
 /** 链接无法打开时的临时反馈 */
 private fun Context.notImplemented(name: String) {

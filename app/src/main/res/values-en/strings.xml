@@ -6,6 +6,7 @@
   <string name="action_cancel">Cancel</string>
   <string name="action_confirm">OK</string>
   <string name="action_save">Save</string>
+  <string name="action_update">Update</string>
   <string name="action_delete">Delete</string>
   <string name="action_edit">Edit</string>
   <string name="action_next">Next</string>
@@ -32,8 +33,25 @@
     <item>Show all</item>
   </string-array>
   <string name="settings_plans">Shift plans</string>
-  <string name="settings_plans_summary">Create, import, or select a plan</string>
+  <string name="settings_plans_summary">Create, import, select or edit a plan</string>
+  <string name="settings_check_updates">Check for updates</string>
+  <string name="settings_check_updates_summary">Check for and get the latest version after startup</string>
+  <string name="settings_update_channel">Update channel</string>
+  <string name="settings_update_channel_summary">Choose an update channel based on your network</string>
+  <string-array name="update_channel_options">
+    <item>GitHub</item>
+    <item>Mirror</item>
+  </string-array>
   <string name="settings_about">About</string>
+  <string name="update_available_title">New version available</string>
+  <string name="update_available_message">Version v%1$s is available. Download and install it?</string>
+  <string name="update_downloading_title">Updating</string>
+  <string name="update_downloading">Downloading the update…</string>
+  <string name="update_downloading_progress">Downloading the update… %1$d%%</string>
+  <string name="update_check_failed">Could not check for updates. Check your network or choose another channel.</string>
+  <string name="update_download_failed">Could not download the update. Try again later.</string>
+  <string name="update_install_failed">Could not open the system installer</string>
+  <string name="update_install_permission_required">Allow Shift Calendar to install unknown apps to continue</string>
   <string-array name="weekday_short">
     <item>Mon</item>
     <item>Tue</item>
@@ -265,11 +283,8 @@
   <string name="about_source_summary">View the project source on GitHub</string>
   <string name="about_licenses">Open-source licenses</string>
   <string name="about_licenses_summary">View open-source components and licenses</string>
-  <string name="about_updates">Get updates</string>
-  <string name="about_updates_summary">Check for a new version</string>
   <string name="version_text">v%1$s</string>
   <string name="open_repository">Open project repository</string>
-  <string name="open_releases">Open updates page</string>
   <string name="not_implemented">“%1$s” is not available yet</string>
   <string name="license_summary">License: %1$s</string>
   <string name="project_androidx">AndroidX and Jetpack Compose</string>

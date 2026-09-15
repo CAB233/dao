@@ -71,6 +71,8 @@ private class PlanDocumentSurrogate(
     val onboardingDone: Boolean = false,
     val weekStartDay: Int = 0,
     val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
+    val checkUpdatesOnLaunch: Boolean = true,
+    val updateChannel: UpdateChannel = UpdateChannel.GITHUB,
 )
 
 object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
@@ -89,6 +91,8 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
                 onboardingDone = value.onboardingDone,
                 weekStartDay = value.weekStartDay,
                 calendarViewMode = value.calendarViewMode,
+                checkUpdatesOnLaunch = value.checkUpdatesOnLaunch,
+                updateChannel = value.updateChannel,
             ),
         )
     }
@@ -103,6 +107,8 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
             onboardingDone = surrogate.onboardingDone,
             weekStartDay = surrogate.weekStartDay,
             calendarViewMode = surrogate.calendarViewMode,
+            checkUpdatesOnLaunch = surrogate.checkUpdatesOnLaunch,
+            updateChannel = surrogate.updateChannel,
         )
     }
 }

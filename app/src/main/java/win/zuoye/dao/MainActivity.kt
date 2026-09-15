@@ -1,10 +1,16 @@
 package win.zuoye.dao
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -30,6 +36,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.data.PlanDocument
@@ -41,6 +48,7 @@ import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.domain.importPlan
 import win.zuoye.dao.ui.about.AboutScreen
+import win.zuoye.dao.ui.about.appVersionName
 import win.zuoye.dao.ui.common.MainBottomBar
 import win.zuoye.dao.ui.common.MainTab
 import win.zuoye.dao.ui.common.PageCardStack
@@ -51,6 +59,10 @@ import win.zuoye.dao.ui.scheme.PlanEditScreen
 import win.zuoye.dao.ui.settings.SettingsScreen
 import win.zuoye.dao.ui.share.SharePlanScreen
 import win.zuoye.dao.ui.theme.AppTheme
+import win.zuoye.dao.ui.update.UpdateDialog
+import win.zuoye.dao.update.AppUpdater
+import win.zuoye.dao.update.UpdateInfo
+import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
 private sealed interface Screen {
@@ -83,13 +95,111 @@ class MainActivity : ComponentActivity() {
                 // 分享要从 Activity 发起（Application context 启动分享面板会闪退）
                 val activityContext = LocalContext.current
                 val resources = LocalResources.current
+                val currentVersionName = remember(activityContext) { activityContext.appVersionName() }
                 val docState by repo.document.collectAsStateWithLifecycle(initialValue = null)
                 val docSnapshot = docState
                 if (docSnapshot != null) planReady = true
                 // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
                 var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
                 var pushedPage by remember { mutableStateOf<Screen?>(null) }
+                var updateCheckStarted by rememberSaveable { mutableStateOf(false) }
+                var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                var showUpdateDialog by remember { mutableStateOf(false) }
+                var downloadingUpdate by remember { mutableStateOf(false) }
+                var downloadProgress by remember { mutableStateOf<Int?>(null) }
+                var pendingInstall by remember { mutableStateOf<File?>(null) }
                 val doc = docState
+
+                fun openInstaller(apk: File) {
+                    runCatching { AppUpdater.installApk(activityContext, apk) }
+                        .onFailure {
+                            Toast.makeText(activityContext, R.string.update_install_failed, Toast.LENGTH_LONG).show()
+                        }
+                }
+
+                val unknownSourcesLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.StartActivityForResult(),
+                ) {
+                    val apk = pendingInstall
+                    pendingInstall = null
+                    if (apk != null && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                            activityContext.packageManager.canRequestPackageInstalls())) {
+                        openInstaller(apk)
+                    } else {
+                        Toast.makeText(activityContext, R.string.update_install_permission_required, Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                fun requestInstall(apk: File) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                        !activityContext.packageManager.canRequestPackageInstalls()) {
+                        pendingInstall = apk
+                        runCatching {
+                            unknownSourcesLauncher.launch(
+                                Intent(
+                                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    Uri.parse("package:${activityContext.packageName}"),
+                                ),
+                            )
+                        }.onFailure {
+                            pendingInstall = null
+                            Toast.makeText(
+                                activityContext,
+                                R.string.update_install_permission_required,
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    } else {
+                        openInstaller(apk)
+                    }
+                }
+
+                fun startUpdateDownload() {
+                    val update = updateInfo ?: return
+                    downloadingUpdate = true
+                    downloadProgress = null
+                    lifecycleScope.launch {
+                        try {
+                            val apk = AppUpdater.downloadApk(
+                                context = applicationContext,
+                                update = update,
+                                onProgress = { progress -> downloadProgress = progress },
+                            )
+                            showUpdateDialog = false
+                            requestInstall(apk)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Throwable) {
+                            showUpdateDialog = false
+                            Toast.makeText(activityContext, R.string.update_download_failed, Toast.LENGTH_LONG).show()
+                        } finally {
+                            downloadingUpdate = false
+                        }
+                    }
+                }
+
+                LaunchedEffect(doc) {
+                    if (doc != null && !updateCheckStarted) {
+                        updateCheckStarted = true
+                        if (doc.checkUpdatesOnLaunch) {
+                            try {
+                                updateInfo = AppUpdater.checkForUpdate(
+                                    currentVersionName = currentVersionName,
+                                    channel = doc.updateChannel,
+                                )
+                                showUpdateDialog = updateInfo != null
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Throwable) {
+                                Toast.makeText(
+                                    activityContext,
+                                    R.string.update_check_failed,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        }
+                    }
+                }
 
                 fun saveNewScheme(
                     cycleDays: Int,
@@ -183,6 +293,12 @@ class MainActivity : ComponentActivity() {
                                     onOpenAbout = { pushedPage = Screen.About },
                                     onOpenPlan = { pushedPage = Screen.Plan },
                                     onMutate = { transform -> lifecycleScope.launch { repo.update(transform) } },
+                                    updateInfo = updateInfo,
+                                    showUpdateDialog = showUpdateDialog,
+                                    downloadingUpdate = downloadingUpdate,
+                                    downloadProgress = downloadProgress,
+                                    onDismissUpdate = { showUpdateDialog = false },
+                                    onStartUpdate = ::startUpdateDownload,
                                 )
                             },
                             card = {
@@ -223,6 +339,12 @@ private fun MainTabs(
     onOpenAbout: () -> Unit,
     onOpenPlan: () -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
+    updateInfo: UpdateInfo?,
+    showUpdateDialog: Boolean,
+    downloadingUpdate: Boolean,
+    downloadProgress: Int?,
+    onDismissUpdate: () -> Unit,
+    onStartUpdate: () -> Unit,
 ) {
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(initialPage = current.ordinal) { tabs.size }
@@ -271,8 +393,22 @@ private fun MainTabs(
                     onCalendarViewModeChange = { mode ->
                         onMutate { plan -> plan.copy(calendarViewMode = mode) }
                     },
+                    onCheckUpdatesOnLaunchChange = { enabled ->
+                        onMutate { plan -> plan.copy(checkUpdatesOnLaunch = enabled) }
+                    },
+                    onUpdateChannelChange = { channel ->
+                        onMutate { plan -> plan.copy(updateChannel = channel) }
+                    },
                 )
             }
         }
+        UpdateDialog(
+            show = showUpdateDialog,
+            update = updateInfo,
+            downloading = downloadingUpdate,
+            downloadProgress = downloadProgress,
+            onDismiss = onDismissUpdate,
+            onUpdate = onStartUpdate,
+        )
     }
 }

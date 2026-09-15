@@ -6,6 +6,7 @@
   <string name="action_cancel">取消</string>
   <string name="action_confirm">确定</string>
   <string name="action_save">保存</string>
+  <string name="action_update">更新</string>
   <string name="action_delete">删除</string>
   <string name="action_edit">编辑</string>
   <string name="action_next">下一步</string>
@@ -32,8 +33,25 @@
     <item>全部显示</item>
   </string-array>
   <string name="settings_plans">倒班方案</string>
-  <string name="settings_plans_summary">创建、导入或选择方案</string>
+  <string name="settings_plans_summary">创建、导入、选择或编辑方案</string>
+  <string name="settings_check_updates">检查更新</string>
+  <string name="settings_check_updates_summary">启动应用后检查并获取最新版</string>
+  <string name="settings_update_channel">更新渠道</string>
+  <string name="settings_update_channel_summary">根据自身网络情况选择更新渠道</string>
+  <string-array name="update_channel_options">
+    <item>GitHub</item>
+    <item>镜像源</item>
+  </string-array>
   <string name="settings_about">关于</string>
+  <string name="update_available_title">检测到新版本</string>
+  <string name="update_available_message">发现新版本 v%1$s，是否下载安装？</string>
+  <string name="update_downloading_title">正在更新</string>
+  <string name="update_downloading">正在下载安装包…</string>
+  <string name="update_downloading_progress">正在下载安装包… %1$d%%</string>
+  <string name="update_check_failed">检查更新失败，请检查网络或更换更新渠道</string>
+  <string name="update_download_failed">下载安装包失败，请稍后重试</string>
+  <string name="update_install_failed">无法打开系统安装界面</string>
+  <string name="update_install_permission_required">需要允许倒班表安装未知应用后才能继续</string>
   <string-array name="weekday_short">
     <item>一</item>
     <item>二</item>
@@ -259,11 +277,8 @@
   <string name="about_source_summary">在 GitHub 上查看项目源码</string>
   <string name="about_licenses">开放源代码许可</string>
   <string name="about_licenses_summary">查看项目使用的开源组件及许可证</string>
-  <string name="about_updates">获取更新</string>
-  <string name="about_updates_summary">检查是否有新版本</string>
   <string name="version_text">v%1$s</string>
   <string name="open_repository">打开项目仓库</string>
-  <string name="open_releases">打开更新页面</string>
   <string name="not_implemented">“%1$s”暂未实现</string>
   <string name="license_summary">许可证：%1$s</string>
   <string name="project_androidx">AndroidX 与 Jetpack Compose</string>

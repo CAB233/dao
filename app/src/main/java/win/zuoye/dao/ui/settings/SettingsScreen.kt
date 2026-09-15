@@ -28,6 +28,7 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -36,6 +37,7 @@ import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.CalendarViewMode
+import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
 
@@ -48,6 +50,8 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit,
     onWeekStartDayChange: (Int) -> Unit,
     onCalendarViewModeChange: (CalendarViewMode) -> Unit,
+    onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
+    onUpdateChannelChange: (UpdateChannel) -> Unit,
 ) {
     BackHandler { onBack() }
 
@@ -57,6 +61,8 @@ fun SettingsScreen(
     val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
     val calendarViewOptions = stringArrayResource(R.array.calendar_view_options)
     val calendarViewModes = CalendarViewMode.entries
+    val updateChannelOptions = stringArrayResource(R.array.update_channel_options)
+    val updateChannels = UpdateChannel.entries
 
     val activeScheme = doc.activeScheme() ?: doc.schemes.firstOrNull()
 
@@ -104,6 +110,32 @@ fun SettingsScreen(
                         }
                     },
                     onClick = onOpenPlan,
+                )
+            }
+
+            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                BasicComponent(
+                    title = stringResource(R.string.settings_check_updates),
+                    summary = stringResource(R.string.settings_check_updates_summary),
+                    endActions = {
+                        Switch(
+                            checked = doc.checkUpdatesOnLaunch,
+                            onCheckedChange = onCheckUpdatesOnLaunchChange,
+                        )
+                    },
+                    onClick = {
+                        onCheckUpdatesOnLaunchChange(!doc.checkUpdatesOnLaunch)
+                    },
+                )
+                OverlayDropdownPreference(
+                    title = stringResource(R.string.settings_update_channel),
+                    summary = stringResource(R.string.settings_update_channel_summary),
+                    items = updateChannelOptions.toList(),
+                    selectedIndex = updateChannels.indexOf(doc.updateChannel),
+                    onSelectedIndexChange = { index ->
+                        updateChannels.getOrNull(index)?.let(onUpdateChannelChange)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 

@@ -66,6 +66,13 @@ enum class CalendarViewMode(
     ALL(showHolidays = true, showLunar = true),
 }
 
+/** 获取应用更新时使用的下载渠道。 */
+@Serializable
+enum class UpdateChannel(val urlPrefix: String) {
+    GITHUB(urlPrefix = ""),
+    MIRROR(urlPrefix = "https://gh-proxy.com/"),
+}
+
 /** 全量持久化文档（单文件 JSON，规模小、无查询需求）。overrides 为换班覆盖，本期 UI 不编辑。 */
 @Immutable
 @Serializable(with = PlanDocumentJsonSerializer::class)
@@ -79,6 +86,8 @@ data class PlanDocument(
     /** 一周第一天：0 = 周一，依次到 6 = 周日 */
     val weekStartDay: Int = 0,
     val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
+    val checkUpdatesOnLaunch: Boolean = true,
+    val updateChannel: UpdateChannel = UpdateChannel.GITHUB,
 ) {
     fun activeScheme(): Scheme? = schemes.firstOrNull { it.id == activeSchemeId }
 

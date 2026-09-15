@@ -35,6 +35,7 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.data.CalendarViewMode
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
 
@@ -46,6 +47,7 @@ fun SettingsScreen(
     onOpenPlan: () -> Unit,
     onOpenAbout: () -> Unit,
     onWeekStartDayChange: (Int) -> Unit,
+    onCalendarViewModeChange: (CalendarViewMode) -> Unit,
 ) {
     BackHandler { onBack() }
 
@@ -53,6 +55,8 @@ fun SettingsScreen(
     val versionName = remember(context) { context.appVersionName() }
     val weekdays = stringArrayResource(R.array.weekday_full)
     val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
+    val calendarViewOptions = stringArrayResource(R.array.calendar_view_options)
+    val calendarViewModes = CalendarViewMode.entries
 
     val activeScheme = doc.activeScheme() ?: doc.schemes.firstOrNull()
 
@@ -72,6 +76,16 @@ fun SettingsScreen(
                     items = weekdays.toList(),
                     selectedIndex = weekStartDay,
                     onSelectedIndexChange = onWeekStartDayChange,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OverlayDropdownPreference(
+                    title = stringResource(R.string.settings_calendar_view),
+                    summary = stringResource(R.string.settings_calendar_view_summary),
+                    items = calendarViewOptions.toList(),
+                    selectedIndex = calendarViewModes.indexOf(doc.calendarViewMode),
+                    onSelectedIndexChange = { index ->
+                        calendarViewModes.getOrNull(index)?.let(onCalendarViewModeChange)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

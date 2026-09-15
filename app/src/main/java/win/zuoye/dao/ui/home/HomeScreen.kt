@@ -117,6 +117,8 @@ fun HomeScreen(
     val isCurrentMonth = viewYear == today.year && viewMonth == today.month
     val weekdays = stringArrayResource(R.array.weekday_short).toList()
     val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
+    val showHolidays = doc.calendarViewMode.showHolidays
+    val showLunar = doc.calendarViewMode.showLunar
     val calendarStrings = calendarStrings()
 
     // 排班索引整个页面共用一份，预组合的三页不会各建一份
@@ -211,6 +213,8 @@ fun HomeScreen(
                         weekStartDay = weekStartDay,
                         weekdays = weekdays,
                         strings = calendarStrings,
+                        showHolidays = showHolidays,
+                        showLunar = showLunar,
                         selected = selectedDate,
                         onDayClick = { selectedDate = it },
                     )
@@ -242,6 +246,7 @@ fun HomeScreen(
                 date = date,
                 doc = doc,
                 roster = roster,
+                showHolidays = showHolidays,
                 show = selectedDate != null,
                 onDismiss = { selectedDate = null },
             )
@@ -422,12 +427,23 @@ private fun MonthGrid(
     weekStartDay: Int,
     weekdays: List<String>,
     strings: CalendarStrings,
+    showHolidays: Boolean,
+    showLunar: Boolean,
     selected: Ymd?,
     onDayClick: (Ymd) -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
-    val slots = remember(roster, year, month, today, weekStartDay, strings) {
-        buildMonthSlots(roster, year, month, today, weekStartDay, strings)
+    val slots = remember(roster, year, month, today, weekStartDay, strings, showHolidays, showLunar) {
+        buildMonthSlots(
+            roster = roster,
+            year = year,
+            month = month,
+            today = today,
+            weekStartDay = weekStartDay,
+            strings = strings,
+            showHolidays = showHolidays,
+            showLunar = showLunar,
+        )
     }
     val colors = remember(colorScheme) {
         GridColors(
@@ -522,7 +538,7 @@ private class CellTextStyles(colors: GridColors, base: TextStyle) {
     val dayTodayFaded =
         base.merge(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.onSurface.faded(0.35f))
     val lunar = base.merge(fontSize = 9.sp, color = colors.onSurfaceVariantSummary)
-    val holiday = base.merge(fontSize = 8.sp, color = colors.onSurfaceVariantSummary)
+    val holiday = base.merge(fontSize = 9.sp, color = colors.onSurfaceVariantSummary)
     val name = base.merge(fontSize = 9.sp)
 }
 
@@ -540,6 +556,8 @@ private fun buildMonthSlots(
     today: Ymd,
     weekStartDay: Int,
     strings: CalendarStrings,
+    showHolidays: Boolean,
+    showLunar: Boolean,
 ): List<DaySlot> {
     val daysInMonth = Ymd.daysInMonth(year, month)
     val firstOffset = Math.floorMod(Ymd(year, month, 1).weekdayIndex - weekStartDay, 7)
@@ -572,7 +590,11 @@ private fun buildMonthSlots(
             }
         }
         val date = Ymd(y, m, day)
-        val lunar = lunarDate(lunarCalendar, date.epochDay)
+        val lunar = if (showHolidays || showLunar) {
+            lunarDate(lunarCalendar, date.epochDay)
+        } else {
+            null
+        }
         val isToday = y == today.year && m == today.month && day == today.day
         slots += DaySlot(
             year = y,
@@ -581,9 +603,12 @@ private fun buildMonthSlots(
             template = roster.templateFor(date.epochDay),
             isToday = isToday,
             fade = if (!inMonth && !isToday) 0.35f else 1f,
-            holiday = LegalHolidays.of(date.epochDay),
-            lunarLabel = lunarLabel(lunar, strings),
-            holidayName = holidayName(date, lunar, today.year)?.let(strings.holidayNames::get),
+            holiday = LegalHolidays.of(date.epochDay).takeIf { showHolidays },
+            lunarLabel = lunar?.takeIf { showLunar }?.let { lunarLabel(it, strings) }.orEmpty(),
+            holidayName = lunar
+                ?.takeIf { showHolidays }
+                ?.let { holidayName(date, it, today.year) }
+                ?.let(strings.holidayNames::get),
         )
     }
     return slots
@@ -733,7 +758,7 @@ private fun CalendarCell(
     val dayText = slot.day.toString()
     val dayLayout = remember(measurer, dayText, dayStyle) { measurer.measure(dayText, dayStyle) }
     val lunarStyle = text.lunar.copy(color = text.lunar.color.faded(fade))
-    val lunarLayout = if (slot.holidayName == null) {
+    val lunarLayout = if (slot.holidayName == null && slot.lunarLabel.isNotEmpty()) {
         remember(measurer, slot.lunarLabel, lunarStyle) {
             measurer.measure(slot.lunarLabel, lunarStyle, maxLines = 1)
         }
@@ -775,9 +800,9 @@ private fun CalendarCell(
             .then(todayBorder)
             .drawWithCache {
                 val totalHeight = dayLayout.size.height +
+                    (nameLayout?.let { lineSpacing + it.size.height } ?: 0f) +
                     (lunarLayout?.let { lineSpacing + it.size.height } ?: 0f) +
-                    (holidayLayout?.let { lineSpacing + it.size.height } ?: 0f) +
-                    (nameLayout?.let { lineSpacing + it.size.height } ?: 0f)
+                    (holidayLayout?.let { lineSpacing + it.size.height } ?: 0f)
                 // 取整到整像素，贴近 Compose 布局的整数摆放（半像素会带来可见的字形差异）
                 val top = ((size.height - totalHeight) / 2f).roundToInt().toFloat()
                 val dayX = ((size.width - dayLayout.size.width) / 2f).roundToInt().toFloat()
@@ -785,6 +810,11 @@ private fun CalendarCell(
                     ((size.width - it.size.width) / 2f).roundToInt().toFloat()
                 }
                 var nextY = top + dayLayout.size.height
+                val nameY = nameLayout?.let {
+                    val y = nextY + lineSpacing
+                    nextY = y + it.size.height
+                    y
+                }
                 val lunarY = lunarLayout?.let {
                     val y = nextY + lineSpacing
                     nextY = y + it.size.height
@@ -795,24 +825,19 @@ private fun CalendarCell(
                     nextY = y + it.size.height
                     y
                 }
-                val nameY = nameLayout?.let {
-                    val y = nextY + lineSpacing
-                    nextY = y + it.size.height
-                    y
-                }
 
                 onDrawBehind {
                     drawText(dayLayout, topLeft = Offset(dayX, top))
+                    nameLayout?.let {
+                        val nameX = ((size.width - it.size.width) / 2f).roundToInt().toFloat()
+                        drawText(it, topLeft = Offset(nameX, nameY!!))
+                    }
                     lunarLayout?.let {
                         drawText(it, topLeft = Offset(lunarX!!, lunarY!!))
                     }
                     holidayLayout?.let {
                         val holidayX = ((size.width - it.size.width) / 2f).roundToInt().toFloat()
                         drawText(it, topLeft = Offset(holidayX, holidayY!!))
-                    }
-                    nameLayout?.let {
-                        val nameX = ((size.width - it.size.width) / 2f).roundToInt().toFloat()
-                        drawText(it, topLeft = Offset(nameX, nameY!!))
                     }
                 }
             }
@@ -843,7 +868,7 @@ private fun CalendarCell(
                     stringResource(
                         if (holiday.isMakeupWorkday) R.string.holiday_work_badge else R.string.holiday_rest_badge,
                     ),
-                    fontSize = 8.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     color = badge.second,
                     maxLines = 1,
@@ -858,10 +883,13 @@ private fun DayDetailDialog(
     date: Ymd,
     doc: PlanDocument,
     roster: Roster,
+    showHolidays: Boolean,
     show: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val holiday = remember(date) { LegalHolidays.of(date.epochDay) }
+    val holiday = remember(date, showHolidays) {
+        LegalHolidays.of(date.epochDay).takeIf { showHolidays }
+    }
     val isOverride = remember(date, doc.overrides, doc.templates) {
         doc.overrides[date.epochDay.toString()]?.let(doc::templateById) != null
     }

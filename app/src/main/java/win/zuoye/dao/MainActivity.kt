@@ -268,6 +268,9 @@ private fun MainTabs(
                     onWeekStartDayChange = { weekStartDay ->
                         onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
                     },
+                    onCalendarViewModeChange = { mode ->
+                        onMutate { plan -> plan.copy(calendarViewMode = mode) }
+                    },
                 )
             }
         }

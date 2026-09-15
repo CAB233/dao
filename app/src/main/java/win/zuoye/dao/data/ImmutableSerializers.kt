@@ -70,6 +70,7 @@ private class PlanDocumentSurrogate(
     val overrides: Map<String, Long> = emptyMap(),
     val onboardingDone: Boolean = false,
     val weekStartDay: Int = 0,
+    val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
 )
 
 object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
@@ -87,6 +88,7 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
                 overrides = value.overrides,
                 onboardingDone = value.onboardingDone,
                 weekStartDay = value.weekStartDay,
+                calendarViewMode = value.calendarViewMode,
             ),
         )
     }
@@ -100,6 +102,7 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
             overrides = surrogate.overrides.toImmutableMap(),
             onboardingDone = surrogate.onboardingDone,
             weekStartDay = surrogate.weekStartDay,
+            calendarViewMode = surrogate.calendarViewMode,
         )
     }
 }

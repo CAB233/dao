@@ -23,6 +23,14 @@
   <string name="nav_settings">Settings</string>
   <string name="settings_week_start">First day of week</string>
   <string name="settings_week_start_summary">Choose the day each week starts</string>
+  <string name="settings_calendar_view">Holidays and lunar calendar</string>
+  <string name="settings_calendar_view_summary">Configure the visibility of holidays and the lunar calendar</string>
+  <string-array name="calendar_view_options">
+    <item>Holidays only</item>
+    <item>Lunar calendar only</item>
+    <item>Show neither</item>
+    <item>Show all</item>
+  </string-array>
   <string name="settings_plans">Shift plans</string>
   <string name="settings_plans_summary">Create, import, or select a plan</string>
   <string name="settings_about">About</string>

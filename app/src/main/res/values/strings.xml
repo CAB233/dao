@@ -23,6 +23,14 @@
   <string name="nav_settings">设置</string>
   <string name="settings_week_start">一周开始日</string>
   <string name="settings_week_start_summary">选择每周的起始星期</string>
+  <string name="settings_calendar_view">节假日与农历视图</string>
+  <string name="settings_calendar_view_summary">配置节假日与农历的可见性</string>
+  <string-array name="calendar_view_options">
+    <item>仅显示节假日</item>
+    <item>仅显示农历</item>
+    <item>都不显示</item>
+    <item>全部显示</item>
+  </string-array>
   <string name="settings_plans">倒班方案</string>
   <string name="settings_plans_summary">创建、导入或选择方案</string>
   <string name="settings_about">关于</string>

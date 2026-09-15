@@ -54,6 +54,18 @@ fun Scheme.defaultGroup(): SchemeGroup? = groups.firstOrNull { it.id == defaultG
 /** 日历使用默认班组的基准日期。 */
 fun Scheme.primaryAnchorEpochDay(): Long? = defaultGroup()?.anchorEpochDay
 
+/** 首页日历中节假日与农历信息的显示方式。 */
+@Serializable
+enum class CalendarViewMode(
+    val showHolidays: Boolean,
+    val showLunar: Boolean,
+) {
+    HOLIDAYS_ONLY(showHolidays = true, showLunar = false),
+    LUNAR_ONLY(showHolidays = false, showLunar = true),
+    NONE(showHolidays = false, showLunar = false),
+    ALL(showHolidays = true, showLunar = true),
+}
+
 /** 全量持久化文档（单文件 JSON，规模小、无查询需求）。overrides 为换班覆盖，本期 UI 不编辑。 */
 @Immutable
 @Serializable(with = PlanDocumentJsonSerializer::class)
@@ -66,6 +78,7 @@ data class PlanDocument(
     val onboardingDone: Boolean = false,
     /** 一周第一天：0 = 周一，依次到 6 = 周日 */
     val weekStartDay: Int = 0,
+    val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
 ) {
     fun activeScheme(): Scheme? = schemes.firstOrNull { it.id == activeSchemeId }
 

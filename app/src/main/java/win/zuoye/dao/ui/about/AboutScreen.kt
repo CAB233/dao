@@ -145,7 +145,7 @@ private fun AboutHomeContent(
                     AboutEntry(
                         title = "获取更新",
                         summary = "检查是否有新版本",
-                        onClick = { context.notImplemented("获取更新") },
+                        onClick = { context.openReleases() },
                     )
                 }
             }
@@ -211,18 +211,23 @@ private fun AboutEntry(
 }
 
 private const val repositoryUrl = "https://github.com/CAB233/dao"
+private const val releasesUrl = "https://github.com/CAB233/dao/releases"
 
-private fun Context.openRepository() {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repositoryUrl)).apply {
-        if (this@openRepository !is Activity) {
+private fun Context.openUrl(url: String, failureName: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        if (this@openUrl !is Activity) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
     runCatching { startActivity(intent) }
-        .onFailure { notImplemented("打开项目仓库") }
+        .onFailure { notImplemented(failureName) }
 }
 
-/** 占位入口的临时反馈，等功能接上后删掉 */
+private fun Context.openRepository() = openUrl(repositoryUrl, "打开项目仓库")
+
+private fun Context.openReleases() = openUrl(releasesUrl, "打开更新页面")
+
+/** 链接无法打开时的临时反馈 */
 private fun Context.notImplemented(name: String) {
     Toast.makeText(this, "「$name」暂未实现", Toast.LENGTH_SHORT).show()
 }

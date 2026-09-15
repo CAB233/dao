@@ -6,6 +6,7 @@ import kotlinx.collections.immutable.toImmutableMap
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
+import win.zuoye.dao.data.primaryAnchorEpochDay
 
 /** 某一天的最终排班结果 */
 @Immutable
@@ -21,7 +22,7 @@ fun resolveShift(doc: PlanDocument, epochDay: Long): ResolvedShift? {
     }
     val scheme = doc.activeScheme() ?: return null
     if (scheme.cycleDays <= 0) return null
-    val index = Math.floorMod(epochDay - scheme.anchorEpochDay, scheme.cycleDays.toLong()).toInt()
+    val index = Math.floorMod(epochDay - scheme.primaryAnchorEpochDay(), scheme.cycleDays.toLong()).toInt()
     val templateId = scheme.dayTemplateIds.getOrNull(index) ?: return null
     val template = doc.templateById(templateId) ?: return null
     return ResolvedShift(template, isOverride = false)
@@ -48,7 +49,7 @@ class Roster private constructor(
         }
         val scheme = scheme ?: return null
         if (scheme.cycleDays <= 0) return null
-        val index = Math.floorMod(epochDay - scheme.anchorEpochDay, scheme.cycleDays.toLong()).toInt()
+        val index = Math.floorMod(epochDay - scheme.primaryAnchorEpochDay(), scheme.cycleDays.toLong()).toInt()
         val templateId = scheme.dayTemplateIds.getOrNull(index) ?: return null
         return templatesById[templateId]
     }

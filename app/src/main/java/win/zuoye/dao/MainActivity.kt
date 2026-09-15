@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -36,6 +37,7 @@ import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanRepository
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.Scheme
+import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.domain.importPlan
@@ -107,6 +109,14 @@ class MainActivity : ComponentActivity() {
                                         anchorEpochDay = anchorEpochDay,
                                         dayTemplateIds = dayTemplateIds,
                                         createdAt = id,
+                                        groups = persistentListOf(
+                                            SchemeGroup(
+                                                id = id,
+                                                name = "班组 1",
+                                                anchorEpochDay = anchorEpochDay,
+                                            ),
+                                        ),
+                                        defaultGroupId = id,
                                     ),
                                 ),
                                 activeSchemeId = id,

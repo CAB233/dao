@@ -66,6 +66,7 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
+import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.common.rememberFabVisible
@@ -173,13 +174,22 @@ private fun SchemeListScreen(
 
     fun createScheme() {
         val id = System.currentTimeMillis()
+        val today = Ymd.today()
         val scheme = Scheme(
             id = id,
             name = "方案 ${doc.schemes.size + 1}",
             cycleDays = 1,
-            anchorEpochDay = Ymd.today().epochDay,
+            anchorEpochDay = today.epochDay,
             dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
             createdAt = id,
+            groups = persistentListOf(
+                SchemeGroup(
+                    id = id,
+                    name = "班组 1",
+                    anchorEpochDay = today.epochDay,
+                ),
+            ),
+            defaultGroupId = id,
         )
         onMutate { plan ->
             plan.copy(

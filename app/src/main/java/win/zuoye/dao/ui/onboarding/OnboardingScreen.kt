@@ -448,13 +448,19 @@ internal fun AssignmentRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     holdDownState: Boolean = false,
+    grouped: Boolean = false,
 ) {
     val interactionSource = rememberHoldDownSource(holdDownState)
     Row(
         modifier
             .fillMaxWidth()
-            // 可点击：squircleSurface 负责底色 + 把涟漪裁进 squircle
-            .squircleSurface(color = MiuixTheme.colorScheme.surfaceVariant, cornerRadius = 12.dp)
+            // 独立行用 squircle 底色；方案页的多行指派放在同一张 Card 内，沿用卡片底色
+            .let {
+                if (grouped) it else it.squircleSurface(
+                    color = MiuixTheme.colorScheme.surfaceVariant,
+                    cornerRadius = 12.dp,
+                )
+            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

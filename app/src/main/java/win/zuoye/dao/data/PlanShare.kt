@@ -74,11 +74,18 @@ object PlanShareCodec {
                 CompactTemplate(it.name, it.startMinute, it.endMinute, it.colorArgb, it.isRest)
             },
             schemes = payload.schemes.map { scheme ->
+                val groups = scheme.editableGroups()
                 CompactScheme(
                     name = scheme.name,
                     cycleDays = scheme.cycleDays,
-                    anchor = scheme.anchorEpochDay,
+                    anchor = scheme.primaryAnchorEpochDay(),
                     days = scheme.dayTemplateIds.map { indexOf[it] ?: -1 },
+                    groups = groups.map { group ->
+                        CompactGroup(name = group.name, anchor = group.anchorEpochDay)
+                    },
+                    defaultGroup = groups.indexOfFirst { it.id == scheme.defaultGroup()?.id }
+                        .takeIf { it >= 0 }
+                        ?: 0,
                 )
             },
             active = payload.activeSchemeId
@@ -108,6 +115,13 @@ object PlanShareCodec {
             )
         }.toImmutableList()
         val schemes = compact.schemes.mapIndexed { index, s ->
+            val groups = s.groups.mapIndexed { groupIndex, group ->
+                SchemeGroup(
+                    id = SCHEME_ID_BASE + index * 1_000L + groupIndex,
+                    name = group.name,
+                    anchorEpochDay = group.anchor,
+                )
+            }.toImmutableList()
             Scheme(
                 id = SCHEME_ID_BASE + index,
                 name = s.name,
@@ -115,6 +129,8 @@ object PlanShareCodec {
                 anchorEpochDay = s.anchor,
                 dayTemplateIds = s.days.map { it.toLong() }.toImmutableList(),
                 createdAt = SCHEME_ID_BASE + index,
+                groups = groups,
+                defaultGroupId = groups.getOrNull(s.defaultGroup ?: 0)?.id,
             )
         }.toImmutableList()
         return PlanShare(
@@ -225,6 +241,14 @@ private class CompactScheme(
     val cycleDays: Int,
     val anchor: Long,
     val days: List<Int>,
+    val groups: List<CompactGroup> = emptyList(),
+    val defaultGroup: Int? = null,
+)
+
+@Serializable
+private class CompactGroup(
+    val name: String,
+    val anchor: Long,
 )
 
 @Serializable

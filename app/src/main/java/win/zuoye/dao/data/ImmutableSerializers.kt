@@ -25,6 +25,8 @@ private class SchemeSurrogate(
     val anchorEpochDay: Long,
     val dayTemplateIds: List<Long>,
     val createdAt: Long,
+    val groups: List<SchemeGroup> = emptyList(),
+    val defaultGroupId: Long? = null,
 )
 
 object SchemeSerializer : KSerializer<Scheme> {
@@ -42,6 +44,8 @@ object SchemeSerializer : KSerializer<Scheme> {
                 anchorEpochDay = value.anchorEpochDay,
                 dayTemplateIds = value.dayTemplateIds,
                 createdAt = value.createdAt,
+                groups = value.groups,
+                defaultGroupId = value.defaultGroupId,
             ),
         )
     }
@@ -55,6 +59,8 @@ object SchemeSerializer : KSerializer<Scheme> {
             anchorEpochDay = surrogate.anchorEpochDay,
             dayTemplateIds = surrogate.dayTemplateIds.toImmutableList(),
             createdAt = surrogate.createdAt,
+            groups = surrogate.groups.toImmutableList(),
+            defaultGroupId = surrogate.defaultGroupId,
         )
     }
 }

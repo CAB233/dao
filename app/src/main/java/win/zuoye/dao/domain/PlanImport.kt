@@ -4,7 +4,10 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
+import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
+import win.zuoye.dao.data.defaultGroup
+import win.zuoye.dao.data.editableGroups
 
 /** 导入结果，用于给用户一个明确反馈 */
 data class ImportResult(
@@ -75,9 +78,11 @@ fun PlanDocument.importPlan(
     payload.schemes.forEach { incoming ->
         val dayIds = incoming.dayTemplateIds.mapNotNull { templateIdMap[it] }
         if (dayIds.size != incoming.dayTemplateIds.size) return@forEach // 引用了缺失的班次，跳过
+        val incomingGroups = incoming.editableGroups()
         val duplicate = mergedSchemes.firstOrNull {
             it.cycleDays == incoming.cycleDays &&
-                it.anchorEpochDay == incoming.anchorEpochDay &&
+                it.editableGroups().sameGroupConfigAs(incomingGroups) &&
+                it.defaultGroup().sameGroupConfigAs(incoming.defaultGroup()) &&
                 it.dayTemplateIds == dayIds &&
                 it.name == incoming.name
         }
@@ -92,6 +97,9 @@ fun PlanDocument.importPlan(
                 id = id,
                 name = uniqueName(incoming.name, usedNames),
                 dayTemplateIds = dayIds.toImmutableList(),
+                anchorEpochDay = incoming.defaultGroup()?.anchorEpochDay ?: incomingGroups.first().anchorEpochDay,
+                groups = incomingGroups.toImmutableList(),
+                defaultGroupId = incoming.defaultGroup()?.id,
                 createdAt = now + schemesAdded,
             ),
         )
@@ -125,6 +133,17 @@ private fun ShiftTemplate.sameContentAs(other: ShiftTemplate): Boolean =
         endMinute == other.endMinute &&
         colorArgb == other.colorArgb &&
         isRest == other.isRest
+
+private fun List<SchemeGroup>.sameGroupConfigAs(
+    other: List<SchemeGroup>,
+): Boolean = size == other.size && zip(other).all { (left, right) ->
+    left.name == right.name && left.anchorEpochDay == right.anchorEpochDay
+}
+
+private fun SchemeGroup?.sameGroupConfigAs(other: SchemeGroup?): Boolean = when {
+    this == null || other == null -> this == other
+    else -> name == other.name && anchorEpochDay == other.anchorEpochDay
+}
 
 private fun uniqueName(base: String, used: MutableSet<String>): String {
     if (used.add(base)) return base

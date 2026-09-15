@@ -34,7 +34,16 @@ data class ShiftTemplate(
     }
 }
 
-/** 倒班方案：周期 N 天 + 每天挂的模板 id + 锚点日期（周期第 1 天）。 */
+/** 一个班组：名称 + 该班组对应的基准日期。 */
+@Immutable
+@Serializable
+data class SchemeGroup(
+    val id: Long,
+    val name: String,
+    val anchorEpochDay: Long,
+)
+
+/** 倒班方案：周期 N 天 + 每天挂的模板 id + 班组基准日期。 */
 @Immutable
 @Serializable(with = SchemeSerializer::class)
 data class Scheme(
@@ -44,7 +53,27 @@ data class Scheme(
     val anchorEpochDay: Long,
     val dayTemplateIds: ImmutableList<Long>,
     val createdAt: Long,
+    val groups: ImmutableList<SchemeGroup> = persistentListOf(),
+    val defaultGroupId: Long? = null,
 )
+
+/** 兼容旧数据：旧方案只有一个锚点，首次进入班组设置时显示为一个默认班组。 */
+fun Scheme.editableGroups(): ImmutableList<SchemeGroup> =
+    groups.takeIf { it.isNotEmpty() }
+        ?: persistentListOf(
+            SchemeGroup(
+                id = id,
+                name = "班组 1",
+                anchorEpochDay = anchorEpochDay,
+            ),
+        )
+
+/** 返回默认班组；旧数据没有默认班组时回退到第一个班组。 */
+fun Scheme.defaultGroup(): SchemeGroup? = editableGroups().firstOrNull { it.id == defaultGroupId }
+    ?: editableGroups().firstOrNull()
+
+/** 日历使用默认班组的基准日期。 */
+fun Scheme.primaryAnchorEpochDay(): Long = defaultGroup()?.anchorEpochDay ?: anchorEpochDay
 
 /** 全量持久化文档（单文件 JSON，规模小、无查询需求）。overrides 为换班覆盖，本期 UI 不编辑。 */
 @Immutable

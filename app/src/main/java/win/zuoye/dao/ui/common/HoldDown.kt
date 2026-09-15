@@ -9,8 +9,6 @@ import androidx.compose.runtime.remember
 import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 
 /**
- * MIUI 惯例：弹出 Dialog 的入口行在 Dialog 打开期间保持"按住"高亮。
- *
  * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可；
  * 自绘的 `clickable` 行走这里——把状态作为 [HoldDownInteraction] 注入 interactionSource，
  * 再交给 `Modifier.clickable(interactionSource = …, indication = LocalIndication.current, …)`，

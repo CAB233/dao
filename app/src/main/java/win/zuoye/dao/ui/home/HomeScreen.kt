@@ -83,7 +83,7 @@ import kotlin.math.roundToInt
 private const val BASE_YEAR = 2000
 private const val MONTH_COUNT = 101 * 12
 
-/** 首页：月历视图，按班次颜色着色。月份左右滑动切换（对齐小米日历）。 */
+/** 首页：月历视图，按班次颜色着色。月份左右滑动切换。 */
 @Composable
 fun HomeScreen(
     doc: PlanDocument,
@@ -119,7 +119,7 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            // 小米日历风格：滑到别的月份时，右下角出现蓝色圆形「今」，一键回到今天
+            // 滑到别的月份时，右下角出现蓝色圆形「今」，一键回到今天
             // 外边距放在 AnimatedVisibility 之外，保证缩放动画以圆心为中心
             Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
                 AnimatedVisibility(
@@ -531,7 +531,7 @@ private fun CalendarCell(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        // 法定节假日角标（小米日历式，右上角「休」/「班」）：颜色预乘淡化系数，避免离屏 alpha 图层
+        // 法定节假日角标：颜色预乘淡化系数，避免离屏 alpha 图层
         slot.holiday?.let { holiday ->
             val badge = remember(holiday.isMakeupWorkday, fade) {
                 if (holiday.isMakeupWorkday) {

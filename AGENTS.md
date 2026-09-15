@@ -5,7 +5,7 @@
 Android 应用「**倒班表**」（app_name 与界面标题都用这个；namespace 仍是 `win.zuoye.dao`），
 单模块 `:app`，Gradle Kotlin DSL。**功能是倒班安排表**：班次模板 + 周期方案 + 月历着色。
 
-**产品目标**：基于 [miuix](https://github.com/compose-miuix-ui/miuix)（HyperOS 风格 Compose UI 框架）的倒班安排表应用，
+**产品目标**：基于 [miuix](https://github.com/compose-miuix-ui/miuix) 的倒班安排表应用，
 离线可用、可把自己的排班方案导出给别人导入。
 
 其余注意事项在项目 .agents/ 里（不提交到 git）。
@@ -160,7 +160,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
   **长内容 Dialog** 包 `Column(Modifier.heightIn(max = 500.dp))`，滚动区 `weight(1f, fill = false).verticalScroll(...)`，按钮作非加权子项固定底部——
   miuix `WindowDialog` 不限 content 高度，过长会把按钮顶出屏（TemplateEditorDialog 含时间滚轮，加长时按此办）。
   选项列表 Dialog `insideMargin = DpSize(0.dp, 24.dp)`（水平 0 让行全出血、行内自带 24dp 内缩；垂直 24 补 title 顶距）；
-  弹 Dialog 的入口行设 `holdDownState`（MIUI 惯例）；单选互斥用 `WindowDropdownDialog`，别手搓 TextButton 列表 + 确认按钮。
+  弹 Dialog 的入口行设 `holdDownState`；单选互斥用 `WindowDropdownDialog`，别手搓 TextButton 列表 + 确认按钮。
   **弹层要常驻组合、用 `show` 驱动**：写成 `if (x) { OverlayDialog(show = true, …) }` 的话，关闭时整个 composable 被直接拿走，
   退出动画来不及播（进场有、退场没有）。内容依赖"打开的是哪一项"时，另存一份 `shownXxx` 记住最后一次打开的值供退出动画渲染
   （`DialogContentLayout` 内部是 `if (!show && !internalVisible) return`，隐藏时既不渲染也不注册 `NavigationBackHandler`，常驻没有副作用）。
@@ -187,7 +187,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 - miuix-icons（`MiuixIcons.Regular.*` 那套图标）与 miuix-preference（`WindowDropdownDialog` 单选弹窗）版本号跟 miuix 一致
 - kotlinx-collections-immutable 0.4.0（数据模型的不可变集合）+ lifecycle-runtime-compose 2.9.4（`collectAsStateWithLifecycle`）
 - minSdk 24，compileSdk/targetSdk 37；依赖一律走 `gradle/libs.versions.toml`
-- 应用版本：`app/build.gradle.kts` 的 `defaultConfig { versionCode / versionName }`（当前 2 / "0.0.2"）。
+- 应用版本：`app/build.gradle.kts` 的 `defaultConfig { versionCode / versionName }`。
   发新版要**同时**改 `versionCode`（+1，否则装不上更新）和 `versionName`；关于页/设置页显示的版本是从 PackageManager 读的，不用手改。
 
 ## 构建与测试命令

@@ -126,7 +126,7 @@ fun SettingsScreen(
                     title = "导入倒班方案",
                     summary = "从剪贴板、二维码或文件导入",
                     endActions = { Chevron() },
-                    // 弹 Dialog 的入口行：打开期间保持按住高亮（MIUI 惯例）
+                    // 弹 Dialog 的入口行：打开期间保持按住高亮
                     holdDownState = showImport,
                     onClick = {
                         showImport = true

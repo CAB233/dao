@@ -7,7 +7,6 @@ import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.defaultGroup
-import win.zuoye.dao.data.editableGroups
 
 /** 导入结果，用于给用户一个明确反馈 */
 data class ImportResult(
@@ -78,11 +77,12 @@ fun PlanDocument.importPlan(
     payload.schemes.forEach { incoming ->
         val dayIds = incoming.dayTemplateIds.mapNotNull { templateIdMap[it] }
         if (dayIds.size != incoming.dayTemplateIds.size) return@forEach // 引用了缺失的班次，跳过
-        val incomingGroups = incoming.editableGroups()
+        val incomingGroups = incoming.groups
+        val incomingDefaultGroup = incoming.defaultGroup() ?: return@forEach
         val duplicate = mergedSchemes.firstOrNull {
             it.cycleDays == incoming.cycleDays &&
-                it.editableGroups().sameGroupConfigAs(incomingGroups) &&
-                it.defaultGroup().sameGroupConfigAs(incoming.defaultGroup()) &&
+                it.groups.sameGroupConfigAs(incomingGroups) &&
+                it.defaultGroup().sameGroupConfigAs(incomingDefaultGroup) &&
                 it.dayTemplateIds == dayIds &&
                 it.name == incoming.name
         }
@@ -97,9 +97,8 @@ fun PlanDocument.importPlan(
                 id = id,
                 name = uniqueName(incoming.name, usedNames),
                 dayTemplateIds = dayIds.toImmutableList(),
-                anchorEpochDay = incoming.defaultGroup()?.anchorEpochDay ?: incomingGroups.first().anchorEpochDay,
                 groups = incomingGroups.toImmutableList(),
-                defaultGroupId = incoming.defaultGroup()?.id,
+                defaultGroupId = incomingDefaultGroup.id,
                 createdAt = now + schemesAdded,
             ),
         )

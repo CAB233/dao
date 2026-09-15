@@ -106,7 +106,6 @@ class MainActivity : ComponentActivity() {
                                         id = id,
                                         name = "方案 ${current.schemes.size + 1}",
                                         cycleDays = cycleDays,
-                                        anchorEpochDay = anchorEpochDay,
                                         dayTemplateIds = dayTemplateIds,
                                         createdAt = id,
                                         groups = persistentListOf(

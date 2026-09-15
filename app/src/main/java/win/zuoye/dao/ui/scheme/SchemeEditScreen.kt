@@ -76,7 +76,7 @@ import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
-import win.zuoye.dao.data.editableGroups
+import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.data.primaryAnchorEpochDay
 import win.zuoye.dao.ui.common.TemplateEditorDialog
 import win.zuoye.dao.ui.common.rememberHoldDownSource
@@ -142,18 +142,18 @@ fun SchemeEditScreen(
     var showCycleDialog by remember { mutableStateOf(false) }
     var cycleDraft by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
     var groupCountText by rememberSaveable(scheme.id) {
-        mutableStateOf(scheme.editableGroups().size.toString())
+        mutableStateOf(scheme.groups.size.toString())
     }
     var showGroupCountDialog by remember { mutableStateOf(false) }
     var groupCountDraft by rememberSaveable(scheme.id) {
-        mutableStateOf(scheme.editableGroups().size.toString())
+        mutableStateOf(scheme.groups.size.toString())
     }
     var showDefaultGroupDialog by remember { mutableStateOf(false) }
     var showGroupEditor by remember { mutableStateOf(false) }
     var editingGroupIndex by rememberSaveable(scheme.id) { mutableIntStateOf(-1) }
     var groupNameDraft by rememberSaveable(scheme.id) { mutableStateOf("") }
     var groupAnchorEpochDay by rememberSaveable(scheme.id) {
-        mutableStateOf(scheme.primaryAnchorEpochDay())
+        mutableStateOf(scheme.primaryAnchorEpochDay() ?: Ymd.today().epochDay)
     }
     var showGroupAnchorDialog by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
@@ -174,10 +174,8 @@ fun SchemeEditScreen(
     // 页签内容滚动时，右下角的加号收起来
     val contentScrollState = rememberScrollState()
     val fabVisible = rememberFabVisible { contentScrollState.value }
-    val groups = remember(draftScheme.id, draftScheme.groups, draftScheme.anchorEpochDay) {
-        draftScheme.editableGroups()
-    }
-    val defaultGroup = groups.firstOrNull { it.id == draftScheme.defaultGroupId } ?: groups.firstOrNull()
+    val groups = draftScheme.groups
+    val defaultGroup = draftScheme.defaultGroup()
 
     fun updateScheme(transform: (Scheme) -> Scheme) {
         draftDocument = draftDocument.copy(
@@ -204,19 +202,18 @@ fun SchemeEditScreen(
         val count = input.toIntOrNull()?.takeIf { it in 1..99 } ?: return
         groupCountText = count.toString()
         updateScheme { current ->
-            val existing = current.editableGroups()
+            val existing = current.groups
             val next = List(count) { index ->
                 existing.getOrNull(index) ?: SchemeGroup(
                     id = System.currentTimeMillis() + index,
                     name = "班组 ${index + 1}",
                     anchorEpochDay = existing.firstOrNull()?.anchorEpochDay
-                        ?: current.primaryAnchorEpochDay(),
+                        ?: Ymd.today().epochDay,
                 )
             }.toImmutableList()
             val defaultGroupId = next.firstOrNull { it.id == current.defaultGroupId }?.id
                 ?: next.first().id
             current.copy(
-                anchorEpochDay = next.first { it.id == defaultGroupId }.anchorEpochDay,
                 groups = next,
                 defaultGroupId = defaultGroupId,
             )
@@ -225,13 +222,8 @@ fun SchemeEditScreen(
 
     fun selectDefaultGroup(groupId: Long) {
         updateScheme { current ->
-            val existing = current.editableGroups()
-            val selected = existing.firstOrNull { it.id == groupId } ?: return@updateScheme current
-            current.copy(
-                anchorEpochDay = selected.anchorEpochDay,
-                groups = existing,
-                defaultGroupId = selected.id,
-            )
+            if (current.groups.none { it.id == groupId }) return@updateScheme current
+            current.copy(defaultGroupId = groupId)
         }
         showDefaultGroupDialog = false
     }
@@ -249,7 +241,7 @@ fun SchemeEditScreen(
         val name = groupNameDraft.trim()
         if (index < 0 || name.isEmpty()) return
         updateScheme { current ->
-            val existing = current.editableGroups()
+            val existing = current.groups
             val next = existing.mapIndexed { groupIndex, group ->
                 if (groupIndex == index) {
                     group.copy(name = name, anchorEpochDay = groupAnchorEpochDay)
@@ -260,7 +252,6 @@ fun SchemeEditScreen(
             val defaultGroupId = next.firstOrNull { it.id == current.defaultGroupId }?.id
                 ?: next.first().id
             current.copy(
-                anchorEpochDay = next.first { it.id == defaultGroupId }.anchorEpochDay,
                 groups = next,
                 defaultGroupId = defaultGroupId,
             )

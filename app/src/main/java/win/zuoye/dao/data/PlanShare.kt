@@ -74,18 +74,17 @@ object PlanShareCodec {
                 CompactTemplate(it.name, it.startMinute, it.endMinute, it.colorArgb, it.isRest)
             },
             schemes = payload.schemes.map { scheme ->
-                val groups = scheme.editableGroups()
+                val groups = scheme.groups
+                val defaultGroup = groups.indexOfFirst { it.id == scheme.defaultGroupId }
+                require(defaultGroup >= 0) { "方案缺少默认班组" }
                 CompactScheme(
                     name = scheme.name,
                     cycleDays = scheme.cycleDays,
-                    anchor = scheme.primaryAnchorEpochDay(),
                     days = scheme.dayTemplateIds.map { indexOf[it] ?: -1 },
                     groups = groups.map { group ->
                         CompactGroup(name = group.name, anchor = group.anchorEpochDay)
                     },
-                    defaultGroup = groups.indexOfFirst { it.id == scheme.defaultGroup()?.id }
-                        .takeIf { it >= 0 }
-                        ?: 0,
+                    defaultGroup = defaultGroup,
                 )
             },
             active = payload.activeSchemeId
@@ -122,15 +121,15 @@ object PlanShareCodec {
                     anchorEpochDay = group.anchor,
                 )
             }.toImmutableList()
+            val defaultGroup = groups.getOrNull(s.defaultGroup) ?: return null
             Scheme(
                 id = SCHEME_ID_BASE + index,
                 name = s.name,
                 cycleDays = s.cycleDays,
-                anchorEpochDay = s.anchor,
                 dayTemplateIds = s.days.map { it.toLong() }.toImmutableList(),
                 createdAt = SCHEME_ID_BASE + index,
                 groups = groups,
-                defaultGroupId = groups.getOrNull(s.defaultGroup ?: 0)?.id,
+                defaultGroupId = defaultGroup.id,
             )
         }.toImmutableList()
         return PlanShare(
@@ -239,10 +238,9 @@ private class CompactTemplate(
 private class CompactScheme(
     val name: String,
     val cycleDays: Int,
-    val anchor: Long,
     val days: List<Int>,
-    val groups: List<CompactGroup> = emptyList(),
-    val defaultGroup: Int? = null,
+    val groups: List<CompactGroup>,
+    val defaultGroup: Int,
 )
 
 @Serializable

@@ -50,30 +50,17 @@ data class Scheme(
     val id: Long,
     val name: String,
     val cycleDays: Int,
-    val anchorEpochDay: Long,
     val dayTemplateIds: ImmutableList<Long>,
     val createdAt: Long,
-    val groups: ImmutableList<SchemeGroup> = persistentListOf(),
-    val defaultGroupId: Long? = null,
+    val groups: ImmutableList<SchemeGroup>,
+    val defaultGroupId: Long,
 )
 
-/** 兼容旧数据：旧方案只有一个锚点，首次进入班组设置时显示为一个默认班组。 */
-fun Scheme.editableGroups(): ImmutableList<SchemeGroup> =
-    groups.takeIf { it.isNotEmpty() }
-        ?: persistentListOf(
-            SchemeGroup(
-                id = id,
-                name = "班组 1",
-                anchorEpochDay = anchorEpochDay,
-            ),
-        )
-
-/** 返回默认班组；旧数据没有默认班组时回退到第一个班组。 */
-fun Scheme.defaultGroup(): SchemeGroup? = editableGroups().firstOrNull { it.id == defaultGroupId }
-    ?: editableGroups().firstOrNull()
+/** 返回方案明确指定的默认班组。 */
+fun Scheme.defaultGroup(): SchemeGroup? = groups.firstOrNull { it.id == defaultGroupId }
 
 /** 日历使用默认班组的基准日期。 */
-fun Scheme.primaryAnchorEpochDay(): Long = defaultGroup()?.anchorEpochDay ?: anchorEpochDay
+fun Scheme.primaryAnchorEpochDay(): Long? = defaultGroup()?.anchorEpochDay
 
 /** 全量持久化文档（单文件 JSON，规模小、无查询需求）。overrides 为换班覆盖，本期 UI 不编辑。 */
 @Immutable

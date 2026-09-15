@@ -22,7 +22,8 @@ fun resolveShift(doc: PlanDocument, epochDay: Long): ResolvedShift? {
     }
     val scheme = doc.activeScheme() ?: return null
     if (scheme.cycleDays <= 0) return null
-    val index = Math.floorMod(epochDay - scheme.primaryAnchorEpochDay(), scheme.cycleDays.toLong()).toInt()
+    val anchorEpochDay = scheme.primaryAnchorEpochDay() ?: return null
+    val index = Math.floorMod(epochDay - anchorEpochDay, scheme.cycleDays.toLong()).toInt()
     val templateId = scheme.dayTemplateIds.getOrNull(index) ?: return null
     val template = doc.templateById(templateId) ?: return null
     return ResolvedShift(template, isOverride = false)
@@ -44,7 +45,8 @@ class Roster private constructor(
     /** 该日期的班次模板；只在需要区分"换班覆盖"时用 [resolveShift]。 */
     fun templateFor(epochDay: Long): ShiftTemplate? {
         val scheme = scheme ?: return null
-        return templateFor(epochDay, scheme.primaryAnchorEpochDay())
+        val anchorEpochDay = scheme.primaryAnchorEpochDay() ?: return null
+        return templateFor(epochDay, anchorEpochDay)
     }
 
     /** 使用指定班组的基准日期查询该日期的班次。 */

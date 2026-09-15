@@ -212,7 +212,6 @@ private fun SchemeListScreen(
             id = id,
             name = "方案 ${doc.schemes.size + 1}",
             cycleDays = 1,
-            anchorEpochDay = today.epochDay,
             dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
             createdAt = id,
             groups = persistentListOf(

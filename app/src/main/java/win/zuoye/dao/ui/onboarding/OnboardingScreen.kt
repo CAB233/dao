@@ -76,6 +76,7 @@ import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
+import win.zuoye.dao.data.primaryAnchorEpochDay
 import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.common.TemplateEditorDialog
 import win.zuoye.dao.ui.common.rememberHoldDownSource
@@ -120,7 +121,7 @@ fun OnboardingScreen(
         )
     }
     var anchor by remember {
-        mutableStateOf(editing?.let { Ymd.fromEpochDay(it.anchorEpochDay) } ?: Ymd.today())
+        mutableStateOf(editing?.primaryAnchorEpochDay()?.let(Ymd::fromEpochDay) ?: Ymd.today())
     }
     var showEditor by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<ShiftTemplate?>(null) }

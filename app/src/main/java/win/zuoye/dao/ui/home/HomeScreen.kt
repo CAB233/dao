@@ -84,7 +84,6 @@ import win.zuoye.dao.R
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
-import win.zuoye.dao.data.editableGroups
 import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
 import win.zuoye.dao.ui.HolidayPalette
@@ -260,7 +259,7 @@ private fun TodayGroupsCard(
     today: Ymd,
 ) {
     val scheme = doc.activeScheme()
-    val groups = scheme?.editableGroups().orEmpty()
+    val groups = scheme?.groups.orEmpty()
 
     Card(
         modifier = Modifier

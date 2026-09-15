@@ -38,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +72,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.R
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
@@ -185,6 +188,10 @@ private fun SchemeListScreen(
     onCreate: (Scheme) -> Unit,
 ) {
     val context = LocalContext.current
+    val defaultPlanName = stringResource(R.string.default_plan_name, doc.schemes.size + 1)
+    val defaultGroupName = stringResource(R.string.default_group_name, 1)
+    val importUnrecognized = stringResource(R.string.import_unrecognized)
+    val activePlanRequired = stringResource(R.string.active_plan_required)
     var selecting by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
     var showDeleteSelected by remember { mutableStateOf(false) }
@@ -210,14 +217,14 @@ private fun SchemeListScreen(
         val today = Ymd.today()
         val scheme = Scheme(
             id = id,
-            name = "方案 ${doc.schemes.size + 1}",
+            name = defaultPlanName,
             cycleDays = 1,
             dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
             createdAt = id,
             groups = persistentListOf(
                 SchemeGroup(
                     id = id,
-                    name = "班组 1",
+                    name = defaultGroupName,
                     anchorEpochDay = today.epochDay,
                 ),
             ),
@@ -229,7 +236,7 @@ private fun SchemeListScreen(
     fun importFrom(text: String?) {
         val payload = text?.let(PlanShareCodec::decode)
         if (payload == null) {
-            Toast.makeText(context, "没识别到方案数据", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, importUnrecognized, Toast.LENGTH_SHORT).show()
         } else {
             showAddMenu = false
             onImportPlan(payload)
@@ -247,16 +254,20 @@ private fun SchemeListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (selecting) "已选 ${selectedIds.size} 个" else "倒班方案",
+                title = if (selecting) {
+                    stringResource(R.string.plans_selected, selectedIds.size)
+                } else {
+                    stringResource(R.string.settings_plans)
+                },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     if (selecting) {
                         IconButton(onClick = { exitSelection() }) {
-                            Icon(MiuixIcons.Basic.Close, contentDescription = "取消选择")
+                            Icon(MiuixIcons.Basic.Close, contentDescription = stringResource(R.string.action_close_selection))
                         }
                     } else {
                         IconButton(onClick = onBack) {
-                            Icon(MiuixIcons.Regular.Back, contentDescription = "返回")
+                            Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
                         }
                     }
                 },
@@ -279,7 +290,7 @@ private fun SchemeListScreen(
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Regular.Add,
-                                contentDescription = "添加方案",
+                                contentDescription = stringResource(R.string.action_add_plan),
                                 tint = MiuixTheme.colorScheme.onPrimary,
                             )
                         }
@@ -305,7 +316,7 @@ private fun SchemeListScreen(
                             .navigationBarsPadding()
                             .padding(horizontal = 12.dp, vertical = 12.dp),
                     ) {
-                        Text("删除")
+                        Text(stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -340,7 +351,7 @@ private fun SchemeListScreen(
                             onMutate { plan -> plan.copy(activeSchemeId = scheme.id) }
                         } else {
                             // 不能全关，至少留一个
-                            Toast.makeText(context, "至少保留一个使用中的方案", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, activePlanRequired, Toast.LENGTH_SHORT).show()
                         }
                     },
                 )
@@ -350,7 +361,7 @@ private fun SchemeListScreen(
 
         OverlayDialog(
             show = showAddMenu,
-            title = "添加倒班方案",
+            title = stringResource(R.string.add_plan_title),
             onDismissRequest = { showAddMenu = false },
         ) {
             Column(
@@ -358,7 +369,7 @@ private fun SchemeListScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TextButton(
-                    text = "手动添加",
+                    text = stringResource(R.string.create_manual),
                     onClick = {
                         showAddMenu = false
                         createScheme()
@@ -366,12 +377,12 @@ private fun SchemeListScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TextButton(
-                    text = "从剪贴板导入",
+                    text = stringResource(R.string.create_clipboard),
                     onClick = { importFrom(context.clipboardText()) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TextButton(
-                    text = "扫描二维码导入",
+                    text = stringResource(R.string.create_qr),
                     onClick = {
                         scanLauncher.launch(
                             ScanOptions().apply {
@@ -389,7 +400,7 @@ private fun SchemeListScreen(
                     colors = ButtonDefaults.buttonColorsPrimary(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         }
@@ -397,18 +408,22 @@ private fun SchemeListScreen(
         // 弹层必须在 Scaffold 的 content 里（宿主由 Scaffold 提供，放外面点不动）
         OverlayDialog(
             show = showDeleteSelected,
-            title = "删除选中的 ${selectedIds.size} 个方案？",
-            summary = "删除后无法恢复。",
+            title = pluralStringResource(
+                R.plurals.delete_selected_plans_title,
+                selectedIds.size,
+                selectedIds.size,
+            ),
+            summary = stringResource(R.string.delete_irreversible_period),
             onDismissRequest = { showDeleteSelected = false },
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     onClick = { showDeleteSelected = false },
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "删除",
+                    text = stringResource(R.string.action_delete),
                     onClick = {
                         // 先抓一份选中集合：onMutate 交给协程稍后执行，exitSelection() 会先把它清空
                         val ids = selectedIds
@@ -492,7 +507,7 @@ private fun SchemeCard(
                     if (active) {
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "使用中",
+                            text = stringResource(R.string.plan_active),
                             fontSize = 12.sp,
                             color = MiuixTheme.colorScheme.primary,
                         )

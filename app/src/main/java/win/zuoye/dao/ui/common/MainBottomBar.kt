@@ -1,11 +1,13 @@
 package win.zuoye.dao.ui.common
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Home
 import top.yukonga.miuix.kmp.icon.extended.Settings
+import win.zuoye.dao.R
 
 /** 底栏的两个主入口。 */
 enum class MainTab {
@@ -27,13 +29,13 @@ fun MainBottomBar(
             selected = selected == MainTab.Home,
             onClick = { onSelect(MainTab.Home) },
             icon = MiuixIcons.Regular.Home,
-            label = "主页",
+            label = stringResource(R.string.nav_home),
         )
         NavigationBarItem(
             selected = selected == MainTab.Settings,
             onClick = { onSelect(MainTab.Settings) },
             icon = MiuixIcons.Regular.Settings,
-            label = "设置",
+            label = stringResource(R.string.nav_settings),
         )
     }
 }

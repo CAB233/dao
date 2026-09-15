@@ -136,10 +136,10 @@ object PlanShareCodec {
         return decodePayload(token)
     }
 
-    fun shareText(doc: PlanDocument, appName: String, schemeId: Long? = null): String {
+    fun shareText(doc: PlanDocument, localizedHeader: String, schemeId: Long? = null): String {
         val payload = doc.toShare(schemeId)
         val sb = StringBuilder()
-        sb.append("【$appName】排班方案\n")
+        sb.append(localizedHeader).append('\n')
         sb.append(encodePayload(payload))
         return sb.toString()
     }

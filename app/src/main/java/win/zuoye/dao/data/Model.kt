@@ -20,14 +20,6 @@ data class ShiftTemplate(
 ) {
     fun crossesMidnight(): Boolean = !isRest && endMinute <= startMinute
 
-    fun timeRangeText(): String = when {
-        isRest -> "休息"
-        else -> {
-            val end = if (crossesMidnight()) "次日${format(endMinute)}" else format(endMinute)
-            "${format(startMinute)}–$end"
-        }
-    }
-
     companion object {
         fun format(minuteOfDay: Int): String =
             "%02d:%02d".format(minuteOfDay / 60, minuteOfDay % 60)

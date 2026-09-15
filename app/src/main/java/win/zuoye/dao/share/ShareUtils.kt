@@ -3,6 +3,7 @@ package win.zuoye.dao.share
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import win.zuoye.dao.R
 
 /** 通过系统分享面板发送排班方案文本。 */
 object ShareUtils {
@@ -14,7 +15,7 @@ object ShareUtils {
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, text)
         }
-        startChooser(context, intent, "分享排班方案")
+        startChooser(context, intent, context.getString(R.string.share_chooser_title))
     }
 
     /**

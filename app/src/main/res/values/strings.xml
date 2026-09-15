@@ -1,5 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <resources>
-    <string name="app_name">倒班表</string>
-    <!-- 扫码页 -->
-    <string name="scan_back">返回</string>
+  <string name="app_name">倒班表</string>
+  <string name="action_back">返回</string>
+  <string name="action_back_to_plan_list">返回方案列表</string>
+  <string name="action_cancel">取消</string>
+  <string name="action_confirm">确定</string>
+  <string name="action_save">保存</string>
+  <string name="action_delete">删除</string>
+  <string name="action_edit">编辑</string>
+  <string name="action_next">下一步</string>
+  <string name="action_previous">上一步</string>
+  <string name="action_done">完成</string>
+  <string name="action_not_save">不保存</string>
+  <string name="action_save_and_exit">保存并退出</string>
+  <string name="action_skip_configuration">跳过配置</string>
+  <string name="action_add_shift">新增班次</string>
+  <string name="action_add_plan">添加方案</string>
+  <string name="action_close_selection">取消选择</string>
+  <string name="status_not_set">未设置</string>
+  <string name="status_not_selected">未选择</string>
+  <string name="nav_home">主页</string>
+  <string name="nav_settings">设置</string>
+  <string name="settings_week_start">一周开始日</string>
+  <string name="settings_week_start_summary">选择每周的起始星期</string>
+  <string name="settings_plans">倒班方案</string>
+  <string name="settings_plans_summary">创建、导入或选择方案</string>
+  <string name="settings_about">关于</string>
+  <string-array name="weekday_short">
+    <item>一</item>
+    <item>二</item>
+    <item>三</item>
+    <item>四</item>
+    <item>五</item>
+    <item>六</item>
+    <item>日</item>
+  </string-array>
+  <string-array name="weekday_full">
+    <item>周一</item>
+    <item>周二</item>
+    <item>周三</item>
+    <item>周四</item>
+    <item>周五</item>
+    <item>周六</item>
+    <item>周日</item>
+  </string-array>
+  <string-array name="lunar_month_names">
+    <item>正</item>
+    <item>二</item>
+    <item>三</item>
+    <item>四</item>
+    <item>五</item>
+    <item>六</item>
+    <item>七</item>
+    <item>八</item>
+    <item>九</item>
+    <item>十</item>
+    <item>冬</item>
+    <item>腊</item>
+  </string-array>
+  <string-array name="lunar_day_names">
+    <item>初一</item>
+    <item>初二</item>
+    <item>初三</item>
+    <item>初四</item>
+    <item>初五</item>
+    <item>初六</item>
+    <item>初七</item>
+    <item>初八</item>
+    <item>初九</item>
+    <item>初十</item>
+    <item>十一</item>
+    <item>十二</item>
+    <item>十三</item>
+    <item>十四</item>
+    <item>十五</item>
+    <item>十六</item>
+    <item>十七</item>
+    <item>十八</item>
+    <item>十九</item>
+    <item>二十</item>
+    <item>廿一</item>
+    <item>廿二</item>
+    <item>廿三</item>
+    <item>廿四</item>
+    <item>廿五</item>
+    <item>廿六</item>
+    <item>廿七</item>
+    <item>廿八</item>
+    <item>廿九</item>
+    <item>三十</item>
+  </string-array>
+  <string name="default_plan_name">方案 %1$d</string>
+  <string name="default_group_name">班组 %1$d</string>
+  <string name="import_failed">导入失败</string>
+  <string name="import_unrecognized">没识别到方案数据</string>
+  <string name="import_duplicate_only">这些方案本机已经有了，没有重复导入</string>
+  <string name="import_nothing">没识别到可导入的内容</string>
+  <string name="import_success">已导入 %1$s、%2$s</string>
+  <string name="import_success_skipped">已导入 %1$s、%2$s，跳过 %3$s</string>
+  <plurals name="shift_count">
+    <item quantity="other">%1$d 个班次</item>
+  </plurals>
+  <plurals name="plan_count">
+    <item quantity="other">%1$d 个方案</item>
+  </plurals>
+  <plurals name="duplicate_plan_count">
+    <item quantity="other">%1$d 个重复方案</item>
+  </plurals>
+  <string name="import_switch_hint">；可在“设置”里点“启用”切换</string>
+  <string name="shift_add_title">新增班次</string>
+  <string name="shift_edit_title">编辑班次</string>
+  <string name="shift_editor_summary">非工作日则打开“休班”开关</string>
+  <string name="shift_name">班次名称</string>
+  <string name="shift_rest">休班</string>
+  <string name="shift_rest_time">休息</string>
+  <string name="shift_start">开始</string>
+  <string name="shift_end">结束</string>
+  <string name="shift_next_day">次日%1$s</string>
+  <string name="color_select">选择颜色</string>
+  <string name="color_presets">预设颜色</string>
+  <string name="onboarding_title">引导页面</string>
+  <string name="onboarding_edit_title">修改方案</string>
+  <string name="onboarding_method_title">创建方式</string>
+  <string name="onboarding_templates_title">班次模板</string>
+  <string name="onboarding_cycle_title">周期与指派</string>
+  <string name="onboarding_anchor_title">开始日期</string>
+  <string name="step_progress">%1$d/%2$d %3$s</string>
+  <string name="create_method_prompt">选择创建倒班方案方式</string>
+  <string name="create_manual">手动添加</string>
+  <string name="create_manual_summary">自己设置班次模板、周期与班组</string>
+  <string name="create_clipboard">从剪贴板导入</string>
+  <string name="create_clipboard_summary">读取已经复制的倒班方案</string>
+  <string name="create_qr">扫描二维码导入</string>
+  <string name="create_qr_summary">扫描他人分享的方案二维码</string>
+  <string name="empty_shifts">还没有班次，点击右下角添加</string>
+  <string name="cycle_day">第 %1$d 天</string>
+  <string name="tap_to_select">点击选择</string>
+  <string name="cycle_days_hint">1–99 天，如 4</string>
+  <string name="assign_each_day">为周期内每天选择班次</string>
+  <string name="cycle_first_day">周期第 1 天：%1$s</string>
+  <string name="anchor_explanation">周期第 1 天对应这一天，日历会按周期自动推导其它日期的班次。</string>
+  <string name="select_shift">选择班次</string>
+  <string name="select_shift_empty">请先在第一步添加班次。</string>
+  <string name="delete_shift_title">删除班次“%1$s”？</string>
+  <string name="delete_shift_in_use">该班次正被方案使用，删除后相关日期会显示“未排班”。</string>
+  <string name="delete_shift_confirm">确定删除该班次吗？</string>
+  <string name="plan_edit_title">编辑方案</string>
+  <string name="plan_name">方案名</string>
+  <string name="plan_tab_templates">班次模板</string>
+  <string name="plan_tab_schedule">排班设置</string>
+  <string name="plan_tab_groups">班组设置</string>
+  <string name="plan_delete">删除方案</string>
+  <string name="delete_irreversible">删除后无法恢复</string>
+  <string name="delete_irreversible_period">删除后无法恢复。</string>
+  <string name="group_count">班组数量</string>
+  <string name="group_count_label">班组数量（1–99）</string>
+  <string name="group_edit">编辑班组</string>
+  <string name="group_name">班组名称</string>
+  <string name="group_anchor">基准日期</string>
+  <string name="cycle_days">周期天数</string>
+  <string name="cycle_days_label">周期天数（1–99）</string>
+  <string name="unsaved_exit_title">保存更改后退出？</string>
+  <string name="unsaved_new_summary">此方案尚未创建，不保存将丢弃全部编辑内容。</string>
+  <string name="unsaved_summary">不保存将丢弃本次编辑内容。</string>
+  <string name="delete_plan_title">删除“%1$s”？</string>
+  <plurals name="days_count">
+    <item quantity="other">%1$d 天</item>
+  </plurals>
+  <plurals name="groups_count">
+    <item quantity="other">%1$d 个</item>
+  </plurals>
+  <string name="default_group">默认班组</string>
+  <string name="select_default_group">选择默认班组</string>
+  <string name="month_label">月</string>
+  <string name="day_label">日</string>
+  <string name="start_date">开始日期</string>
+  <string name="plans_selected">已选 %1$d 个</string>
+  <string name="active_plan_required">至少保留一个使用中的方案</string>
+  <string name="add_plan_title">添加倒班方案</string>
+  <plurals name="delete_selected_plans_title">
+    <item quantity="other">删除选中的 %1$d 个方案？</item>
+  </plurals>
+  <string name="plan_active">使用中</string>
+  <string name="share_plan_description">分享排班方案</string>
+  <string name="today_short">今</string>
+  <string name="month_title">%1$d月</string>
+  <string name="home_empty_plan">尚未配置倒班方案：点底部“设置”新建一个，日历会按周期自动着色。</string>
+  <string name="today_schedule">今日排班</string>
+  <string name="no_plan">暂无倒班方案</string>
+  <string name="no_group">暂无班组</string>
+  <string name="no_schedule">暂无排班</string>
+  <string name="unassigned_shift">未指派班次</string>
+  <string name="on_rest">休班中</string>
+  <string name="on_shift">倒班中</string>
+  <string name="plan_label">方案：%1$s</string>
+  <string name="holiday_work_badge">班</string>
+  <string name="holiday_rest_badge">休</string>
+  <string name="date_dialog_title">%1$d年%2$d月%3$d日 · 周%4$s</string>
+  <string name="makeup_workday">%1$s · 调休上班</string>
+  <string name="legal_holiday">%1$s · 法定假日</string>
+  <string name="date_no_schedule">该日期暂无排班信息。</string>
+  <string name="shift_override">（换班覆盖）</string>
+  <string name="lunar_date">%1$s%2$s月%3$s</string>
+  <string name="lunar_leap">闰</string>
+  <string name="holiday_new_year">元旦</string>
+  <string name="holiday_spring_festival">春节</string>
+  <string name="holiday_lantern_festival">元宵节</string>
+  <string name="holiday_dragon_heads_raising">龙抬头</string>
+  <string name="holiday_qingming">清明节</string>
+  <string name="holiday_labor_day">劳动节</string>
+  <string name="holiday_dragon_boat">端午节</string>
+  <string name="holiday_qixi">七夕</string>
+  <string name="holiday_ghost_festival">中元节</string>
+  <string name="holiday_mid_autumn">中秋节</string>
+  <string name="holiday_double_ninth">重阳节</string>
+  <string name="holiday_laba">腊八节</string>
+  <string name="holiday_new_year_eve">除夕</string>
+  <string name="holiday_national_day">国庆节</string>
+  <string name="holiday_valentines">情人节</string>
+  <string name="holiday_womens_day">妇女节</string>
+  <string name="holiday_april_fools">愚人节</string>
+  <string name="holiday_childrens_day">儿童节</string>
+  <string name="holiday_halloween">万圣节</string>
+  <string name="holiday_christmas">圣诞节</string>
+  <string name="holiday_mothers_day">母亲节</string>
+  <string name="holiday_fathers_day">父亲节</string>
+  <string name="holiday_thanksgiving">感恩节</string>
+  <string name="share_title">分享配置</string>
+  <string name="share_empty">还没有排班方案，先去设置里新建一个吧。</string>
+  <string name="share_select_plan">选择要分享的方案</string>
+  <plurals name="cycle_summary">
+    <item quantity="other">%1$d 天周期</item>
+  </plurals>
+  <string name="selected_description">已选择</string>
+  <string name="share_scan">扫码分享</string>
+  <string name="qr_description">排班方案二维码</string>
+  <string name="qr_too_large">方案太大，二维码装不下，请改用下面的复制或系统分享。</string>
+  <string name="share_other_methods">其它方式</string>
+  <string name="copy_clipboard">复制到剪贴板</string>
+  <string name="copy_clipboard_summary">复制方案配置文本</string>
+  <string name="copied_plan">已复制方案配置</string>
+  <string name="system_share">系统分享</string>
+  <string name="system_share_summary">调起系统分享面板发送文本</string>
+  <string name="share_subject">%1$s · 排班方案</string>
+  <string name="share_clip_label">倒班方案配置</string>
+  <string name="share_text_header">【%1$s】排班方案</string>
+  <string name="share_chooser_title">分享排班方案</string>
+  <string name="about_source">查看源代码</string>
+  <string name="about_source_summary">在 GitHub 上查看项目源码</string>
+  <string name="about_licenses">开放源代码许可</string>
+  <string name="about_licenses_summary">查看项目使用的开源组件及许可证</string>
+  <string name="about_updates">获取更新</string>
+  <string name="about_updates_summary">检查是否有新版本</string>
+  <string name="version_text">v%1$s</string>
+  <string name="open_repository">打开项目仓库</string>
+  <string name="open_releases">打开更新页面</string>
+  <string name="not_implemented">“%1$s”暂未实现</string>
+  <string name="license_summary">许可证：%1$s</string>
+  <string name="project_androidx">AndroidX 与 Jetpack Compose</string>
+  <string name="project_kotlin">Kotlin 与 kotlinx.serialization</string>
+  <string name="project_zxing">ZXing 与 zxing-android-embedded</string>
+  <string name="project_miuix">miuix</string>
+  <string name="project_immutable_collections">kotlinx.collections.immutable</string>
+  <string name="license_apache_2">Apache License 2.0</string>
+  <string name="scan_back">返回</string>
 </resources>

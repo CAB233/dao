@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -65,6 +66,9 @@ fun SharePlanScreen(
     BackHandler { onBack() }
     val context = LocalContext.current
     val appName = stringResource(R.string.app_name)
+    val shareHeader = stringResource(R.string.share_text_header, appName)
+    val copiedMessage = stringResource(R.string.copied_plan)
+    val shareSubject = stringResource(R.string.share_subject, appName)
 
     var selectedSchemeId by remember(doc) {
         mutableStateOf(doc.activeSchemeId ?: doc.schemes.firstOrNull()?.id)
@@ -74,18 +78,18 @@ fun SharePlanScreen(
 
     val payload = remember(doc, selectedScheme?.id) { doc.toShare(selectedScheme?.id) }
     val payloadText = remember(payload) { PlanShareCodec.encodePayload(payload) }
-    val shareText = remember(doc, selectedScheme?.id) {
-        PlanShareCodec.shareText(doc, appName, selectedScheme?.id)
+    val shareText = remember(doc, selectedScheme?.id, shareHeader) {
+        PlanShareCodec.shareText(doc, shareHeader, selectedScheme?.id)
     }
     val qrCode = remember(payloadText) { encodeQrCode(payloadText) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "分享配置",
+                title = stringResource(R.string.share_title),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Regular.Back, contentDescription = "返回")
+                        Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -98,24 +102,24 @@ fun SharePlanScreen(
             if (doc.schemes.isEmpty()) {
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    "还没有排班方案，先去设置里新建一个吧。",
+                    stringResource(R.string.share_empty),
                     fontSize = 14.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             } else {
-            SmallTitle(text = "选择要分享的方案")
+            SmallTitle(text = stringResource(R.string.share_select_plan))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 doc.schemes.sortedByDescending { it.createdAt }.forEach { scheme ->
                     val selected = scheme.id == selectedScheme?.id
                     BasicComponent(
                         title = scheme.name,
-                        summary = "${scheme.cycleDays} 天周期",
+                        summary = pluralStringResource(R.plurals.cycle_summary, scheme.cycleDays, scheme.cycleDays),
                         endActions = {
                             if (selected) {
                                 Icon(
                                     imageVector = MiuixIcons.Basic.Check,
-                                    contentDescription = "已选择",
+                                    contentDescription = stringResource(R.string.selected_description),
                                     modifier = Modifier.size(20.dp),
                                     tint = MiuixTheme.colorScheme.primary,
                                 )
@@ -126,7 +130,7 @@ fun SharePlanScreen(
                 }
             }
 
-            SmallTitle(text = "扫码分享")
+            SmallTitle(text = stringResource(R.string.share_scan))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 Column(
                     Modifier.fillMaxWidth().padding(16.dp),
@@ -143,13 +147,13 @@ fun SharePlanScreen(
                         ) {
                             Image(
                                 bitmap = qrCode,
-                                contentDescription = "排班方案二维码",
+                                contentDescription = stringResource(R.string.qr_description),
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
                     } else {
                         Text(
-                            "方案太大，二维码装不下，请改用下面的复制或系统分享。",
+                            stringResource(R.string.qr_too_large),
                             fontSize = 13.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -157,21 +161,25 @@ fun SharePlanScreen(
                 }
             }
 
-            SmallTitle(text = "其它方式")
+            SmallTitle(text = stringResource(R.string.share_other_methods))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
-                    title = "复制到剪贴板",
-                    summary = "复制方案配置文本",
+                    title = stringResource(R.string.copy_clipboard),
+                    summary = stringResource(R.string.copy_clipboard_summary),
                     onClick = {
                         context.copyToClipboard(shareText)
-                        Toast.makeText(context, "已复制方案配置", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
                     },
                 )
                 BasicComponent(
-                    title = "系统分享",
-                    summary = "调起系统分享面板发送文本",
+                    title = stringResource(R.string.system_share),
+                    summary = stringResource(R.string.system_share_summary),
                     onClick = {
-                        ShareUtils.shareText(context, "$appName · 排班方案", shareText)
+                        ShareUtils.shareText(
+                            context,
+                            shareSubject,
+                            shareText,
+                        )
                     },
                 )
             }
@@ -184,5 +192,5 @@ fun SharePlanScreen(
 
 private fun Context.copyToClipboard(text: String) {
     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-    clipboard.setPrimaryClip(ClipData.newPlainText("倒班方案配置", text))
+    clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.share_clip_label), text))
 }

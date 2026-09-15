@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +84,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.R
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
@@ -92,6 +94,7 @@ import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.primaryAnchorEpochDay
 import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.common.TemplateEditorDialog
+import win.zuoye.dao.ui.common.localizedTimeRangeText
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import win.zuoye.dao.ui.scheme.AnchorDialog
 import win.zuoye.dao.ui.scheme.SchemeEditScreen
@@ -99,14 +102,17 @@ import win.zuoye.dao.ui.scheme.UNASSIGNED
 import win.zuoye.dao.ui.scheme.formatYmd
 import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
-private enum class Step(val label: String) {
-    METHOD("创建方式"), TEMPLATES("班次模板"), CYCLE_ASSIGN("周期与指派"), ANCHOR("开始日期")
+private enum class Step(val labelRes: Int) {
+    METHOD(R.string.onboarding_method_title),
+    TEMPLATES(R.string.onboarding_templates_title),
+    CYCLE_ASSIGN(R.string.onboarding_cycle_title),
+    ANCHOR(R.string.onboarding_anchor_title),
 }
 
-private enum class CreateMethod(val title: String, val summary: String) {
-    MANUAL("手动添加", "自己设置班次模板、周期与班组"),
-    CLIPBOARD("从剪贴板导入", "读取已经复制的倒班方案"),
-    QR_CODE("扫描二维码导入", "扫描他人分享的方案二维码"),
+private enum class CreateMethod(val titleRes: Int, val summaryRes: Int) {
+    MANUAL(R.string.create_manual, R.string.create_manual_summary),
+    CLIPBOARD(R.string.create_clipboard, R.string.create_clipboard_summary),
+    QR_CODE(R.string.create_qr, R.string.create_qr_summary),
 }
 
 /**
@@ -132,22 +138,25 @@ fun OnboardingScreen(
     BackHandler(enabled = editing != null) { onCancel?.invoke() }
 
     val context = LocalContext.current
+    val importUnrecognized = stringResource(R.string.import_unrecognized)
+    val defaultPlanName = stringResource(R.string.default_plan_name, doc.schemes.size + 1)
+    val defaultGroupName = stringResource(R.string.default_group_name, 1)
     var step by remember { mutableStateOf(if (editing == null) Step.METHOD else Step.TEMPLATES) }
     var createMethod by remember { mutableStateOf<CreateMethod?>(null) }
     var manualMode by remember { mutableStateOf(false) }
-    val manualScheme = remember {
+    val manualScheme = remember(doc, defaultPlanName, defaultGroupName) {
         val id = System.currentTimeMillis()
         val today = Ymd.today().epochDay
         Scheme(
             id = id,
-            name = "方案 ${doc.schemes.size + 1}",
+            name = defaultPlanName,
             cycleDays = 1,
             dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
             createdAt = id,
             groups = persistentListOf(
                 SchemeGroup(
                     id = id,
-                    name = "班组 1",
+                    name = defaultGroupName,
                     anchorEpochDay = today,
                 ),
             ),
@@ -199,7 +208,7 @@ fun OnboardingScreen(
     val importFrom: (String?) -> Unit = { text ->
         val payload = text?.let(PlanShareCodec::decode)
         if (payload == null) {
-            Toast.makeText(context, "没识别到方案数据", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, importUnrecognized, Toast.LENGTH_SHORT).show()
         } else {
             onImportPlan(payload)
         }
@@ -267,12 +276,12 @@ fun OnboardingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (editing == null) "引导页面" else "修改方案",
+                title = stringResource(if (editing == null) R.string.onboarding_title else R.string.onboarding_edit_title),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     if (editing != null && step == Step.TEMPLATES) {
                         IconButton(onClick = { onCancel?.invoke() }) {
-                            Icon(MiuixIcons.Regular.Back, contentDescription = "返回")
+                            Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
                         }
                     }
                 },
@@ -290,7 +299,7 @@ fun OnboardingScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Regular.Add,
-                            contentDescription = "新增班次",
+                            contentDescription = stringResource(R.string.action_add_shift),
                             tint = MiuixTheme.colorScheme.onPrimary,
                         )
                     }
@@ -308,7 +317,7 @@ fun OnboardingScreen(
             ) {
                 when {
                     step == Step.METHOD && onSkip != null -> TextButton(
-                        text = "跳过配置",
+                        text = stringResource(R.string.action_skip_configuration),
                         onClick = onSkip,
                         colors = ButtonDefaults.textButtonColors(
                             textColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
@@ -316,7 +325,7 @@ fun OnboardingScreen(
                         modifier = Modifier.weight(1f),
                     )
                     step != Step.METHOD -> TextButton(
-                        text = "上一步",
+                        text = stringResource(R.string.action_previous),
                         onClick = { back() },
                         modifier = Modifier.weight(1f),
                     )
@@ -328,7 +337,7 @@ fun OnboardingScreen(
                     colors = ButtonDefaults.buttonColorsPrimary(),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(if (step == Step.ANCHOR) "完成" else "下一步")
+                    Text(stringResource(if (step == Step.ANCHOR) R.string.action_done else R.string.action_next))
                 }
             }
         },
@@ -456,7 +465,7 @@ private fun CreateMethodStep(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "选择创建倒班方案方式",
+            text = stringResource(R.string.create_method_prompt),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
             fontSize = 23.sp,
             fontWeight = FontWeight.Normal,
@@ -487,7 +496,7 @@ private fun CreateMethodStep(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = method.title,
+                            text = stringResource(method.titleRes),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (isSelected) {
@@ -498,7 +507,7 @@ private fun CreateMethodStep(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = method.summary,
+                            text = stringResource(method.summaryRes),
                             fontSize = 13.sp,
                             color = if (isSelected) {
                                 MiuixTheme.colorScheme.onPrimary
@@ -538,7 +547,7 @@ private fun StepIndicator(step: Step) {
         }
         Spacer(Modifier.width(8.dp))
         Text(
-            "${index + 1}/${steps.size} ${step.label}",
+            stringResource(R.string.step_progress, index + 1, steps.size, stringResource(step.labelRes)),
             fontSize = 13.sp,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
@@ -566,7 +575,7 @@ internal fun TemplatesStep(
     onAdd: (() -> Unit)?,
     onEdit: (ShiftTemplate) -> Unit,
     onDelete: (ShiftTemplate) -> Unit,
-    title: String? = "我的班次",
+    title: String?,
     showEditAction: Boolean = true,
     addHoldDown: Boolean = false,
     editHoldDown: (ShiftTemplate) -> Boolean = { false },
@@ -581,7 +590,7 @@ internal fun TemplatesStep(
                 SmallTitle(text = title, modifier = Modifier.weight(1f))
                 if (onAdd != null) {
                     IconButton(onClick = onAdd, holdDownState = addHoldDown) {
-                        Icon(MiuixIcons.Regular.Add, contentDescription = "新增班次")
+                        Icon(MiuixIcons.Regular.Add, contentDescription = stringResource(R.string.action_add_shift))
                     }
                 }
             }
@@ -589,7 +598,7 @@ internal fun TemplatesStep(
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
             if (templates.isEmpty()) {
                 Text(
-                    "还没有班次，点击右下角添加",
+                    stringResource(R.string.empty_shifts),
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -619,18 +628,18 @@ internal fun TemplatesStep(
                     Column(Modifier.weight(1f)) {
                         Text(template.name, fontSize = 16.sp)
                         Text(
-                            template.timeRangeText(),
+                            template.localizedTimeRangeText(),
                             fontSize = 12.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
                     if (showEditAction) {
                         IconButton(onClick = { onEdit(template) }, holdDownState = editHoldDown(template)) {
-                            Icon(MiuixIcons.Regular.Edit, contentDescription = "编辑")
+                            Icon(MiuixIcons.Regular.Edit, contentDescription = stringResource(R.string.action_edit))
                         }
                     }
                     IconButton(onClick = { onDelete(template) }, holdDownState = deleteHoldDown(template)) {
-                        Icon(MiuixIcons.Regular.Delete, contentDescription = "删除")
+                        Icon(MiuixIcons.Regular.Delete, contentDescription = stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -667,17 +676,17 @@ internal fun AssignmentRow(
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("第 ${day + 1} 天", fontSize = 15.sp, color = MiuixTheme.colorScheme.onSurface)
+        Text(stringResource(R.string.cycle_day, day + 1), fontSize = 15.sp, color = MiuixTheme.colorScheme.onSurface)
         Spacer(Modifier.weight(1f))
         if (template == null) {
-            Text("点击选择", fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Text(stringResource(R.string.tap_to_select), fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         } else {
             Box(Modifier.size(12.dp).background(ShiftPalette.color(template.colorArgb), CircleShape))
             Spacer(Modifier.width(8.dp))
             Text(template.name, fontSize = 14.sp)
             Spacer(Modifier.width(6.dp))
             Text(
-                template.timeRangeText(),
+                template.localizedTimeRangeText(),
                 fontSize = 12.sp,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
@@ -712,7 +721,7 @@ private fun CycleAssignStep(
             TextField(
                 value = cycleText,
                 onValueChange = onCycleChange,
-                label = "1–99 天，如 4",
+                label = stringResource(R.string.cycle_days_hint),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 // 和方案页的周期天数表单一样高（纵向 26dp）
                 insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
@@ -724,7 +733,7 @@ private fun CycleAssignStep(
         }
         if (cycleDays != null) {
             item {
-                SmallTitle(text = "为周期内每天选择班次")
+                SmallTitle(text = stringResource(R.string.assign_each_day))
             }
             items(cycleDays) { day ->
                 AssignmentRow(
@@ -756,8 +765,8 @@ private fun AnchorPickerStep(
     Column(Modifier.fillMaxWidth()) {
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
             BasicComponent(
-                title = "开始日期",
-                summary = "周期第 1 天：${formatYmd(anchor)}",
+                title = stringResource(R.string.start_date),
+                summary = stringResource(R.string.cycle_first_day, formatYmd(anchor)),
                 endActions = {
                     Icon(
                         imageVector = MiuixIcons.Basic.ArrowRight,
@@ -771,7 +780,7 @@ private fun AnchorPickerStep(
             )
         }
         Text(
-            "周期第 1 天对应这一天，日历会按周期自动推导其它日期的班次。",
+            stringResource(R.string.anchor_explanation),
             fontSize = 13.sp,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -789,21 +798,22 @@ internal fun TemplatePickDialog(
     onDismiss: () -> Unit,
 ) {
     if (templates.isEmpty()) {
-        OverlayDialog(show = show, title = "选择班次", onDismissRequest = onDismiss) {
+        OverlayDialog(show = show, title = stringResource(R.string.select_shift), onDismissRequest = onDismiss) {
             Text(
-                "请先在第一步添加班次。",
+                stringResource(R.string.select_shift_empty),
                 fontSize = 14.sp,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
         return
     }
-    val entry = remember(templates, currentId, onPick) {
+    val localizedRanges = templates.map { it.localizedTimeRangeText() }
+    val entry = remember(templates, localizedRanges, currentId, onPick) {
         DropdownEntry(
-            items = templates.map { template ->
+            items = templates.mapIndexed { index, template ->
                 DropdownItem(
                     text = template.name,
-                    summary = template.timeRangeText(),
+                    summary = localizedRanges[index],
                     selected = template.id == currentId,
                     onClick = { onPick(template.id) },
                     icon = { iconModifier ->
@@ -823,8 +833,8 @@ internal fun TemplatePickDialog(
     }
     WindowDropdownDialog(
         entry = entry,
-        title = "选择班次",
-        dialogButtonString = "取消",
+        title = stringResource(R.string.select_shift),
+        dialogButtonString = stringResource(R.string.action_cancel),
         show = show,
         onDismiss = onDismiss,
         onDismissFinished = {},
@@ -843,14 +853,14 @@ internal fun DeleteTemplateDialog(
 ) {
     OverlayDialog(
         show = show,
-        title = "删除班次「${template.name}」？",
-        summary = if (inUse) "该班次正被方案使用，删除后相关日期会显示「未排班」。" else "确定删除该班次吗？",
+        title = stringResource(R.string.delete_shift_title, template.name),
+        summary = stringResource(if (inUse) R.string.delete_shift_in_use else R.string.delete_shift_confirm),
         onDismissRequest = onDismiss,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(text = "取消", onClick = onDismiss, modifier = Modifier.weight(1f))
+            TextButton(text = stringResource(R.string.action_cancel), onClick = onDismiss, modifier = Modifier.weight(1f))
             TextButton(
-                text = "删除",
+                text = stringResource(R.string.action_delete),
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),

@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -42,6 +43,7 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.ShiftTemplate
+import win.zuoye.dao.R
 import win.zuoye.dao.ui.ShiftPalette
 
 /** 时间滚轮的行高：miuix 默认 45dp，这里跟日期弹窗保持一致，数字别挨得太近 */
@@ -59,6 +61,7 @@ fun TemplateEditorDialog(
     onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val defaultRestName = stringResource(R.string.shift_rest)
     // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
     var name by remember(existing) { mutableStateOf(existing?.name ?: "") }
     var startH by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
@@ -97,8 +100,8 @@ fun TemplateEditorDialog(
 
     OverlayDialog(
         show = show,
-        title = if (existing == null) "新增班次" else "编辑班次",
-        summary = "非工作日则打开「休班」开关",
+        title = stringResource(if (existing == null) R.string.shift_add_title else R.string.shift_edit_title),
+        summary = stringResource(R.string.shift_editor_summary),
         onDismissRequest = onDismiss,
     ) {
         // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
@@ -112,7 +115,7 @@ fun TemplateEditorDialog(
                 TextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = "班次名称",
+                    label = stringResource(R.string.shift_name),
                     trailingIcon = {
                         // 颜色收进名称框右边这个圆点里，点它进颜色页
                         IconButton(onClick = { showColorDialog = true }) {
@@ -137,14 +140,14 @@ fun TemplateEditorDialog(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("休班", fontSize = 16.sp, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.shift_rest), fontSize = 16.sp, modifier = Modifier.weight(1f))
                         Switch(checked = isRest, onCheckedChange = { isRest = it })
                     }
                 }
                 if (!isRest) {
                     Spacer(Modifier.height(12.dp))
                     SegmentedSwitch(
-                        tabs = listOf("开始", "结束"),
+                        tabs = listOf(stringResource(R.string.shift_start), stringResource(R.string.shift_end)),
                         selectedIndex = if (editingEnd) 1 else 0,
                         onSelect = { editingEnd = it == 1 },
                         modifier = Modifier.fillMaxWidth(),
@@ -176,16 +179,16 @@ fun TemplateEditorDialog(
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "保存",
+                    text = stringResource(R.string.action_save),
                     enabled = isRest || name.isNotBlank(),
                     onClick = {
                         onSave(
-                            name.trim().ifBlank { "休班" },
+                            name.trim().ifBlank { defaultRestName },
                             if (isRest) 0 else startH * 60 + startM,
                             if (isRest) 0 else endH * 60 + endM,
                             color,
@@ -230,7 +233,7 @@ private fun ColorDialog(
 
     OverlayDialog(
         show = show,
-        title = "选择颜色",
+        title = stringResource(R.string.color_select),
         onDismissRequest = onDismiss,
     ) {
         // 调色盘本身挺高，长内容按 Dialog 规范交给滚动区
@@ -247,7 +250,7 @@ private fun ColorDialog(
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "预设颜色",
+                    stringResource(R.string.color_presets),
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
@@ -257,12 +260,12 @@ private fun ColorDialog(
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "确定",
+                    text = stringResource(R.string.action_confirm),
                     onClick = { onConfirm(draft.copy(alpha = 1f).toArgb()) },
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                     modifier = Modifier.weight(1f),

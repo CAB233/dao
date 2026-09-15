@@ -38,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
@@ -73,6 +75,7 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.R
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
@@ -105,6 +108,7 @@ fun SchemeEditScreen(
     onDelete: () -> Unit,
     onboardingMode: Boolean = false,
 ) {
+    val defaultGroupNames = (1..99).map { stringResource(R.string.default_group_name, it) }
     val isNewScheme = remember(scheme.id) { doc.schemes.none { it.id == scheme.id } }
     val initialDraft = remember(scheme.id) {
         if (isNewScheme) {
@@ -213,7 +217,7 @@ fun SchemeEditScreen(
             val next = List(count) { index ->
                 existing.getOrNull(index) ?: SchemeGroup(
                     id = System.currentTimeMillis() + index,
-                    name = "班组 ${index + 1}",
+                    name = defaultGroupNames[index],
                     anchorEpochDay = existing.firstOrNull()?.anchorEpochDay
                         ?: Ymd.today().epochDay,
                 )
@@ -279,11 +283,11 @@ fun SchemeEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (onboardingMode) "引导页面" else "编辑方案",
+                title = stringResource(if (onboardingMode) R.string.onboarding_title else R.string.plan_edit_title),
                 navigationIcon = {
                     if (!onboardingMode) {
                         IconButton(onClick = ::requestExit) {
-                            Icon(MiuixIcons.Regular.Back, contentDescription = "返回方案列表")
+                            Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back_to_plan_list))
                         }
                     }
                 },
@@ -295,7 +299,7 @@ fun SchemeEditScreen(
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Regular.Ok,
-                                contentDescription = "保存",
+                                contentDescription = stringResource(R.string.action_save),
                                 tint = if (draftScheme.name.isNotBlank()) {
                                     MiuixTheme.colorScheme.primary
                                 } else {
@@ -317,7 +321,7 @@ fun SchemeEditScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     TextButton(
-                        text = "上一步",
+                        text = stringResource(R.string.action_previous),
                         onClick = { if (tabIndex > 0) tabIndex-- else onBack() },
                         modifier = Modifier.weight(1f),
                     )
@@ -327,7 +331,7 @@ fun SchemeEditScreen(
                         colors = ButtonDefaults.buttonColorsPrimary(),
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(if (tabIndex == 2) "完成" else "下一步")
+                        Text(stringResource(if (tabIndex == 2) R.string.action_done else R.string.action_next))
                     }
                 }
             }
@@ -349,7 +353,7 @@ fun SchemeEditScreen(
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Regular.Add,
-                                contentDescription = "新增班次",
+                                contentDescription = stringResource(R.string.action_add_shift),
                                 tint = MiuixTheme.colorScheme.onPrimary,
                             )
                         }
@@ -370,7 +374,7 @@ fun SchemeEditScreen(
                 onValueChange = { input ->
                     updateScheme { it.copy(name = input) }
                 },
-                label = "方案名",
+                label = stringResource(R.string.plan_name),
                 useLabelAsPlaceholder = true,
                 // 点进去才出现主题色描边，保持它作为正文表单的正常样式
                 colors = TextFieldDefaults.textFieldColors(
@@ -391,7 +395,11 @@ fun SchemeEditScreen(
             if (!onboardingMode) {
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     SegmentedSwitch(
-                        tabs = listOf("班次模板", "排班设置", "班组设置"),
+                        tabs = listOf(
+                            stringResource(R.string.plan_tab_templates),
+                            stringResource(R.string.plan_tab_schedule),
+                            stringResource(R.string.plan_tab_groups),
+                        ),
                         selectedIndex = tabIndex,
                         onSelect = { tabIndex = it },
                         // 连同灰色轨道一起填满整张卡片
@@ -458,8 +466,8 @@ fun SchemeEditScreen(
                             .padding(bottom = 12.dp),
                     ) {
                         BasicComponent(
-                            title = "删除方案",
-                            summary = "删除后无法恢复",
+                            title = stringResource(R.string.plan_delete),
+                            summary = stringResource(R.string.delete_irreversible),
                             titleColor = BasicComponentDefaults.titleColor(color = MiuixTheme.colorScheme.error),
                             holdDownState = showDeleteScheme,
                             onClick = { showDeleteScheme = true },
@@ -473,7 +481,7 @@ fun SchemeEditScreen(
         // ---- 弹层：都在 Scaffold 内部 ----
         OverlayDialog(
             show = showGroupCountDialog,
-            title = "班组数量",
+            title = stringResource(R.string.group_count),
             onDismissRequest = { showGroupCountDialog = false },
         ) {
             Column(Modifier.fillMaxWidth()) {
@@ -482,7 +490,7 @@ fun SchemeEditScreen(
                     onValueChange = { input ->
                         groupCountDraft = input.filter { it.isDigit() }.take(2)
                     },
-                    label = "班组数量（1–99）",
+                    label = stringResource(R.string.group_count_label),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
                     modifier = Modifier.fillMaxWidth(),
@@ -490,12 +498,12 @@ fun SchemeEditScreen(
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
-                        text = "取消",
+                        text = stringResource(R.string.action_cancel),
                         onClick = { showGroupCountDialog = false },
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(
-                        text = "确定",
+                        text = stringResource(R.string.action_confirm),
                         enabled = groupCountDraft.toIntOrNull()?.let { it in 1..99 } == true,
                         onClick = {
                             updateGroupCount(groupCountDraft)
@@ -510,20 +518,20 @@ fun SchemeEditScreen(
 
         OverlayDialog(
             show = showGroupEditor,
-            title = "编辑班组",
+            title = stringResource(R.string.group_edit),
             onDismissRequest = { showGroupEditor = false },
         ) {
             Column(Modifier.fillMaxWidth()) {
                 TextField(
                     value = groupNameDraft,
                     onValueChange = { groupNameDraft = it },
-                    label = "班组名称",
+                    label = stringResource(R.string.group_name),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
                 Card(Modifier.fillMaxWidth()) {
                     BasicComponent(
-                        title = "基准日期",
+                        title = stringResource(R.string.group_anchor),
                         summary = formatYmd(Ymd.fromEpochDay(groupAnchorEpochDay)),
                         endActions = {
                             Icon(
@@ -540,12 +548,12 @@ fun SchemeEditScreen(
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
-                        text = "取消",
+                        text = stringResource(R.string.action_cancel),
                         onClick = { showGroupEditor = false },
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(
-                        text = "确定",
+                        text = stringResource(R.string.action_confirm),
                         enabled = groupNameDraft.isNotBlank(),
                         onClick = ::saveGroup,
                         colors = ButtonDefaults.textButtonColorsPrimary(),
@@ -565,7 +573,7 @@ fun SchemeEditScreen(
 
         AnchorDialog(
             anchor = Ymd.fromEpochDay(groupAnchorEpochDay),
-            title = "基准日期",
+            title = stringResource(R.string.group_anchor),
             show = showGroupAnchorDialog,
             onDismiss = { showGroupAnchorDialog = false },
             onConfirm = { date ->
@@ -576,7 +584,7 @@ fun SchemeEditScreen(
 
         OverlayDialog(
             show = showCycleDialog,
-            title = "周期天数",
+            title = stringResource(R.string.cycle_days),
             onDismissRequest = { showCycleDialog = false },
         ) {
             Column(Modifier.fillMaxWidth()) {
@@ -585,7 +593,7 @@ fun SchemeEditScreen(
                     onValueChange = { input ->
                         cycleDraft = input.filter { it.isDigit() }.take(2)
                     },
-                    label = "周期天数（1–99）",
+                    label = stringResource(R.string.cycle_days_label),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
                     modifier = Modifier.fillMaxWidth(),
@@ -593,12 +601,12 @@ fun SchemeEditScreen(
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
-                        text = "取消",
+                        text = stringResource(R.string.action_cancel),
                         onClick = { showCycleDialog = false },
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(
-                        text = "确定",
+                        text = stringResource(R.string.action_confirm),
                         enabled = cycleDraft.toIntOrNull()?.let { it in 1..99 } == true,
                         onClick = {
                             updateCycle(cycleDraft)
@@ -691,17 +699,17 @@ fun SchemeEditScreen(
 
         OverlayDialog(
             show = showExitConfirmation,
-            title = "保存更改后退出？",
+            title = stringResource(R.string.unsaved_exit_title),
             summary = if (isNewScheme) {
-                "此方案尚未创建，不保存将丢弃全部编辑内容。"
+                stringResource(R.string.unsaved_new_summary)
             } else {
-                "不保存将丢弃本次编辑内容。"
+                stringResource(R.string.unsaved_summary)
             },
             onDismissRequest = { showExitConfirmation = false },
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    text = "不保存",
+                    text = stringResource(R.string.action_not_save),
                     onClick = {
                         showExitConfirmation = false
                         onBack()
@@ -709,12 +717,12 @@ fun SchemeEditScreen(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     onClick = { showExitConfirmation = false },
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "保存并退出",
+                    text = stringResource(R.string.action_save_and_exit),
                     enabled = draftScheme.name.isNotBlank(),
                     onClick = ::saveAndExit,
                     colors = ButtonDefaults.textButtonColorsPrimary(),
@@ -725,18 +733,18 @@ fun SchemeEditScreen(
 
         OverlayDialog(
             show = showDeleteScheme,
-            title = "删除「${draftScheme.name}」？",
-            summary = "删除后无法恢复。",
+            title = stringResource(R.string.delete_plan_title, draftScheme.name),
+            summary = stringResource(R.string.delete_irreversible_period),
             onDismissRequest = { showDeleteScheme = false },
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     onClick = { showDeleteScheme = false },
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "删除",
+                    text = stringResource(R.string.action_delete),
                     onClick = {
                         showDeleteScheme = false
                         onDelete()
@@ -763,11 +771,13 @@ private fun ShiftSettingsTab(
     Column(Modifier.fillMaxWidth()) {
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
             BasicComponent(
-                title = "周期天数",
+                title = stringResource(R.string.cycle_days),
                 endActions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = cycleText.toIntOrNull()?.takeIf { it in 1..99 }?.let { "$it 天" } ?: "未设置",
+                            text = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
+                                ?.let { pluralStringResource(R.plurals.days_count, it, it) }
+                                ?: stringResource(R.string.status_not_set),
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -818,12 +828,13 @@ private fun GroupSettingsTab(
     Column(Modifier.fillMaxWidth()) {
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
             BasicComponent(
-                title = "班组数量",
+                title = stringResource(R.string.group_count),
                 endActions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = groupCountText.toIntOrNull()?.takeIf { it in 1..99 }?.let { "$it 个" }
-                                ?: "未设置",
+                            text = groupCountText.toIntOrNull()?.takeIf { it in 1..99 }
+                                ?.let { pluralStringResource(R.plurals.groups_count, it, it) }
+                                ?: stringResource(R.string.status_not_set),
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -839,11 +850,11 @@ private fun GroupSettingsTab(
                 onClick = onOpenGroupCount,
             )
             BasicComponent(
-                title = "默认班组",
+                title = stringResource(R.string.default_group),
                 endActions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = defaultGroup?.name ?: "未设置",
+                            text = defaultGroup?.name ?: stringResource(R.string.status_not_set),
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -919,8 +930,8 @@ private fun DefaultGroupDialog(
     }
     WindowDropdownDialog(
         entry = entry,
-        title = "选择默认班组",
-        dialogButtonString = "取消",
+        title = stringResource(R.string.select_default_group),
+        dialogButtonString = stringResource(R.string.action_cancel),
         show = show,
         onDismiss = onDismiss,
         onDismissFinished = {},
@@ -935,7 +946,7 @@ private fun DefaultGroupDialog(
 @Composable
 internal fun AnchorDialog(
     anchor: Ymd,
-    title: String = "开始日期",
+    title: String? = null,
     show: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (Ymd) -> Unit,
@@ -953,20 +964,20 @@ internal fun AnchorDialog(
 
     OverlayDialog(
         show = show,
-        title = title,
+        title = title ?: stringResource(R.string.start_date),
         onDismissRequest = onDismiss,
     ) {
         Column(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth()) {
                 Text(
-                    text = "月",
+                    text = stringResource(R.string.month_label),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
                 Text(
-                    text = "日",
+                    text = stringResource(R.string.day_label),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 13.sp,
@@ -998,12 +1009,12 @@ internal fun AnchorDialog(
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "确定",
+                    text = stringResource(R.string.action_confirm),
                     onClick = { onConfirm(Ymd(anchor.year, month, day.coerceIn(1, maxDay))) },
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                     modifier = Modifier.weight(1f),

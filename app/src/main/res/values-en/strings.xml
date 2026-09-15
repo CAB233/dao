@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+  <string name="app_name">Shift Calendar</string>
+  <string name="action_back">Back</string>
+  <string name="action_back_to_plan_list">Back to plans</string>
+  <string name="action_cancel">Cancel</string>
+  <string name="action_confirm">OK</string>
+  <string name="action_save">Save</string>
+  <string name="action_delete">Delete</string>
+  <string name="action_edit">Edit</string>
+  <string name="action_next">Next</string>
+  <string name="action_previous">Previous</string>
+  <string name="action_done">Done</string>
+  <string name="action_not_save">Don’t save</string>
+  <string name="action_save_and_exit">Save and exit</string>
+  <string name="action_skip_configuration">Skip setup</string>
+  <string name="action_add_shift">Add shift</string>
+  <string name="action_add_plan">Add plan</string>
+  <string name="action_close_selection">Cancel selection</string>
+  <string name="status_not_set">Not set</string>
+  <string name="status_not_selected">Not selected</string>
+  <string name="nav_home">Home</string>
+  <string name="nav_settings">Settings</string>
+  <string name="settings_week_start">First day of week</string>
+  <string name="settings_week_start_summary">Choose the day each week starts</string>
+  <string name="settings_plans">Shift plans</string>
+  <string name="settings_plans_summary">Create, import, or select a plan</string>
+  <string name="settings_about">About</string>
+  <string-array name="weekday_short">
+    <item>Mon</item>
+    <item>Tue</item>
+    <item>Wed</item>
+    <item>Thu</item>
+    <item>Fri</item>
+    <item>Sat</item>
+    <item>Sun</item>
+  </string-array>
+  <string-array name="weekday_full">
+    <item>Monday</item>
+    <item>Tuesday</item>
+    <item>Wednesday</item>
+    <item>Thursday</item>
+    <item>Friday</item>
+    <item>Saturday</item>
+    <item>Sunday</item>
+  </string-array>
+  <string-array name="lunar_month_names">
+    <item>1st</item>
+    <item>2nd</item>
+    <item>3rd</item>
+    <item>4th</item>
+    <item>5th</item>
+    <item>6th</item>
+    <item>7th</item>
+    <item>8th</item>
+    <item>9th</item>
+    <item>10th</item>
+    <item>11th</item>
+    <item>12th</item>
+  </string-array>
+  <string-array name="lunar_day_names">
+    <item>Day 1</item>
+    <item>Day 2</item>
+    <item>Day 3</item>
+    <item>Day 4</item>
+    <item>Day 5</item>
+    <item>Day 6</item>
+    <item>Day 7</item>
+    <item>Day 8</item>
+    <item>Day 9</item>
+    <item>Day 10</item>
+    <item>Day 11</item>
+    <item>Day 12</item>
+    <item>Day 13</item>
+    <item>Day 14</item>
+    <item>Day 15</item>
+    <item>Day 16</item>
+    <item>Day 17</item>
+    <item>Day 18</item>
+    <item>Day 19</item>
+    <item>Day 20</item>
+    <item>Day 21</item>
+    <item>Day 22</item>
+    <item>Day 23</item>
+    <item>Day 24</item>
+    <item>Day 25</item>
+    <item>Day 26</item>
+    <item>Day 27</item>
+    <item>Day 28</item>
+    <item>Day 29</item>
+    <item>Day 30</item>
+  </string-array>
+  <string name="default_plan_name">Plan %1$d</string>
+  <string name="default_group_name">Group %1$d</string>
+  <string name="import_failed">Import failed</string>
+  <string name="import_unrecognized">No plan data recognized</string>
+  <string name="import_duplicate_only">These plans already exist and were not imported again</string>
+  <string name="import_nothing">No importable content recognized</string>
+  <string name="import_success">Imported %1$s and %2$s</string>
+  <string name="import_success_skipped">Imported %1$s and %2$s; skipped %3$s</string>
+  <plurals name="shift_count">
+    <item quantity="one">%1$d shift</item>
+    <item quantity="other">%1$d shifts</item>
+  </plurals>
+  <plurals name="plan_count">
+    <item quantity="one">%1$d plan</item>
+    <item quantity="other">%1$d plans</item>
+  </plurals>
+  <plurals name="duplicate_plan_count">
+    <item quantity="one">%1$d duplicate plan</item>
+    <item quantity="other">%1$d duplicate plans</item>
+  </plurals>
+  <string name="import_switch_hint">. Switch plans by tapping Enable in Settings</string>
+  <string name="shift_add_title">Add shift</string>
+  <string name="shift_edit_title">Edit shift</string>
+  <string name="shift_editor_summary">Turn on “Rest day” for a non-working day</string>
+  <string name="shift_name">Shift name</string>
+  <string name="shift_rest">Rest day</string>
+  <string name="shift_rest_time">Rest</string>
+  <string name="shift_start">Start</string>
+  <string name="shift_end">End</string>
+  <string name="shift_next_day">Next day %1$s</string>
+  <string name="color_select">Select color</string>
+  <string name="color_presets">Preset colors</string>
+  <string name="onboarding_title">Setup</string>
+  <string name="onboarding_edit_title">Edit plan</string>
+  <string name="onboarding_method_title">Creation method</string>
+  <string name="onboarding_templates_title">Shift templates</string>
+  <string name="onboarding_cycle_title">Cycle and assignments</string>
+  <string name="onboarding_anchor_title">Start date</string>
+  <string name="create_method_prompt">Choose how to create a shift plan</string>
+  <string name="create_manual">Create manually</string>
+  <string name="create_manual_summary">Set up shift templates, a cycle, and groups</string>
+  <string name="create_clipboard">Import from clipboard</string>
+  <string name="create_clipboard_summary">Read a copied shift plan</string>
+  <string name="create_qr">Scan QR code</string>
+  <string name="create_qr_summary">Scan a plan QR code shared by someone else</string>
+  <string name="empty_shifts">No shifts yet. Tap the button at the bottom right to add one</string>
+  <string name="cycle_day">Day %1$d</string>
+  <string name="tap_to_select">Tap to select</string>
+  <string name="cycle_days_hint">1–99 days, e.g. 4</string>
+  <string name="assign_each_day">Select a shift for each day in the cycle</string>
+  <string name="cycle_first_day">Cycle day 1: %1$s</string>
+  <string name="anchor_explanation">This date is day 1 of the cycle. Other dates are calculated automatically.</string>
+  <string name="select_shift">Select shift</string>
+  <string name="select_shift_empty">Add a shift in the first step.</string>
+  <string name="delete_shift_title">Delete “%1$s”?</string>
+  <string name="delete_shift_in_use">This shift is used by a plan. Related dates will show “Unassigned” after deletion.</string>
+  <string name="delete_shift_confirm">Delete this shift?</string>
+  <string name="plan_edit_title">Edit plan</string>
+  <string name="plan_name">Plan name</string>
+  <string name="plan_tab_templates">Shift templates</string>
+  <string name="plan_tab_schedule">Schedule</string>
+  <string name="plan_tab_groups">Groups</string>
+  <string name="plan_delete">Delete plan</string>
+  <string name="delete_irreversible">This can’t be undone</string>
+  <string name="delete_irreversible_period">This can’t be undone.</string>
+  <string name="group_count">Number of groups</string>
+  <string name="group_count_label">Number of groups (1–99)</string>
+  <string name="group_edit">Edit group</string>
+  <string name="group_name">Group name</string>
+  <string name="group_anchor">Reference date</string>
+  <string name="cycle_days">Cycle length</string>
+  <string name="cycle_days_label">Cycle length (1–99)</string>
+  <string name="unsaved_exit_title">Save changes before exiting?</string>
+  <string name="unsaved_new_summary">This plan hasn’t been created. All edits will be discarded if you don’t save.</string>
+  <string name="unsaved_summary">Your edits will be discarded if you don’t save.</string>
+  <string name="delete_plan_title">Delete “%1$s”?</string>
+  <plurals name="days_count">
+    <item quantity="one">%1$d day</item>
+    <item quantity="other">%1$d days</item>
+  </plurals>
+  <plurals name="groups_count">
+    <item quantity="one">%1$d group</item>
+    <item quantity="other">%1$d groups</item>
+  </plurals>
+  <string name="default_group">Default group</string>
+  <string name="select_default_group">Select default group</string>
+  <string name="month_label">Month</string>
+  <string name="day_label">Day</string>
+  <string name="start_date">Start date</string>
+  <string name="plans_selected">%1$d selected</string>
+  <string name="active_plan_required">At least one plan must remain active</string>
+  <string name="add_plan_title">Add shift plan</string>
+  <plurals name="delete_selected_plans_title">
+    <item quantity="one">Delete %1$d selected plan?</item>
+    <item quantity="other">Delete %1$d selected plans?</item>
+  </plurals>
+  <string name="plan_active">Active</string>
+  <string name="share_plan_description">Share shift plan</string>
+  <string name="today_short">Today</string>
+  <string name="month_title">%1$d</string>
+  <string name="home_empty_plan">No shift plan configured. Create one in Settings to color the calendar automatically.</string>
+  <string name="today_schedule">Today’s schedule</string>
+  <string name="no_plan">No shift plan</string>
+  <string name="no_group">No group</string>
+  <string name="no_schedule">No shift scheduled</string>
+  <string name="unassigned_shift">Unassigned shift</string>
+  <string name="on_rest">Resting</string>
+  <string name="on_shift">On shift</string>
+  <string name="plan_label">Plan: %1$s</string>
+  <string name="holiday_work_badge">Work</string>
+  <string name="holiday_rest_badge">Off</string>
+  <string name="date_dialog_title">%1$d-%2$02d-%3$02d · %4$s</string>
+  <string name="makeup_workday">%1$s · Adjusted workday</string>
+  <string name="legal_holiday">%1$s · Public holiday</string>
+  <string name="date_no_schedule">No schedule information for this date.</string>
+  <string name="shift_override">(Shift override)</string>
+  <string name="lunar_date">%1$s%2$s month, %3$s</string>
+  <string name="lunar_leap">Leap </string>
+  <string name="holiday_new_year">New Year’s Day</string>
+  <string name="holiday_spring_festival">Spring Festival</string>
+  <string name="holiday_lantern_festival">Lantern Festival</string>
+  <string name="holiday_dragon_heads_raising">Dragon Heads-raising Day</string>
+  <string name="holiday_qingming">Qingming Festival</string>
+  <string name="holiday_labor_day">Labor Day</string>
+  <string name="holiday_dragon_boat">Dragon Boat Festival</string>
+  <string name="holiday_qixi">Qixi Festival</string>
+  <string name="holiday_ghost_festival">Ghost Festival</string>
+  <string name="holiday_mid_autumn">Mid-Autumn Festival</string>
+  <string name="holiday_double_ninth">Double Ninth Festival</string>
+  <string name="holiday_laba">Laba Festival</string>
+  <string name="holiday_new_year_eve">Chinese New Year’s Eve</string>
+  <string name="holiday_national_day">National Day</string>
+  <string name="holiday_valentines">Valentine’s Day</string>
+  <string name="holiday_womens_day">International Women’s Day</string>
+  <string name="holiday_april_fools">April Fools’ Day</string>
+  <string name="holiday_childrens_day">Children’s Day</string>
+  <string name="holiday_halloween">Halloween</string>
+  <string name="holiday_christmas">Christmas</string>
+  <string name="holiday_mothers_day">Mother’s Day</string>
+  <string name="holiday_fathers_day">Father’s Day</string>
+  <string name="holiday_thanksgiving">Thanksgiving</string>
+  <string name="share_title">Share configuration</string>
+  <string name="share_empty">No shift plans yet. Create one in Settings first.</string>
+  <string name="share_select_plan">Select a plan to share</string>
+  <plurals name="cycle_summary">
+    <item quantity="one">%1$d-day cycle</item>
+    <item quantity="other">%1$d-day cycle</item>
+  </plurals>
+  <string name="selected_description">Selected</string>
+  <string name="share_scan">Share by QR code</string>
+  <string name="qr_description">Shift plan QR code</string>
+  <string name="qr_too_large">This plan is too large for a QR code. Use copy or system sharing below.</string>
+  <string name="share_other_methods">Other methods</string>
+  <string name="copy_clipboard">Copy to clipboard</string>
+  <string name="copy_clipboard_summary">Copy the plan configuration text</string>
+  <string name="copied_plan">Plan configuration copied</string>
+  <string name="system_share">System share</string>
+  <string name="system_share_summary">Open the system share sheet to send text</string>
+  <string name="share_subject">%1$s · Shift plan</string>
+  <string name="share_clip_label">Shift plan configuration</string>
+  <string name="share_text_header">[%1$s] Shift plan</string>
+  <string name="share_chooser_title">Share shift plan</string>
+  <string name="about_source">View source code</string>
+  <string name="about_source_summary">View the project source on GitHub</string>
+  <string name="about_licenses">Open-source licenses</string>
+  <string name="about_licenses_summary">View open-source components and licenses</string>
+  <string name="about_updates">Get updates</string>
+  <string name="about_updates_summary">Check for a new version</string>
+  <string name="version_text">v%1$s</string>
+  <string name="open_repository">Open project repository</string>
+  <string name="open_releases">Open updates page</string>
+  <string name="not_implemented">“%1$s” is not available yet</string>
+  <string name="license_summary">License: %1$s</string>
+  <string name="project_androidx">AndroidX and Jetpack Compose</string>
+  <string name="project_kotlin">Kotlin and kotlinx.serialization</string>
+  <string name="project_zxing">ZXing and zxing-android-embedded</string>
+  <string name="step_progress">%1$d/%2$d %3$s</string>
+  <string name="project_miuix">miuix</string>
+  <string name="project_immutable_collections">kotlinx.collections.immutable</string>
+  <string name="license_apache_2">Apache License 2.0</string>
+  <string name="scan_back">Back</string>
+</resources>

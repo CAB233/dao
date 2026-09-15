@@ -35,6 +35,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,7 +101,7 @@ private fun AboutHomeContent(
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Regular.Back, contentDescription = "返回")
+                        Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -133,18 +134,18 @@ private fun AboutHomeContent(
                         .padding(bottom = 12.dp),
                 ) {
                     AboutEntry(
-                        title = "查看源代码",
-                        summary = "在 GitHub 上查看项目源码",
+                        title = stringResource(R.string.about_source),
+                        summary = stringResource(R.string.about_source_summary),
                         onClick = { context.openRepository() },
                     )
                     AboutEntry(
-                        title = "开放源代码许可",
-                        summary = "查看项目使用的开源组件及许可证",
+                        title = stringResource(R.string.about_licenses),
+                        summary = stringResource(R.string.about_licenses_summary),
                         onClick = onOpenLicenses,
                     )
                     AboutEntry(
-                        title = "获取更新",
-                        summary = "检查是否有新版本",
+                        title = stringResource(R.string.about_updates),
+                        summary = stringResource(R.string.about_updates_summary),
                         onClick = { context.openReleases() },
                     )
                 }
@@ -180,7 +181,7 @@ private fun AboutHero(
         )
         Spacer(Modifier.height(5.dp))
         Text(
-            text = "v${app.versionName}",
+            text = stringResource(R.string.version_text, app.versionName),
             fontSize = 14.sp,
             color = colors.onSurfaceVariantSummary,
         )
@@ -223,26 +224,26 @@ private fun Context.openUrl(url: String, failureName: String) {
         .onFailure { notImplemented(failureName) }
 }
 
-private fun Context.openRepository() = openUrl(repositoryUrl, "打开项目仓库")
+private fun Context.openRepository() = openUrl(repositoryUrl, getString(R.string.open_repository))
 
-private fun Context.openReleases() = openUrl(releasesUrl, "打开更新页面")
+private fun Context.openReleases() = openUrl(releasesUrl, getString(R.string.open_releases))
 
 /** 链接无法打开时的临时反馈 */
 private fun Context.notImplemented(name: String) {
-    Toast.makeText(this, "「$name」暂未实现", Toast.LENGTH_SHORT).show()
+    Toast.makeText(this, getString(R.string.not_implemented, name), Toast.LENGTH_SHORT).show()
 }
 
 private data class OpenSourceProject(
-    val name: String,
-    val license: String,
+    @StringRes val nameRes: Int,
+    @StringRes val licenseRes: Int,
 )
 
 private val openSourceProjects = listOf(
-    OpenSourceProject("miuix", "Apache License 2.0"),
-    OpenSourceProject("AndroidX 与 Jetpack Compose", "Apache License 2.0"),
-    OpenSourceProject("Kotlin 与 kotlinx.serialization", "Apache License 2.0"),
-    OpenSourceProject("kotlinx.collections.immutable", "Apache License 2.0"),
-    OpenSourceProject("ZXing 与 zxing-android-embedded", "Apache License 2.0"),
+    OpenSourceProject(R.string.project_miuix, R.string.license_apache_2),
+    OpenSourceProject(R.string.project_androidx, R.string.license_apache_2),
+    OpenSourceProject(R.string.project_kotlin, R.string.license_apache_2),
+    OpenSourceProject(R.string.project_immutable_collections, R.string.license_apache_2),
+    OpenSourceProject(R.string.project_zxing, R.string.license_apache_2),
 )
 
 @Composable
@@ -254,11 +255,11 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "开放源代码许可",
+                title = stringResource(R.string.about_licenses),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Regular.Back, contentDescription = "返回")
+                        Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -275,7 +276,7 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             state = listState,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
-            items(openSourceProjects, key = { it.name }) { project ->
+            items(openSourceProjects, key = { it.nameRes }) { project ->
                 Card(
                     Modifier
                         .fillMaxWidth()
@@ -283,8 +284,8 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                         .padding(bottom = 12.dp),
                 ) {
                     BasicComponent(
-                        title = project.name,
-                        summary = "许可证：${project.license}",
+                        title = stringResource(project.nameRes),
+                        summary = stringResource(R.string.license_summary, stringResource(project.licenseRes)),
                     )
                 }
             }

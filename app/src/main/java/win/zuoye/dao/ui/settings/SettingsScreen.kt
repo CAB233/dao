@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -33,8 +35,8 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
-import win.zuoye.dao.ui.common.WEEKDAY_LABELS
 
 /** 设置：倒班方案（二级页面入口）、关于。 */
 @Composable
@@ -49,12 +51,13 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val versionName = remember(context) { context.appVersionName() }
-    val weekStartDay = doc.weekStartDay.coerceIn(0, WEEKDAY_LABELS.lastIndex)
+    val weekdays = stringArrayResource(R.array.weekday_full)
+    val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
 
     val activeScheme = doc.activeScheme() ?: doc.schemes.firstOrNull()
 
     Scaffold(
-        topBar = { TopAppBar(title = "设置") },
+        topBar = { TopAppBar(title = stringResource(R.string.nav_settings)) },
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         Column(
@@ -64,9 +67,9 @@ fun SettingsScreen(
             Spacer(Modifier.height(12.dp))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 OverlayDropdownPreference(
-                    title = "一周开始日",
-                    summary = "选择每周的起始星期",
-                    items = WEEKDAY_LABELS.map { "周$it" },
+                    title = stringResource(R.string.settings_week_start),
+                    summary = stringResource(R.string.settings_week_start_summary),
+                    items = weekdays.toList(),
                     selectedIndex = weekStartDay,
                     onSelectedIndexChange = onWeekStartDayChange,
                     modifier = Modifier.fillMaxWidth(),
@@ -74,12 +77,12 @@ fun SettingsScreen(
             }
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
-                    title = "倒班方案",
-                    summary = "创建、导入或选择方案",
+                    title = stringResource(R.string.settings_plans),
+                    summary = stringResource(R.string.settings_plans_summary),
                     endActions = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = activeScheme?.name ?: "未选择",
+                                text = activeScheme?.name ?: stringResource(R.string.status_not_selected),
                                 fontSize = 14.sp,
                                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                             )
@@ -92,8 +95,8 @@ fun SettingsScreen(
 
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
-                    title = "关于",
-                    summary = "v$versionName",
+                    title = stringResource(R.string.settings_about),
+                    summary = stringResource(R.string.version_text, versionName),
                     endActions = { Chevron() },
                     onClick = onOpenAbout,
                 )

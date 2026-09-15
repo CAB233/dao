@@ -8,9 +8,19 @@ import java.util.Calendar
  */
 object LegalHolidays {
 
+    enum class HolidayName {
+        NEW_YEAR,
+        SPRING_FESTIVAL,
+        QINGMING,
+        LABOR_DAY,
+        DRAGON_BOAT,
+        MID_AUTUMN,
+        NATIONAL_DAY,
+    }
+
     /** 某天的节假日属性：[name] 节日名；[isMakeupWorkday] = true 表示"调休上班"（角标显示「班」），否则是放假日（「休」） */
     data class HolidayDay(
-        val name: String,
+        val name: HolidayName,
         val isMakeupWorkday: Boolean,
         /** 只有对应的节日当天为 true，避免连续放假日每天重复显示节日名。 */
         val isNameDay: Boolean = false,
@@ -18,7 +28,7 @@ object LegalHolidays {
 
     /** 一条年度安排：放假日区间 + 调休上班日 */
     private class Arrangement(
-        val name: String,
+        val name: HolidayName,
         /** 放假日期（闭区间，IntArray=年月日） */
         val rest: List<IntArray>,
         val restEnd: List<IntArray>,
@@ -31,37 +41,37 @@ object LegalHolidays {
     // 2026：国办发明电〔2025〕7号；后续年度安排公布后追加到这里
     private val arrangements = listOf(
         Arrangement(
-            "元旦", listOf(intArrayOf(2026, 1, 1)), listOf(intArrayOf(2026, 1, 3)),
+            HolidayName.NEW_YEAR, listOf(intArrayOf(2026, 1, 1)), listOf(intArrayOf(2026, 1, 3)),
             intArrayOf(2026, 1, 1),
             listOf(intArrayOf(2026, 1, 4)),
         ),
         Arrangement(
-            "春节", listOf(intArrayOf(2026, 2, 15)), listOf(intArrayOf(2026, 2, 23)),
+            HolidayName.SPRING_FESTIVAL, listOf(intArrayOf(2026, 2, 15)), listOf(intArrayOf(2026, 2, 23)),
             intArrayOf(2026, 2, 17),
             listOf(intArrayOf(2026, 2, 14), intArrayOf(2026, 2, 28)),
         ),
         Arrangement(
-            "清明节", listOf(intArrayOf(2026, 4, 4)), listOf(intArrayOf(2026, 4, 6)),
+            HolidayName.QINGMING, listOf(intArrayOf(2026, 4, 4)), listOf(intArrayOf(2026, 4, 6)),
             intArrayOf(2026, 4, 5),
             emptyList(),
         ),
         Arrangement(
-            "劳动节", listOf(intArrayOf(2026, 5, 1)), listOf(intArrayOf(2026, 5, 5)),
+            HolidayName.LABOR_DAY, listOf(intArrayOf(2026, 5, 1)), listOf(intArrayOf(2026, 5, 5)),
             intArrayOf(2026, 5, 1),
             listOf(intArrayOf(2026, 5, 9)),
         ),
         Arrangement(
-            "端午节", listOf(intArrayOf(2026, 6, 19)), listOf(intArrayOf(2026, 6, 21)),
+            HolidayName.DRAGON_BOAT, listOf(intArrayOf(2026, 6, 19)), listOf(intArrayOf(2026, 6, 21)),
             intArrayOf(2026, 6, 19),
             emptyList(),
         ),
         Arrangement(
-            "中秋节", listOf(intArrayOf(2026, 9, 25)), listOf(intArrayOf(2026, 9, 27)),
+            HolidayName.MID_AUTUMN, listOf(intArrayOf(2026, 9, 25)), listOf(intArrayOf(2026, 9, 27)),
             intArrayOf(2026, 9, 25),
             emptyList(),
         ),
         Arrangement(
-            "国庆节", listOf(intArrayOf(2026, 10, 1)), listOf(intArrayOf(2026, 10, 7)),
+            HolidayName.NATIONAL_DAY, listOf(intArrayOf(2026, 10, 1)), listOf(intArrayOf(2026, 10, 7)),
             intArrayOf(2026, 10, 1),
             listOf(intArrayOf(2026, 9, 20), intArrayOf(2026, 10, 10)),
         ),

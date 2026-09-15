@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -88,7 +89,7 @@ import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
-import win.zuoye.dao.ui.common.WEEKDAY_LABELS
+import win.zuoye.dao.ui.common.localizedTimeRangeText
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import kotlin.math.roundToInt
 import java.util.Locale
@@ -97,13 +98,6 @@ import java.util.Locale
 private const val BASE_YEAR = 2000
 private const val MONTH_COUNT = 101 * 12
 private const val MILLIS_PER_DAY = 86_400_000L
-
-private val LUNAR_MONTH_NAMES = listOf("正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "冬", "腊")
-private val LUNAR_DAY_NAMES = listOf(
-    "初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十",
-    "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
-    "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十",
-)
 
 /** 首页：月历视图，按班次颜色着色。月份左右滑动切换。 */
 @Composable
@@ -122,7 +116,9 @@ fun HomeScreen(
     val viewYear = BASE_YEAR + settledIndex / 12
     val viewMonth = settledIndex % 12 + 1
     val isCurrentMonth = viewYear == today.year && viewMonth == today.month
-    val weekStartDay = doc.weekStartDay.coerceIn(0, WEEKDAY_LABELS.lastIndex)
+    val weekdays = stringArrayResource(R.array.weekday_short).toList()
+    val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
+    val calendarStrings = calendarStrings()
 
     // 排班索引整个页面共用一份，预组合的三页不会各建一份
     val roster = remember(doc) { Roster.of(doc) }
@@ -140,7 +136,7 @@ fun HomeScreen(
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = onExportPlan) {
-                        Icon(MiuixIcons.Regular.Share, contentDescription = "分享排班方案")
+                        Icon(MiuixIcons.Regular.Share, contentDescription = stringResource(R.string.share_plan_description))
                     }
                 },
             )
@@ -165,7 +161,7 @@ fun HomeScreen(
                         minWidth = 54.dp,
                         minHeight = 54.dp,
                     ) {
-                        Text("今", fontSize = 22.sp, color = MiuixTheme.colorScheme.onPrimary)
+                        Text(stringResource(R.string.today_short), fontSize = 22.sp, color = MiuixTheme.colorScheme.onPrimary)
                     }
                 }
             }
@@ -189,7 +185,7 @@ fun HomeScreen(
 
             // 左对齐月份标题
             Text(
-                "${viewMonth}月",
+                stringResource(R.string.month_title, viewMonth),
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -214,6 +210,8 @@ fun HomeScreen(
                         month = pageIndex % 12 + 1,
                         today = today,
                         weekStartDay = weekStartDay,
+                        weekdays = weekdays,
+                        strings = calendarStrings,
                         selected = selectedDate,
                         onDayClick = { selectedDate = it },
                     )
@@ -227,7 +225,7 @@ fun HomeScreen(
             if (doc.activeScheme() == null) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "尚未配置倒班方案：点底部「设置」新建一个，日历会按周期自动着色。",
+                    stringResource(R.string.home_empty_plan),
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -269,14 +267,14 @@ private fun TodayGroupsCard(
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
-                "今日排班",
+                stringResource(R.string.today_schedule),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             if (groups.isEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    if (scheme == null) "暂无倒班方案" else "暂无班组",
+                    stringResource(if (scheme == null) R.string.no_plan else R.string.no_group),
                     fontSize = 14.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
@@ -306,20 +304,20 @@ private fun TodayGroupsCard(
                         )
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                template?.name ?: "暂无排班",
+                                template?.name ?: stringResource(R.string.no_schedule),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Medium,
                             )
                             template?.let {
                                 Text(
-                                    it.timeRangeText(),
+                                    it.localizedTimeRangeText(),
                                     fontSize = 12.sp,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
                             if (template == null) {
                                 Text(
-                                    "未指派班次",
+                                    stringResource(R.string.unassigned_shift),
                                     fontSize = 12.sp,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
@@ -379,19 +377,22 @@ private fun RosterStatusCard(
                 modifier = Modifier.padding(start = 16.dp, top = 14.dp),
             ) {
                 Text(
-                    text = if (todayShift?.template?.isRest == true) "休班中" else "倒班中",
+                    text = stringResource(if (todayShift?.template?.isRest == true) R.string.on_rest else R.string.on_shift),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(1.dp))
                 Text(
-                    text = "方案：${activeScheme?.name ?: "未选择"}",
+                    text = stringResource(
+                        R.string.plan_label,
+                        activeScheme?.name ?: stringResource(R.string.status_not_selected),
+                    ),
                     fontSize = 15.sp,
                 )
             }
 
             Text(
-                text = currentGroupName ?: "暂无班组",
+                text = currentGroupName ?: stringResource(R.string.no_group),
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 16.dp, bottom = 10.dp),
@@ -410,12 +411,14 @@ private fun MonthGrid(
     month: Int,
     today: Ymd,
     weekStartDay: Int,
+    weekdays: List<String>,
+    strings: CalendarStrings,
     selected: Ymd?,
     onDayClick: (Ymd) -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
-    val slots = remember(roster, year, month, today, weekStartDay) {
-        buildMonthSlots(roster, year, month, today, weekStartDay)
+    val slots = remember(roster, year, month, today, weekStartDay, strings) {
+        buildMonthSlots(roster, year, month, today, weekStartDay, strings)
     }
     val colors = remember(colorScheme) {
         GridColors(
@@ -441,7 +444,7 @@ private fun MonthGrid(
         ) {
             repeat(7) { column ->
                 Text(
-                    text = WEEKDAY_LABELS[(weekStartDay + column) % WEEKDAY_LABELS.size],
+                    text = weekdays[(weekStartDay + column) % weekdays.size],
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 13.sp,
@@ -527,6 +530,7 @@ private fun buildMonthSlots(
     month: Int,
     today: Ymd,
     weekStartDay: Int,
+    strings: CalendarStrings,
 ): List<DaySlot> {
     val daysInMonth = Ymd.daysInMonth(year, month)
     val firstOffset = Math.floorMod(Ymd(year, month, 1).weekdayIndex - weekStartDay, 7)
@@ -569,8 +573,8 @@ private fun buildMonthSlots(
             isToday = isToday,
             fade = if (!inMonth && !isToday) 0.35f else 1f,
             holiday = LegalHolidays.of(date.epochDay),
-            lunarLabel = lunarLabel(lunar),
-            holidayName = holidayName(date, lunar, today.year),
+            lunarLabel = lunarLabel(lunar, strings),
+            holidayName = holidayName(date, lunar, today.year)?.let(strings.holidayNames::get),
         )
     }
     return slots
@@ -583,6 +587,47 @@ private data class LunarDate(
     val daysInMonth: Int,
 )
 
+private data class CalendarStrings(
+    val lunarMonths: List<String>,
+    val lunarDays: List<String>,
+    val lunarLeap: String,
+    val lunarFormat: String,
+    val holidayNames: Map<Int, String>,
+)
+
+@Composable
+private fun calendarStrings() = CalendarStrings(
+    lunarMonths = stringArrayResource(R.array.lunar_month_names).toList(),
+    lunarDays = stringArrayResource(R.array.lunar_day_names).toList(),
+    lunarLeap = stringResource(R.string.lunar_leap),
+    lunarFormat = stringResource(R.string.lunar_date, "%1\$s", "%2\$s", "%3\$s"),
+    holidayNames = listOf(
+        R.string.holiday_new_year,
+        R.string.holiday_spring_festival,
+        R.string.holiday_lantern_festival,
+        R.string.holiday_dragon_heads_raising,
+        R.string.holiday_qingming,
+        R.string.holiday_labor_day,
+        R.string.holiday_dragon_boat,
+        R.string.holiday_qixi,
+        R.string.holiday_ghost_festival,
+        R.string.holiday_mid_autumn,
+        R.string.holiday_double_ninth,
+        R.string.holiday_laba,
+        R.string.holiday_new_year_eve,
+        R.string.holiday_national_day,
+        R.string.holiday_valentines,
+        R.string.holiday_womens_day,
+        R.string.holiday_april_fools,
+        R.string.holiday_childrens_day,
+        R.string.holiday_halloween,
+        R.string.holiday_christmas,
+        R.string.holiday_mothers_day,
+        R.string.holiday_fathers_day,
+        R.string.holiday_thanksgiving,
+    ).associateWith { stringResource(it) },
+)
+
 private fun lunarDate(calendar: ChineseCalendar, epochDay: Long): LunarDate {
     calendar.setTimeInMillis(epochDay * MILLIS_PER_DAY)
     return LunarDate(
@@ -593,41 +638,54 @@ private fun lunarDate(calendar: ChineseCalendar, epochDay: Long): LunarDate {
     )
 }
 
-private fun lunarLabel(lunar: LunarDate): String {
-    val dayName = LUNAR_DAY_NAMES.getOrElse(lunar.day - 1) { lunar.day.toString() }
+private fun lunarLabel(lunar: LunarDate, strings: CalendarStrings): String {
+    val dayName = strings.lunarDays.getOrElse(lunar.day - 1) { lunar.day.toString() }
     if (lunar.day != 1) return dayName
-    val leapPrefix = if (lunar.isLeapMonth) "闰" else ""
-    val monthName = LUNAR_MONTH_NAMES.getOrElse(lunar.month - 1) { lunar.month.toString() }
-    return "$leapPrefix${monthName}月$dayName"
+    val leapPrefix = if (lunar.isLeapMonth) strings.lunarLeap else ""
+    val monthName = strings.lunarMonths.getOrElse(lunar.month - 1) { lunar.month.toString() }
+    return strings.lunarFormat
+        .replace("%1\$s", leapPrefix)
+        .replace("%2\$s", monthName)
+        .replace("%3\$s", dayName)
 }
 
 /** 节日信息只在当前年和下一年显示；法定节假日优先于通用节日名称。 */
-private fun holidayName(date: Ymd, lunar: LunarDate, currentYear: Int): String? {
-    LegalHolidays.of(date.epochDay)?.takeIf { it.isNameDay }?.let { return it.name }
+private fun holidayName(date: Ymd, lunar: LunarDate, currentYear: Int): Int? {
+    LegalHolidays.of(date.epochDay)?.takeIf { it.isNameDay }?.let { return it.name.stringRes() }
     if (date.year !in currentYear..(currentYear + 1) || lunar.isLeapMonth) return null
 
     return when {
-        lunar.month == 1 && lunar.day == 1 -> "春节"
-        lunar.month == 1 && lunar.day == 15 -> "元宵节"
-        lunar.month == 2 && lunar.day == 2 -> "龙抬头"
-        lunar.month == 5 && lunar.day == 5 -> "端午节"
-        lunar.month == 7 && lunar.day == 7 -> "七夕"
-        lunar.month == 7 && lunar.day == 15 -> "中元节"
-        lunar.month == 8 && lunar.day == 15 -> "中秋节"
-        lunar.month == 9 && lunar.day == 9 -> "重阳节"
-        lunar.month == 12 && lunar.day == 8 -> "腊八节"
-        lunar.month == 12 && lunar.day >= lunar.daysInMonth -> "除夕"
-        date.month == 2 && date.day == 14 -> "情人节"
-        date.month == 3 && date.day == 8 -> "妇女节"
-        date.month == 4 && date.day == 1 -> "愚人节"
-        date.month == 6 && date.day == 1 -> "儿童节"
-        date.month == 10 && date.day == 31 -> "万圣节"
-        date.month == 12 && date.day == 25 -> "圣诞节"
-        date.month == 5 && date.weekdayIndex == 6 && date.day in 8..14 -> "母亲节"
-        date.month == 6 && date.weekdayIndex == 6 && date.day in 15..21 -> "父亲节"
-        date.month == 11 && date.weekdayIndex == 3 && date.day in 22..28 -> "感恩节"
+        lunar.month == 1 && lunar.day == 1 -> R.string.holiday_spring_festival
+        lunar.month == 1 && lunar.day == 15 -> R.string.holiday_lantern_festival
+        lunar.month == 2 && lunar.day == 2 -> R.string.holiday_dragon_heads_raising
+        lunar.month == 5 && lunar.day == 5 -> R.string.holiday_dragon_boat
+        lunar.month == 7 && lunar.day == 7 -> R.string.holiday_qixi
+        lunar.month == 7 && lunar.day == 15 -> R.string.holiday_ghost_festival
+        lunar.month == 8 && lunar.day == 15 -> R.string.holiday_mid_autumn
+        lunar.month == 9 && lunar.day == 9 -> R.string.holiday_double_ninth
+        lunar.month == 12 && lunar.day == 8 -> R.string.holiday_laba
+        lunar.month == 12 && lunar.day >= lunar.daysInMonth -> R.string.holiday_new_year_eve
+        date.month == 2 && date.day == 14 -> R.string.holiday_valentines
+        date.month == 3 && date.day == 8 -> R.string.holiday_womens_day
+        date.month == 4 && date.day == 1 -> R.string.holiday_april_fools
+        date.month == 6 && date.day == 1 -> R.string.holiday_childrens_day
+        date.month == 10 && date.day == 31 -> R.string.holiday_halloween
+        date.month == 12 && date.day == 25 -> R.string.holiday_christmas
+        date.month == 5 && date.weekdayIndex == 6 && date.day in 8..14 -> R.string.holiday_mothers_day
+        date.month == 6 && date.weekdayIndex == 6 && date.day in 15..21 -> R.string.holiday_fathers_day
+        date.month == 11 && date.weekdayIndex == 3 && date.day in 22..28 -> R.string.holiday_thanksgiving
         else -> null
     }
+}
+
+private fun LegalHolidays.HolidayName.stringRes(): Int = when (this) {
+    LegalHolidays.HolidayName.NEW_YEAR -> R.string.holiday_new_year
+    LegalHolidays.HolidayName.SPRING_FESTIVAL -> R.string.holiday_spring_festival
+    LegalHolidays.HolidayName.QINGMING -> R.string.holiday_qingming
+    LegalHolidays.HolidayName.LABOR_DAY -> R.string.holiday_labor_day
+    LegalHolidays.HolidayName.DRAGON_BOAT -> R.string.holiday_dragon_boat
+    LegalHolidays.HolidayName.MID_AUTUMN -> R.string.holiday_mid_autumn
+    LegalHolidays.HolidayName.NATIONAL_DAY -> R.string.holiday_national_day
 }
 
 private fun darken(c: Color, f: Float = 0.62f) =
@@ -773,7 +831,9 @@ private fun CalendarCell(
                     .padding(horizontal = 2.5.dp, vertical = 0.5.dp),
             ) {
                 Text(
-                    if (holiday.isMakeupWorkday) "班" else "休",
+                    stringResource(
+                        if (holiday.isMakeupWorkday) R.string.holiday_work_badge else R.string.holiday_rest_badge,
+                    ),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     color = badge.second,
@@ -793,21 +853,31 @@ private fun DayDetailDialog(
 ) {
     val resolved = resolveShift(doc, date.epochDay)
     val holiday = remember(date) { LegalHolidays.of(date.epochDay) }
+    val weekdays = stringArrayResource(R.array.weekday_short)
     OverlayDialog(
         show = show,
-        title = "${date.year}年${date.month}月${date.day}日 · 周${WEEKDAY_LABELS[date.weekdayIndex]}",
+        title = stringResource(
+            R.string.date_dialog_title,
+            date.year,
+            date.month,
+            date.day,
+            weekdays[date.weekdayIndex],
+        ),
         onDismissRequest = onDismiss,
     ) {
         Column(Modifier.fillMaxWidth()) {
             holiday?.let {
                 Text(
-                    if (it.isMakeupWorkday) "${it.name} · 调休上班" else "${it.name} · 法定假日",
+                    stringResource(
+                        if (it.isMakeupWorkday) R.string.makeup_workday else R.string.legal_holiday,
+                        stringResource(it.name.stringRes()),
+                    ),
                     fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(6.dp))
             }
             if (resolved == null) {
-                Text("该日期暂无排班信息。", fontSize = 15.sp)
+                Text(stringResource(R.string.date_no_schedule), fontSize = 15.sp)
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -819,7 +889,7 @@ private fun DayDetailDialog(
                     Spacer(Modifier.weight(1f))
                     if (!resolved.template.isRest) {
                         Text(
-                            resolved.template.timeRangeText(),
+                            resolved.template.localizedTimeRangeText(),
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -828,7 +898,7 @@ private fun DayDetailDialog(
                 if (resolved.isOverride) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "（换班覆盖）",
+                        stringResource(R.string.shift_override),
                         fontSize = 12.sp,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )

@@ -5,16 +5,14 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,16 +21,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.ui.platform.LocalResources
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanRepository
 import win.zuoye.dao.data.PlanShare
@@ -41,17 +40,18 @@ import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.domain.importPlan
-import win.zuoye.dao.ui.home.HomeScreen
-import win.zuoye.dao.ui.common.MainTab
-import win.zuoye.dao.ui.common.MainBottomBar
-import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.about.AboutScreen
+import win.zuoye.dao.ui.common.MainBottomBar
+import win.zuoye.dao.ui.common.MainTab
+import win.zuoye.dao.ui.common.PageCardStack
+import win.zuoye.dao.ui.common.localizedMessage
+import win.zuoye.dao.ui.home.HomeScreen
 import win.zuoye.dao.ui.onboarding.OnboardingScreen
 import win.zuoye.dao.ui.scheme.PlanEditScreen
-import win.zuoye.dao.ui.share.SharePlanScreen
-import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.ui.settings.SettingsScreen
+import win.zuoye.dao.ui.share.SharePlanScreen
 import win.zuoye.dao.ui.theme.AppTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 private sealed interface Screen {
     /** 二级页面（卡片推入；null = 停在底栏页面） */
@@ -76,12 +76,13 @@ class MainActivity : ComponentActivity() {
             AppTheme {
                 // 兜底：数据读取真出问题时也别一直卡在启动图上
                 LaunchedEffect(Unit) {
-                    delay(2_000)
+                    delay(2_000.milliseconds)
                     planReady = true
                 }
                 val repo = remember { PlanRepository.get(applicationContext) }
                 // 分享要从 Activity 发起（Application context 启动分享面板会闪退）
                 val activityContext = LocalContext.current
+                val resources = LocalResources.current
                 val docState by repo.document.collectAsStateWithLifecycle(initialValue = null)
                 val docSnapshot = docState
                 if (docSnapshot != null) planReady = true
@@ -104,14 +105,14 @@ class MainActivity : ComponentActivity() {
                                 schemes = current.schemes.toPersistentList().add(
                                     Scheme(
                                         id = id,
-                                        name = "方案 ${current.schemes.size + 1}",
+                                        name = resources.getString(R.string.default_plan_name, current.schemes.size + 1),
                                         cycleDays = cycleDays,
                                         dayTemplateIds = dayTemplateIds,
                                         createdAt = id,
                                         groups = persistentListOf(
                                             SchemeGroup(
                                                 id = id,
-                                                name = "班组 1",
+                                                name = resources.getString(R.string.default_group_name, 1),
                                                 anchorEpochDay = anchorEpochDay,
                                             ),
                                         ),
@@ -139,7 +140,11 @@ class MainActivity : ComponentActivity() {
                                 merged
                             }
                         }
-                        Toast.makeText(activityContext, result?.message() ?: "导入失败", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            activityContext,
+                            result?.localizedMessage(resources) ?: resources.getString(R.string.import_failed),
+                            Toast.LENGTH_LONG,
+                        ).show()
                     }
                 }
 

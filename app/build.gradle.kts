@@ -6,17 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-/**
- * 发布签名。
- * 口令放在根目录的 keystore.properties（已在 .gitignore 里，不进版本库）：
- *
- *   storeFile=dao-release.jks
- *   storePassword=…
- *   keyAlias=dao
- *   keyPassword=…
- *
- * 没有这个文件时 release 产物不签名（assembleRelease 会输出 *-unsigned.apk）。
- */
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
@@ -34,8 +23,8 @@ android {
         applicationId = "win.zuoye.dao"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.0.2"
+        versionCode = 3
+        versionName = "0.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -56,7 +45,7 @@ android {
             // keystore.properties 缺失时为 null，产物保持未签名
             signingConfig = signingConfigs.findByName("release")
             optimization {
-                enable = false
+                enable = true
             }
         }
     }

@@ -446,7 +446,7 @@ private fun Context.clipboardText(): String =
         .orEmpty()
 
 /**
- * 一个方案卡片（尺寸对齐系统闹钟列表）：标题（+「使用中」小字）/ 周期摘要，
+ * 一个方案卡片（尺寸对齐系统闹钟列表）：标题（+「使用中」小字），
  * 右侧是使用中开关；关闭的方案整体变灰；多选模式下左侧出现复选框、开关隐藏。
  */
 @Composable
@@ -462,11 +462,6 @@ private fun SchemeCard(
 ) {
     // 关闭的方案整体灰掉
     val nameColor = if (active) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSurface
-    val summaryColor = if (active) {
-        MiuixTheme.colorScheme.onSurfaceVariantSummary
-    } else {
-        MiuixTheme.colorScheme.disabledOnSurface
-    }
 
     Card(
         onClick = { if (selecting) onToggleSelection() else onEnter() },
@@ -503,12 +498,6 @@ private fun SchemeCard(
                         )
                     }
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "${scheme.cycleDays} 天周期",
-                    fontSize = 13.sp,
-                    color = summaryColor,
-                )
             }
             if (!selecting) {
                 Switch(checked = active, onCheckedChange = onToggleActive)

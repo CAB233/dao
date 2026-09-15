@@ -2,6 +2,7 @@ package win.zuoye.dao.ui.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -16,13 +17,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
@@ -71,10 +75,17 @@ fun SettingsScreen(
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
                     title = "倒班方案",
-                    summary = activeScheme?.let {
-                        "${it.cycleDays} 天周期 · ${doc.templates.size} 个班次"
-                    } ?: "还没有方案，点进去建一个",
-                    endActions = { Chevron() },
+                    summary = "创建、导入或选择方案",
+                    endActions = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = activeScheme?.name ?: "未选择",
+                                fontSize = 14.sp,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            )
+                            Chevron(Modifier.padding(start = 8.dp))
+                        }
+                    },
                     onClick = onOpenPlan,
                 )
             }
@@ -93,11 +104,11 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun Chevron() {
+private fun Chevron(modifier: Modifier = Modifier) {
     Icon(
         imageVector = MiuixIcons.Basic.ArrowRight,
         contentDescription = null,
-        modifier = Modifier.size(12.dp, 18.dp),
+        modifier = modifier.size(12.dp, 18.dp),
         tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
     )
 }

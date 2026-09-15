@@ -9,6 +9,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.toColorInt
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.R
@@ -103,7 +105,7 @@ object ShareUtils {
         val footerH = 90
         val height = headerH + weekdayH + rows * CELL_H + footerH
 
-        val bitmap = Bitmap.createBitmap(WIDTH, height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(WIDTH, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
 
@@ -111,19 +113,19 @@ object ShareUtils {
         val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
         // 标题
-        textPaint.color = Color.parseColor("#1C1B1F")
+        textPaint.color = "#1C1B1F".toColorInt()
         textPaint.textSize = 76f
         textPaint.isFakeBoldText = true
         canvas.drawText("${year}年${month}月", WIDTH / 2f, 128f, textPaint)
         textPaint.textSize = 34f
         textPaint.isFakeBoldText = false
-        textPaint.color = Color.parseColor("#757575")
+        textPaint.color = "#757575".toColorInt()
         canvas.drawText(appName, WIDTH / 2f, 182f, textPaint)
 
         // 星期表头
         val weekdays = listOf("一", "二", "三", "四", "五", "六", "日")
         textPaint.textSize = 36f
-        textPaint.color = Color.parseColor("#757575")
+        textPaint.color = "#757575".toColorInt()
         weekdays.forEachIndexed { i, w ->
             canvas.drawText(w, PAD + i * CELL_W + CELL_W / 2f, headerH + 44f, textPaint)
         }
@@ -147,7 +149,7 @@ object ShareUtils {
             }
 
             val onColor = template?.let { textColorFor(it.colorArgb) }
-                ?: Color.parseColor("#757575")
+                ?: "#757575".toColorInt()
             textPaint.color = onColor
             textPaint.textSize = 42f
             textPaint.isFakeBoldText = true
@@ -163,7 +165,7 @@ object ShareUtils {
         }
 
         // 页脚
-        textPaint.color = Color.parseColor("#BDBDBD")
+        textPaint.color = "#BDBDBD".toColorInt()
         textPaint.textSize = 30f
         canvas.drawText("由「$appName」生成", WIDTH / 2f, height - 34f, textPaint)
         return bitmap
@@ -174,6 +176,6 @@ object ShareUtils {
         val g = (argb shr 8) and 0xFF
         val b = argb and 0xFF
         val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
-        return if (luminance > 0.62) Color.parseColor("#1C1B1F") else Color.WHITE
+        return if (luminance > 0.62) "#1C1B1F".toColorInt() else Color.WHITE
     }
 }

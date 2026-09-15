@@ -67,6 +67,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -99,13 +100,44 @@ fun SchemeEditScreen(
     scheme: Scheme,
     autoFocusName: Boolean,
     onBack: () -> Unit,
+    onSave: (PlanDocument) -> Unit,
     onDelete: () -> Unit,
-    onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
 ) {
-    BackHandler { onBack() }
+    val isNewScheme = remember(scheme.id) { doc.schemes.none { it.id == scheme.id } }
+    val initialDraft = remember(scheme.id) {
+        if (isNewScheme) {
+            doc.copy(schemes = doc.schemes.toPersistentList().add(scheme))
+        } else {
+            doc
+        }
+    }
+    var draftDocument by remember(scheme.id) { mutableStateOf(initialDraft) }
+    val draftScheme = draftDocument.schemes.first { it.id == scheme.id }
+    val hasUnsavedChanges = draftDocument != initialDraft
+    var showExitConfirmation by remember { mutableStateOf(false) }
+
+    fun requestExit() {
+        if (hasUnsavedChanges) showExitConfirmation = true else onBack()
+    }
+
+    fun saveAndExit() {
+        if (draftScheme.name.isBlank()) return
+        val normalizedName = draftScheme.name.trim()
+        val savedDocument = if (normalizedName == draftScheme.name) {
+            draftDocument
+        } else {
+            draftDocument.copy(
+                schemes = draftDocument.schemes.map {
+                    if (it.id == draftScheme.id) it.copy(name = normalizedName) else it
+                }.toImmutableList(),
+            )
+        }
+        onSave(savedDocument)
+    }
+
+    BackHandler { requestExit() }
 
     var tabIndex by rememberSaveable(scheme.id) { mutableIntStateOf(0) }
-    var nameDraft by rememberSaveable(scheme.id) { mutableStateOf(scheme.name) }
     var cycleText by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
     var showCycleDialog by remember { mutableStateOf(false) }
     var cycleDraft by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
@@ -142,13 +174,17 @@ fun SchemeEditScreen(
     // 页签内容滚动时，右下角的加号收起来
     val contentScrollState = rememberScrollState()
     val fabVisible = rememberFabVisible { contentScrollState.value }
-    val groups = remember(scheme.id, scheme.groups, scheme.anchorEpochDay) { scheme.editableGroups() }
-    val defaultGroup = groups.firstOrNull { it.id == scheme.defaultGroupId } ?: groups.firstOrNull()
+    val groups = remember(draftScheme.id, draftScheme.groups, draftScheme.anchorEpochDay) {
+        draftScheme.editableGroups()
+    }
+    val defaultGroup = groups.firstOrNull { it.id == draftScheme.defaultGroupId } ?: groups.firstOrNull()
 
     fun updateScheme(transform: (Scheme) -> Scheme) {
-        onMutate { plan ->
-            plan.copy(schemes = plan.schemes.map { if (it.id == scheme.id) transform(it) else it }.toImmutableList())
-        }
+        draftDocument = draftDocument.copy(
+            schemes = draftDocument.schemes.map {
+                if (it.id == draftScheme.id) transform(it) else it
+            }.toImmutableList(),
+        )
     }
 
     fun updateCycle(input: String) {
@@ -237,8 +273,24 @@ fun SchemeEditScreen(
             TopAppBar(
                 title = "编辑方案",
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = ::requestExit) {
                         Icon(MiuixIcons.Regular.Back, contentDescription = "返回方案列表")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        enabled = draftScheme.name.isNotBlank(),
+                        onClick = ::saveAndExit,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Regular.Ok,
+                            contentDescription = "保存",
+                            tint = if (draftScheme.name.isNotBlank()) {
+                                MiuixTheme.colorScheme.primary
+                            } else {
+                                MiuixTheme.colorScheme.disabledOnSurface
+                            },
+                        )
                     }
                 },
             )
@@ -277,11 +329,9 @@ fun SchemeEditScreen(
         ) {
             // ---- 方案名（默认不高亮，只显示当前值）----
             TextField(
-                value = nameDraft,
+                value = draftScheme.name,
                 onValueChange = { input ->
-                    nameDraft = input
-                    // 清空时先不落库，等用户打出内容再写，避免出现空名方案
-                    if (input.isNotBlank()) updateScheme { it.copy(name = input.trim()) }
+                    updateScheme { it.copy(name = input) }
                 },
                 label = "方案名",
                 useLabelAsPlaceholder = true,
@@ -320,18 +370,19 @@ fun SchemeEditScreen(
             ) {
                 when (tabIndex) {
                     0 -> TemplatesStep(
-                        templates = doc.templates,
+                        templates = draftDocument.templates,
                         // 表头小标题去掉，加号挪到右下角 FAB
                         onAdd = null,
                         title = null,
                         onEdit = { editingTemplate = it; showEditor = true },
                         onDelete = { deleteTemplate = it },
+                        showEditAction = false,
                         editHoldDown = { showEditor && editingTemplate?.id == it.id },
                         deleteHoldDown = { deleteTemplate?.id == it.id },
                     )
                     1 -> ShiftSettingsTab(
-                        doc = doc,
-                        scheme = scheme,
+                        doc = draftDocument,
+                        scheme = draftScheme,
                         cycleText = cycleText,
                         cycleHoldDown = showCycleDialog,
                         onOpenCycle = {
@@ -359,20 +410,22 @@ fun SchemeEditScreen(
                 }
 
                 // ---- 删除方案（方案级操作，不放在页签里）----
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .padding(top = 4.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    BasicComponent(
-                        title = "删除方案",
-                        summary = "删除后无法恢复",
-                        titleColor = BasicComponentDefaults.titleColor(color = MiuixTheme.colorScheme.error),
-                        holdDownState = showDeleteScheme,
-                        onClick = { showDeleteScheme = true },
-                    )
+                if (!isNewScheme) {
+                    Card(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .padding(top = 4.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        BasicComponent(
+                            title = "删除方案",
+                            summary = "删除后无法恢复",
+                            titleColor = BasicComponentDefaults.titleColor(color = MiuixTheme.colorScheme.error),
+                            holdDownState = showDeleteScheme,
+                            onClick = { showDeleteScheme = true },
+                        )
+                    }
                 }
                 Spacer(Modifier.height(24.dp).navigationBarsPadding())
             }
@@ -522,42 +575,39 @@ fun SchemeEditScreen(
         TemplateEditorDialog(
             show = showEditor,
             existing = editingTemplate,
-            usedColors = doc.templates.map { it.colorArgb },
+            usedColors = draftDocument.templates.map { it.colorArgb },
             onDismiss = { showEditor = false },
             onSave = { name, start, end, color, isRest ->
-                // 先抓一份：onMutate 交给协程稍后执行，别在 lambda 里读可变的组合状态
                 val editing = editingTemplate
-                onMutate { plan ->
-                    if (editing == null) {
-                        plan.copy(
-                            templates = plan.templates.toPersistentList().add(
-                                ShiftTemplate(
-                                    id = System.currentTimeMillis(),
+                draftDocument = if (editing == null) {
+                    draftDocument.copy(
+                        templates = draftDocument.templates.toPersistentList().add(
+                            ShiftTemplate(
+                                id = System.currentTimeMillis(),
+                                name = name,
+                                startMinute = start,
+                                endMinute = end,
+                                colorArgb = color,
+                                isRest = isRest,
+                            ),
+                        ),
+                    )
+                } else {
+                    draftDocument.copy(
+                        templates = draftDocument.templates.map {
+                            if (it.id == editing.id) {
+                                it.copy(
                                     name = name,
                                     startMinute = start,
                                     endMinute = end,
                                     colorArgb = color,
                                     isRest = isRest,
-                                ),
-                            ),
-                        )
-                    } else {
-                        plan.copy(
-                            templates = plan.templates.map {
-                                if (it.id == editing.id) {
-                                    it.copy(
-                                        name = name,
-                                        startMinute = start,
-                                        endMinute = end,
-                                        colorArgb = color,
-                                        isRest = isRest,
-                                    )
-                                } else {
-                                    it
-                                }
-                            }.toImmutableList(),
-                        )
-                    }
+                                )
+                            } else {
+                                it
+                            }
+                        }.toImmutableList(),
+                    )
                 }
                 showEditor = false
             },
@@ -566,8 +616,8 @@ fun SchemeEditScreen(
         if (shownPickDay >= 0) {
             val day = shownPickDay
             TemplatePickDialog(
-                templates = doc.templates,
-                currentId = scheme.dayTemplateIds.getOrNull(day),
+                templates = draftDocument.templates,
+                currentId = draftScheme.dayTemplateIds.getOrNull(day),
                 show = pickingDay >= 0,
                 onPick = { templateId ->
                     updateScheme { current ->
@@ -586,21 +636,57 @@ fun SchemeEditScreen(
         shownDeleteTemplate?.let { template ->
             DeleteTemplateDialog(
                 template = template,
-                inUse = doc.schemes.any { template.id in it.dayTemplateIds },
+                inUse = draftDocument.schemes.any { template.id in it.dayTemplateIds },
                 show = deleteTemplate != null,
                 onDismiss = { deleteTemplate = null },
                 onConfirm = {
-                    onMutate { plan ->
-                        plan.copy(templates = plan.templates.filterNot { it.id == template.id }.toImmutableList())
-                    }
+                    draftDocument = draftDocument.copy(
+                        templates = draftDocument.templates
+                            .filterNot { it.id == template.id }
+                            .toImmutableList(),
+                    )
                     deleteTemplate = null
                 },
             )
         }
 
         OverlayDialog(
+            show = showExitConfirmation,
+            title = "保存更改后退出？",
+            summary = if (isNewScheme) {
+                "此方案尚未创建，不保存将丢弃全部编辑内容。"
+            } else {
+                "不保存将丢弃本次编辑内容。"
+            },
+            onDismissRequest = { showExitConfirmation = false },
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    text = "不保存",
+                    onClick = {
+                        showExitConfirmation = false
+                        onBack()
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    text = "取消",
+                    onClick = { showExitConfirmation = false },
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    text = "保存并退出",
+                    enabled = draftScheme.name.isNotBlank(),
+                    onClick = ::saveAndExit,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        OverlayDialog(
             show = showDeleteScheme,
-            title = "删除「${scheme.name}」？",
+            title = "删除「${draftScheme.name}」？",
             summary = "删除后无法恢复。",
             onDismissRequest = { showDeleteScheme = false },
         ) {

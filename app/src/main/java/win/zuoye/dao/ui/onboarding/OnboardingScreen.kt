@@ -391,6 +391,7 @@ internal fun TemplatesStep(
     onEdit: (ShiftTemplate) -> Unit,
     onDelete: (ShiftTemplate) -> Unit,
     title: String? = "我的班次",
+    showEditAction: Boolean = true,
     addHoldDown: Boolean = false,
     editHoldDown: (ShiftTemplate) -> Boolean = { false },
     deleteHoldDown: (ShiftTemplate) -> Boolean = { false },
@@ -419,8 +420,22 @@ internal fun TemplatesStep(
                 )
             }
             templates.forEach { template ->
+                val editInteractionSource = rememberHoldDownSource(editHoldDown(template))
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .let { modifier ->
+                            if (showEditAction) {
+                                modifier
+                            } else {
+                                modifier.clickable(
+                                    interactionSource = editInteractionSource,
+                                    indication = LocalIndication.current,
+                                    onClick = { onEdit(template) },
+                                )
+                            }
+                        }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.size(14.dp).background(ShiftPalette.color(template.colorArgb), CircleShape))
@@ -433,8 +448,10 @@ internal fun TemplatesStep(
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
-                    IconButton(onClick = { onEdit(template) }, holdDownState = editHoldDown(template)) {
-                        Icon(MiuixIcons.Regular.Edit, contentDescription = "编辑")
+                    if (showEditAction) {
+                        IconButton(onClick = { onEdit(template) }, holdDownState = editHoldDown(template)) {
+                            Icon(MiuixIcons.Regular.Edit, contentDescription = "编辑")
+                        }
                     }
                     IconButton(onClick = { onDelete(template) }, holdDownState = deleteHoldDown(template)) {
                         Icon(MiuixIcons.Regular.Delete, contentDescription = "删除")

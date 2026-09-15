@@ -170,7 +170,6 @@ class MainActivity : ComponentActivity() {
                                     onExportPlan = { pushedPage = Screen.SharePlan },
                                     onOpenAbout = { pushedPage = Screen.About },
                                     onOpenPlan = { pushedPage = Screen.Plan },
-                                    onImportPlan = { importPlan(it) },
                                     onMutate = { transform -> lifecycleScope.launch { repo.update(transform) } },
                                 )
                             },
@@ -184,6 +183,7 @@ class MainActivity : ComponentActivity() {
                                     Screen.Plan -> PlanEditScreen(
                                         doc = doc,
                                         onBack = { pushedPage = null },
+                                        onImportPlan = { importPlan(it) },
                                         onMutate = { transform -> lifecycleScope.launch { repo.update(transform) } },
                                     )
                                     null -> Unit
@@ -210,7 +210,6 @@ private fun MainTabs(
     onExportPlan: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenPlan: () -> Unit,
-    onImportPlan: (PlanShare) -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
 ) {
     val tabs = MainTab.entries
@@ -254,7 +253,6 @@ private fun MainTabs(
                     onBack = { onSelectTab(MainTab.Home) },
                     onOpenPlan = onOpenPlan,
                     onOpenAbout = onOpenAbout,
-                    onImportPlan = onImportPlan,
                     onWeekStartDayChange = { weekStartDay ->
                         onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
                     },

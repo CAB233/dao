@@ -9,7 +9,12 @@ import java.util.Calendar
 object LegalHolidays {
 
     /** 某天的节假日属性：[name] 节日名；[isMakeupWorkday] = true 表示"调休上班"（角标显示「班」），否则是放假日（「休」） */
-    data class HolidayDay(val name: String, val isMakeupWorkday: Boolean)
+    data class HolidayDay(
+        val name: String,
+        val isMakeupWorkday: Boolean,
+        /** 只有对应的节日当天为 true，避免连续放假日每天重复显示节日名。 */
+        val isNameDay: Boolean = false,
+    )
 
     /** 一条年度安排：放假日区间 + 调休上班日 */
     private class Arrangement(
@@ -17,6 +22,8 @@ object LegalHolidays {
         /** 放假日期（闭区间，IntArray=年月日） */
         val rest: List<IntArray>,
         val restEnd: List<IntArray>,
+        /** 节日名称对应的当天（IntArray=年月日） */
+        val nameDate: IntArray,
         /** 调休上班的单日列表 */
         val work: List<IntArray>,
     )
@@ -25,30 +32,37 @@ object LegalHolidays {
     private val arrangements = listOf(
         Arrangement(
             "元旦", listOf(intArrayOf(2026, 1, 1)), listOf(intArrayOf(2026, 1, 3)),
+            intArrayOf(2026, 1, 1),
             listOf(intArrayOf(2026, 1, 4)),
         ),
         Arrangement(
             "春节", listOf(intArrayOf(2026, 2, 15)), listOf(intArrayOf(2026, 2, 23)),
+            intArrayOf(2026, 2, 17),
             listOf(intArrayOf(2026, 2, 14), intArrayOf(2026, 2, 28)),
         ),
         Arrangement(
             "清明节", listOf(intArrayOf(2026, 4, 4)), listOf(intArrayOf(2026, 4, 6)),
+            intArrayOf(2026, 4, 5),
             emptyList(),
         ),
         Arrangement(
             "劳动节", listOf(intArrayOf(2026, 5, 1)), listOf(intArrayOf(2026, 5, 5)),
+            intArrayOf(2026, 5, 1),
             listOf(intArrayOf(2026, 5, 9)),
         ),
         Arrangement(
             "端午节", listOf(intArrayOf(2026, 6, 19)), listOf(intArrayOf(2026, 6, 21)),
+            intArrayOf(2026, 6, 19),
             emptyList(),
         ),
         Arrangement(
             "中秋节", listOf(intArrayOf(2026, 9, 25)), listOf(intArrayOf(2026, 9, 27)),
+            intArrayOf(2026, 9, 25),
             emptyList(),
         ),
         Arrangement(
             "国庆节", listOf(intArrayOf(2026, 10, 1)), listOf(intArrayOf(2026, 10, 7)),
+            intArrayOf(2026, 10, 1),
             listOf(intArrayOf(2026, 9, 20), intArrayOf(2026, 10, 10)),
         ),
     )
@@ -59,10 +73,15 @@ object LegalHolidays {
             a.rest.indices.forEach { i ->
                 var day = Ymd(a.rest[i][0], a.rest[i][1], a.rest[i][2])
                 val end = Ymd(a.restEnd[i][0], a.restEnd[i][1], a.restEnd[i][2])
+                val nameDay = Ymd(a.nameDate[0], a.nameDate[1], a.nameDate[2])
                 while (day.epochDay <= end.epochDay) {
                     // 同日既有放假又有调休（不应发生）时以调休为准，便于单测暴露数据错误
                     if (!map.containsKey(day.epochDay)) {
-                        map[day.epochDay] = HolidayDay(a.name, isMakeupWorkday = false)
+                        map[day.epochDay] = HolidayDay(
+                            name = a.name,
+                            isMakeupWorkday = false,
+                            isNameDay = day == nameDay,
+                        )
                     }
                     day = Ymd.fromEpochDay(day.epochDay + 1)
                 }

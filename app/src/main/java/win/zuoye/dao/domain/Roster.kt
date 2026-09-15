@@ -43,13 +43,19 @@ class Roster private constructor(
 ) {
     /** 该日期的班次模板；只在需要区分"换班覆盖"时用 [resolveShift]。 */
     fun templateFor(epochDay: Long): ShiftTemplate? {
+        val scheme = scheme ?: return null
+        return templateFor(epochDay, scheme.primaryAnchorEpochDay())
+    }
+
+    /** 使用指定班组的基准日期查询该日期的班次。 */
+    fun templateFor(epochDay: Long, anchorEpochDay: Long): ShiftTemplate? {
         // 覆盖通常是空的，先判空可以省掉一次字符串分配
         if (overrides.isNotEmpty()) {
             overrides[epochDay.toString()]?.let { id -> templatesById[id]?.let { return it } }
         }
         val scheme = scheme ?: return null
         if (scheme.cycleDays <= 0) return null
-        val index = Math.floorMod(epochDay - scheme.primaryAnchorEpochDay(), scheme.cycleDays.toLong()).toInt()
+        val index = Math.floorMod(epochDay - anchorEpochDay, scheme.cycleDays.toLong()).toInt()
         val templateId = scheme.dayTemplateIds.getOrNull(index) ?: return null
         return templatesById[templateId]
     }

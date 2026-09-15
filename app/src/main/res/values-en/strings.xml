@@ -175,6 +175,7 @@
     <item quantity="other">%1$d groups</item>
   </plurals>
   <string name="default_group">Default group</string>
+  <string name="current_default_group">Current default group: %1$s</string>
   <string name="select_default_group">Select default group</string>
   <string name="month_label">Month</string>
   <string name="day_label">Day</string>

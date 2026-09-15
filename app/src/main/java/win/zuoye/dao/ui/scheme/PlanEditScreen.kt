@@ -78,6 +78,7 @@ import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.Ymd
+import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.common.rememberFabVisible
 import win.zuoye.dao.ui.scan.ScanCaptureActivity
@@ -477,6 +478,12 @@ private fun SchemeCard(
 ) {
     // 关闭的方案整体灰掉
     val nameColor = if (active) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSurface
+    val summaryColor = if (active) {
+        MiuixTheme.colorScheme.onSurfaceVariantSummary
+    } else {
+        MiuixTheme.colorScheme.disabledOnSurface
+    }
+    val defaultGroupName = scheme.defaultGroup()?.name ?: stringResource(R.string.status_not_set)
 
     Card(
         onClick = { if (selecting) onToggleSelection() else onEnter() },
@@ -513,6 +520,12 @@ private fun SchemeCard(
                         )
                     }
                 }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.current_default_group, defaultGroupName),
+                    fontSize = 14.sp,
+                    color = summaryColor,
+                )
             }
             if (!selecting) {
                 Switch(checked = active, onCheckedChange = onToggleActive)

@@ -70,7 +70,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -293,18 +292,15 @@ fun SchemeEditScreen(
                 },
                 actions = {
                     if (!onboardingMode) {
-                        IconButton(
+                        Button(
                             enabled = draftScheme.name.isNotBlank(),
                             onClick = ::saveAndExit,
+                            colors = ButtonDefaults.buttonColorsPrimary(),
+                            modifier = Modifier.padding(end = 12.dp),
                         ) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Ok,
-                                contentDescription = stringResource(R.string.action_save),
-                                tint = if (draftScheme.name.isNotBlank()) {
-                                    MiuixTheme.colorScheme.primary
-                                } else {
-                                    MiuixTheme.colorScheme.disabledOnSurface
-                                },
+                            Text(
+                                text = stringResource(R.string.action_save),
+                                fontSize = 16.sp,
                             )
                         }
                     }

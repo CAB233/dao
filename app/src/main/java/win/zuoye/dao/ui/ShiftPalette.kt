@@ -3,6 +3,14 @@ package win.zuoye.dao.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+/** 节假日角标数据色（休=放假日绿、班=调休上班橙），与主题色无关 */
+object HolidayPalette {
+    val restBadge = Color(0xFF34A853)
+    val restOnBadge = Color.White
+    val makeupBadge = Color(0xFFF9A825)
+    val makeupOnBadge = Color(0xFF1C1B1F)
+}
+
 /** 班次颜色预设色板（数据色，独立于主题色）。 */
 object ShiftPalette {
     val statusCardLightBackground: Color = Color(0xFFDFFAE4)

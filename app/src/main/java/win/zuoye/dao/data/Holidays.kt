@@ -1,0 +1,83 @@
+package win.zuoye.dao.data
+
+import java.util.Calendar
+
+/**
+ * 法定节假日离线数据。国务院办公厅每年 11 月前后公布次年安排，届时在此追加一年即可；
+ * 运行时只使用当前年和下一年的数据，角标与详情都由它驱动，超界日期自然无提示。
+ */
+object LegalHolidays {
+
+    /** 某天的节假日属性：[name] 节日名；[isMakeupWorkday] = true 表示"调休上班"（角标显示「班」），否则是放假日（「休」） */
+    data class HolidayDay(val name: String, val isMakeupWorkday: Boolean)
+
+    /** 一条年度安排：放假日区间 + 调休上班日 */
+    private class Arrangement(
+        val name: String,
+        /** 放假日期（闭区间，IntArray=年月日） */
+        val rest: List<IntArray>,
+        val restEnd: List<IntArray>,
+        /** 调休上班的单日列表 */
+        val work: List<IntArray>,
+    )
+
+    // 2026：国办发明电〔2025〕7号；后续年度安排公布后追加到这里
+    private val arrangements = listOf(
+        Arrangement(
+            "元旦", listOf(intArrayOf(2026, 1, 1)), listOf(intArrayOf(2026, 1, 3)),
+            listOf(intArrayOf(2026, 1, 4)),
+        ),
+        Arrangement(
+            "春节", listOf(intArrayOf(2026, 2, 15)), listOf(intArrayOf(2026, 2, 23)),
+            listOf(intArrayOf(2026, 2, 14), intArrayOf(2026, 2, 28)),
+        ),
+        Arrangement(
+            "清明节", listOf(intArrayOf(2026, 4, 4)), listOf(intArrayOf(2026, 4, 6)),
+            emptyList(),
+        ),
+        Arrangement(
+            "劳动节", listOf(intArrayOf(2026, 5, 1)), listOf(intArrayOf(2026, 5, 5)),
+            listOf(intArrayOf(2026, 5, 9)),
+        ),
+        Arrangement(
+            "端午节", listOf(intArrayOf(2026, 6, 19)), listOf(intArrayOf(2026, 6, 21)),
+            emptyList(),
+        ),
+        Arrangement(
+            "中秋节", listOf(intArrayOf(2026, 9, 25)), listOf(intArrayOf(2026, 9, 27)),
+            emptyList(),
+        ),
+        Arrangement(
+            "国庆节", listOf(intArrayOf(2026, 10, 1)), listOf(intArrayOf(2026, 10, 7)),
+            listOf(intArrayOf(2026, 9, 20), intArrayOf(2026, 10, 10)),
+        ),
+    )
+
+    private val byEpochDay: Map<Long, HolidayDay> by lazy {
+        val map = HashMap<Long, HolidayDay>()
+        for (a in arrangements) {
+            a.rest.indices.forEach { i ->
+                var day = Ymd(a.rest[i][0], a.rest[i][1], a.rest[i][2])
+                val end = Ymd(a.restEnd[i][0], a.restEnd[i][1], a.restEnd[i][2])
+                while (day.epochDay <= end.epochDay) {
+                    // 同日既有放假又有调休（不应发生）时以调休为准，便于单测暴露数据错误
+                    if (!map.containsKey(day.epochDay)) {
+                        map[day.epochDay] = HolidayDay(a.name, isMakeupWorkday = false)
+                    }
+                    day = Ymd.fromEpochDay(day.epochDay + 1)
+                }
+            }
+            for (w in a.work) {
+                map[Ymd(w[0], w[1], w[2]).epochDay] = HolidayDay(a.name, isMakeupWorkday = true)
+            }
+        }
+        map
+    }
+
+    fun of(epochDay: Long): HolidayDay? {
+        val year = Ymd.fromEpochDay(epochDay).year
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        if (year !in currentYear..(currentYear + 1)) return null
+        return byEpochDay[epochDay]
+    }
+}

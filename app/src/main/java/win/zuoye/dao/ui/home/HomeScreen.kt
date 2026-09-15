@@ -60,16 +60,19 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Share
+import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import kotlinx.coroutines.launch
+import win.zuoye.dao.data.LegalHolidays
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
+import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import kotlin.math.roundToInt
@@ -352,6 +355,7 @@ private class DaySlot(
     val isToday: Boolean,
     /** 非当月补位日整体弱化，但今天保持着重 */
     val fade: Float,
+    val holiday: LegalHolidays.HolidayDay?,
 )
 
 /** 日历配色，一屏读一次主题，避免 42 个格子各读一次 CompositionLocal */
@@ -422,6 +426,7 @@ private fun buildMonthSlots(
             template = roster.templateFor(Ymd.ymdToEpochDay(y, m, day)),
             isToday = isToday,
             fade = if (!inMonth && !isToday) 0.35f else 1f,
+            holiday = LegalHolidays.of(Ymd.ymdToEpochDay(y, m, day)),
         )
     }
     return slots
@@ -507,8 +512,33 @@ private fun CalendarCell(
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
-        content = {},
-    )
+    ) {
+        // 法定节假日角标（小米日历式，右上角「休」/「班」）：颜色预乘淡化系数，避免离屏 alpha 图层
+        slot.holiday?.let { holiday ->
+            val badge = remember(holiday.isMakeupWorkday, fade) {
+                if (holiday.isMakeupWorkday) {
+                    HolidayPalette.makeupBadge.faded(fade) to HolidayPalette.makeupOnBadge.faded(fade)
+                } else {
+                    HolidayPalette.restBadge.faded(fade) to HolidayPalette.restOnBadge.faded(fade)
+                }
+            }
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(3.dp)
+                    .squircleBackground(color = badge.first, cornerRadius = 3.dp)
+                    .padding(horizontal = 2.5.dp, vertical = 0.5.dp),
+            ) {
+                Text(
+                    if (holiday.isMakeupWorkday) "班" else "休",
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = badge.second,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -519,12 +549,21 @@ private fun DayDetailDialog(
     onDismiss: () -> Unit,
 ) {
     val resolved = resolveShift(doc, date.epochDay)
+    val holiday = remember(date) { LegalHolidays.of(date.epochDay) }
     OverlayDialog(
         show = show,
         title = "${date.year}年${date.month}月${date.day}日 · 周${WEEKDAY_LABELS[date.weekdayIndex]}",
         onDismissRequest = onDismiss,
     ) {
         Column(Modifier.fillMaxWidth()) {
+            holiday?.let {
+                Text(
+                    if (it.isMakeupWorkday) "${it.name} · 调休上班" else "${it.name} · 法定假日",
+                    fontSize = 13.sp,
+                    color = if (it.isMakeupWorkday) HolidayPalette.makeupBadge else HolidayPalette.restBadge,
+                )
+                Spacer(Modifier.height(6.dp))
+            }
             if (resolved == null) {
                 Text("该日期暂无排班信息。", fontSize = 15.sp)
             } else {

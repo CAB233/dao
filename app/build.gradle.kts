@@ -41,9 +41,15 @@ android {
     }
 
     buildTypes {
+        val sharedSigningConfig = signingConfigs.findByName("release")
+        debug {
+            if (sharedSigningConfig != null) {
+                signingConfig = sharedSigningConfig
+            }
+        }
         release {
             // keystore.properties 缺失时为 null，产物保持未签名
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = sharedSigningConfig
             optimization {
                 enable = true
             }
@@ -55,6 +61,16 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set(output.versionName.map { versionName ->
+                "Dao-$versionName.apk"
+            })
+        }
     }
 }
 

@@ -1,5 +1,9 @@
 package win.zuoye.dao.ui.share
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -51,7 +55,7 @@ import win.zuoye.dao.share.encodeQrCode
 
 /**
  * 分享配置（二级页面）：选一个方案 → 亮出二维码给对方扫，
- * 另外保留系统文本分享。
+ * 另外保留复制到剪贴板和系统文本分享。
  */
 @Composable
 fun SharePlanScreen(
@@ -145,22 +149,24 @@ fun SharePlanScreen(
                         }
                     } else {
                         Text(
-                            "方案太大，二维码装不下，请改用下面的系统分享。",
+                            "方案太大，二维码装不下，请改用下面的复制或系统分享。",
                             fontSize = 13.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "扫码即可导入。",
-                        fontSize = 13.sp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
                 }
             }
 
             SmallTitle(text = "其它方式")
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                BasicComponent(
+                    title = "复制到剪贴板",
+                    summary = "复制方案配置文本",
+                    onClick = {
+                        context.copyToClipboard(shareText)
+                        Toast.makeText(context, "已复制方案配置", Toast.LENGTH_SHORT).show()
+                    },
+                )
                 BasicComponent(
                     title = "系统分享",
                     summary = "调起系统分享面板发送文本",
@@ -174,4 +180,9 @@ fun SharePlanScreen(
             Spacer(Modifier.height(24.dp).navigationBarsPadding())
         }
     }
+}
+
+private fun Context.copyToClipboard(text: String) {
+    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    clipboard.setPrimaryClip(ClipData.newPlainText("倒班方案配置", text))
 }

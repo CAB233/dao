@@ -371,7 +371,7 @@ private fun SchemeListScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TextButton(
-                    text = "扫码导入",
+                    text = "扫描二维码导入",
                     onClick = {
                         scanLauncher.launch(
                             ScanOptions().apply {

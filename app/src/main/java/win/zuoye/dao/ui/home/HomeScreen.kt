@@ -307,7 +307,6 @@ private fun MonthGrid(
         GridColors(
             surfaceVariant = colorScheme.surfaceVariant,
             onSurface = colorScheme.onSurface,
-            onSurfaceVariantSummary = colorScheme.onSurfaceVariantSummary,
             primary = colorScheme.primary,
         )
     }
@@ -362,7 +361,6 @@ private class DaySlot(
 private class GridColors(
     val surfaceVariant: Color,
     val onSurface: Color,
-    val onSurfaceVariantSummary: Color,
     val primary: Color,
 )
 
@@ -431,8 +429,8 @@ private fun buildMonthSlots(
     }
     return slots
 }
-private fun darken(c: androidx.compose.ui.graphics.Color, f: Float = 0.62f) =
-    androidx.compose.ui.graphics.Color(c.red * f, c.green * f, c.blue * f, 1f)
+private fun darken(c: Color, f: Float = 0.62f) =
+    Color(c.red * f, c.green * f, c.blue * f, 1f)
 
 /** 透明度整体乘一个系数（替代 Modifier.alpha，省掉一格一个离屏图层） */
 private fun Color.faded(f: Float): Color = copy(alpha = alpha * f)
@@ -457,8 +455,7 @@ private fun CalendarCell(
     val shiftColor = template?.let { ShiftPalette.color(it.colorArgb) }
     val fade = slot.fade
     val container =
-        if (shiftColor != null) shiftColor.copy(alpha = 0.13f).faded(fade)
-        else text.surfaceVariant.faded(fade)
+        shiftColor?.copy(alpha = 0.13f)?.faded(fade) ?: text.surfaceVariant.faded(fade)
     val dayStyle = when {
         slot.isToday && fade < 1f -> text.dayTodayFaded
         slot.isToday -> text.dayToday

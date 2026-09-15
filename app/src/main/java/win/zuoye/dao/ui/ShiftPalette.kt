@@ -1,6 +1,5 @@
 package win.zuoye.dao.ui
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /** 节假日角标数据色（休=放假日绿、班=调休上班橙），与主题色无关 */
@@ -32,17 +31,4 @@ object ShiftPalette {
     )
 
     fun color(argb: Int): Color = Color(argb)
-
-    /** 色块上的文字：按亮度取黑/白，保证对比度 */
-    fun onColor(argb: Int): Color {
-        val r = (argb shr 16) and 0xFF
-        val g = (argb shr 8) and 0xFF
-        val b = argb and 0xFF
-        val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
-        return if (luminance > 0.62) Color(0xFF1C1B1F) else Color.White
-    }
 }
-
-/** 在 Compose 里取色块文字色的便捷函数 */
-@Composable
-fun onShiftColor(argb: Int): Color = ShiftPalette.onColor(argb)

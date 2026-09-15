@@ -14,8 +14,6 @@ data class Ymd(val year: Int, val month: Int, val day: Int) {
     /** 0 = 周一 ... 6 = 周日（1970-01-01 为周四 → floorMod(epochDay + 3, 7)） */
     val weekdayIndex: Int get() = Math.floorMod(epochDay + 3, 7)
 
-    fun daysInMonth(): Int = daysInMonth(year, month)
-
     companion object {
         fun daysInMonth(year: Int, month: Int): Int = when (month) {
             1, 3, 5, 7, 8, 10, 12 -> 31

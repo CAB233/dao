@@ -20,8 +20,8 @@ data class ImportResult(
         !changed && schemesSkipped > 0 -> "这些方案本机已经有了，没有重复导入"
         !changed -> "没识别到可导入的内容"
         else -> buildString {
-            append("已导入 ${templatesAdded} 个班次、${schemesAdded} 个方案")
-            if (schemesSkipped > 0) append("，跳过 ${schemesSkipped} 个重复方案")
+            append("已导入 $templatesAdded 个班次、${schemesAdded} 个方案")
+            if (schemesSkipped > 0) append("，跳过 $schemesSkipped 个重复方案")
             if (!activated && schemesAdded > 0) append("；可在「设置」里点「启用」切换")
         }
     }

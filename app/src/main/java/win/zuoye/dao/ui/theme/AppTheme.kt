@@ -13,11 +13,3 @@ fun AppTheme(content: @Composable () -> Unit) {
         content()
     }
 }
-
-/** 便捷取色 */
-object AppColors {
-    val surface @Composable get() = MiuixTheme.colorScheme.surface
-    val onSurface @Composable get() = MiuixTheme.colorScheme.onSurface
-    val onSurfaceVariant @Composable get() = MiuixTheme.colorScheme.onSurfaceVariantSummary
-    val primary @Composable get() = MiuixTheme.colorScheme.primary
-}

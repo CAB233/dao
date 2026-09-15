@@ -339,7 +339,7 @@ private fun MonthGrid(
                 )
             }
         }
-        repeat(CELL_ROWS) { row ->
+        repeat(slots.size / 7) { row ->
             Row(Modifier.fillMaxWidth()) {
                 repeat(7) { col ->
                     val index = row * 7 + col
@@ -362,9 +362,6 @@ private fun MonthGrid(
         Spacer(Modifier.height(3.dp))
     }
 }
-
-/** 固定 6 行（42 格），保证每一页大小一致；空白位由前后月补位 */
-private const val CELL_ROWS = 6
 
 /** 一格的全部渲染输入，页面构造时算好，重组时直接取用 */
 private class DaySlot(
@@ -413,8 +410,10 @@ private fun buildMonthSlots(
 ): List<DaySlot> {
     val daysInMonth = Ymd.daysInMonth(year, month)
     val firstOffset = Math.floorMod(Ymd(year, month, 1).weekdayIndex - weekStartDay, 7)
-    val slots = ArrayList<DaySlot>(CELL_ROWS * 7)
-    for (index in 0 until CELL_ROWS * 7) {
+    // 只生成覆盖当前月的最少完整周数，月历高度随月份需要的周数动态变化。
+    val cellCount = ((firstOffset + daysInMonth + 6) / 7) * 7
+    val slots = ArrayList<DaySlot>(cellCount)
+    for (index in 0 until cellCount) {
         val y: Int
         val m: Int
         val day: Int

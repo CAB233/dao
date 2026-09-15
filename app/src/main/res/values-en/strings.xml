@@ -204,7 +204,6 @@
   <string name="date_dialog_title">%1$d-%2$02d-%3$02d · %4$s</string>
   <string name="makeup_workday">%1$s · Adjusted workday</string>
   <string name="legal_holiday">%1$s · Public holiday</string>
-  <string name="date_no_schedule">No schedule information for this date.</string>
   <string name="shift_override">(Shift override)</string>
   <string name="lunar_date">%1$s%2$s month, %3$s</string>
   <string name="lunar_leap">Leap </string>

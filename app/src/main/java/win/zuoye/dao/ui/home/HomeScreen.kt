@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -24,6 +23,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -242,6 +241,7 @@ fun HomeScreen(
             DayDetailDialog(
                 date = date,
                 doc = doc,
+                roster = roster,
                 show = selectedDate != null,
                 onDismiss = { selectedDate = null },
             )
@@ -256,9 +256,6 @@ private fun TodayGroupsCard(
     roster: Roster,
     today: Ymd,
 ) {
-    val scheme = doc.activeScheme()
-    val groups = scheme?.groups.orEmpty()
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -271,59 +268,71 @@ private fun TodayGroupsCard(
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            if (groups.isEmpty()) {
-                Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
+            GroupScheduleRows(doc = doc, roster = roster, epochDay = today.epochDay)
+        }
+    }
+}
+
+/** 当前方案下所有班组在指定日期的排班；首页卡片和日期详情共用同一套布局。 */
+@Composable
+private fun GroupScheduleRows(
+    doc: PlanDocument,
+    roster: Roster,
+    epochDay: Long,
+) {
+    val scheme = doc.activeScheme()
+    val groups = scheme?.groups.orEmpty()
+    if (groups.isEmpty()) {
+        Text(
+            stringResource(if (scheme == null) R.string.no_plan else R.string.no_group),
+            fontSize = 14.sp,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+        return
+    }
+
+    groups.forEachIndexed { index, group ->
+        if (index > 0) Spacer(Modifier.height(12.dp))
+        val template = roster.templateFor(epochDay, group.anchorEpochDay)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .squircleBackground(
+                        color = template?.let { ShiftPalette.color(it.colorArgb) }
+                            ?: MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        cornerRadius = 5.dp,
+                    ),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                group.name,
+                modifier = Modifier.weight(1f),
+                fontSize = 16.sp,
+            )
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    stringResource(if (scheme == null) R.string.no_plan else R.string.no_group),
-                    fontSize = 14.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    template?.name ?: stringResource(R.string.no_schedule),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
                 )
-            } else {
-                Spacer(Modifier.height(12.dp))
-                groups.forEachIndexed { index, group ->
-                    if (index > 0) Spacer(Modifier.height(12.dp))
-                    val template = roster.templateFor(today.epochDay, group.anchorEpochDay)
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(10.dp)
-                                .squircleBackground(
-                                    color = template?.let { ShiftPalette.color(it.colorArgb) }
-                                        ?: MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    cornerRadius = 5.dp,
-                                ),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            group.name,
-                            modifier = Modifier.weight(1f),
-                            fontSize = 16.sp,
-                        )
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                template?.name ?: stringResource(R.string.no_schedule),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            template?.let {
-                                Text(
-                                    it.localizedTimeRangeText(),
-                                    fontSize = 12.sp,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
-                            }
-                            if (template == null) {
-                                Text(
-                                    stringResource(R.string.unassigned_shift),
-                                    fontSize = 12.sp,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
-                            }
-                        }
-                    }
+                template?.let {
+                    Text(
+                        it.localizedTimeRangeText(),
+                        fontSize = 12.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+                if (template == null) {
+                    Text(
+                        stringResource(R.string.unassigned_shift),
+                        fontSize = 12.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
                 }
             }
         }
@@ -848,11 +857,14 @@ private fun CalendarCell(
 private fun DayDetailDialog(
     date: Ymd,
     doc: PlanDocument,
+    roster: Roster,
     show: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val resolved = resolveShift(doc, date.epochDay)
     val holiday = remember(date) { LegalHolidays.of(date.epochDay) }
+    val isOverride = remember(date, doc.overrides, doc.templates) {
+        doc.overrides[date.epochDay.toString()]?.let(doc::templateById) != null
+    }
     val weekdays = stringArrayResource(R.array.weekday_short)
     OverlayDialog(
         show = show,
@@ -865,7 +877,12 @@ private fun DayDetailDialog(
         ),
         onDismissRequest = onDismiss,
     ) {
-        Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = 500.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
             holiday?.let {
                 Text(
                     stringResource(
@@ -874,35 +891,16 @@ private fun DayDetailDialog(
                     ),
                     fontSize = 13.sp,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(12.dp))
             }
-            if (resolved == null) {
-                Text(stringResource(R.string.date_no_schedule), fontSize = 15.sp)
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(16.dp)
-                            .background(ShiftPalette.color(resolved.template.colorArgb), CircleShape)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(resolved.template.name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.weight(1f))
-                    if (!resolved.template.isRest) {
-                        Text(
-                            resolved.template.localizedTimeRangeText(),
-                            fontSize = 14.sp,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
-                    }
-                }
-                if (resolved.isOverride) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        stringResource(R.string.shift_override),
-                        fontSize = 12.sp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
-                }
+            GroupScheduleRows(doc = doc, roster = roster, epochDay = date.epochDay)
+            if (isOverride) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.shift_override),
+                    fontSize = 12.sp,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
             }
             Spacer(Modifier.height(8.dp))
         }

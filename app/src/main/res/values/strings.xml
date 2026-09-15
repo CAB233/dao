@@ -199,7 +199,6 @@
   <string name="date_dialog_title">%1$d年%2$d月%3$d日 · 周%4$s</string>
   <string name="makeup_workday">%1$s · 调休上班</string>
   <string name="legal_holiday">%1$s · 法定假日</string>
-  <string name="date_no_schedule">该日期暂无排班信息。</string>
   <string name="shift_override">（换班覆盖）</string>
   <string name="lunar_date">%1$s%2$s月%3$s</string>
   <string name="lunar_leap">闰</string>

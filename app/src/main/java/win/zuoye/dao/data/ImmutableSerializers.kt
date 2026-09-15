@@ -13,7 +13,7 @@ import kotlinx.serialization.encoding.Encoder
  * 直接给接口类型（`ImmutableList` / `ImmutableMap`）挂 `@Serializable` 只会拿到一个
  * 多态序列化器，写盘时就抛 `SerializationException: Serializer for subclass … is not found`。
  *
- * 所以这里给三个持久化类型各配一个"代理"序列化器：**线上格式不变**（还是普通数组/对象），
+ * 所以这里给持久化类型各配一个"代理"序列化器：**线上格式不变**（还是普通数组/对象），
  * 只在编解码边界把普通集合和不可变集合互转。数据模型可以全程用不可变类型（可 skip 的状态）。
  */
 
@@ -100,48 +100,6 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
             overrides = surrogate.overrides.toImmutableMap(),
             onboardingDone = surrogate.onboardingDone,
             weekStartDay = surrogate.weekStartDay,
-        )
-    }
-}
-
-@Serializable
-private class PlanShareSurrogate(
-    val app: String = PlanShare.APP_ID,
-    val version: Int = 1,
-    val exportedAt: Long = 0L,
-    val templates: List<ShiftTemplate> = emptyList(),
-    val schemes: List<Scheme> = emptyList(),
-    val activeSchemeId: Long? = null,
-)
-
-object PlanShareSerializer : KSerializer<PlanShare> {
-    private val surrogate = PlanShareSurrogate.serializer()
-
-    override val descriptor: SerialDescriptor = surrogate.descriptor
-
-    override fun serialize(encoder: Encoder, value: PlanShare) {
-        surrogate.serialize(
-            encoder,
-            PlanShareSurrogate(
-                app = value.app,
-                version = value.version,
-                exportedAt = value.exportedAt,
-                templates = value.templates,
-                schemes = value.schemes,
-                activeSchemeId = value.activeSchemeId,
-            ),
-        )
-    }
-
-    override fun deserialize(decoder: Decoder): PlanShare {
-        val surrogate = surrogate.deserialize(decoder)
-        return PlanShare(
-            app = surrogate.app,
-            version = surrogate.version,
-            exportedAt = surrogate.exportedAt,
-            templates = surrogate.templates.toImmutableList(),
-            schemes = surrogate.schemes.toImmutableList(),
-            activeSchemeId = surrogate.activeSchemeId,
         )
     }
 }

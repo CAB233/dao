@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 
-/** 把月历渲染成图片 / 文本并通过系统分享面板发出，全程离线。 */
+/** 通过系统分享面板发送排班方案文本。 */
 object ShareUtils {
 
     /** 主线程调用：分享一段文本（排班方案文本也走这里） */

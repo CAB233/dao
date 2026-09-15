@@ -1,12 +1,6 @@
 package win.zuoye.dao.ui.share
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,7 +51,7 @@ import win.zuoye.dao.share.encodeQrCode
 
 /**
  * 分享配置（二级页面）：选一个方案 → 亮出二维码给对方扫，
- * 另外保留复制到剪贴板 / 导出配置文件 / 系统分享。
+ * 另外保留系统文本分享。
  */
 @Composable
 fun SharePlanScreen(
@@ -80,22 +74,6 @@ fun SharePlanScreen(
         PlanShareCodec.shareText(doc, appName, selectedScheme?.id)
     }
     val qrCode = remember(payloadText) { encodeQrCode(payloadText) }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val ok = runCatching {
-            context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(PlanShareCodec.encode(payload).toByteArray())
-            }
-        }.isSuccess
-        Toast.makeText(
-            context,
-            if (ok) "已导出配置文件" else "导出失败",
-            Toast.LENGTH_SHORT,
-        ).show()
-    }
 
     Scaffold(
         topBar = {
@@ -167,7 +145,7 @@ fun SharePlanScreen(
                         }
                     } else {
                         Text(
-                            "方案太大，二维码装不下，改用下面的导出或分享吧。",
+                            "方案太大，二维码装不下，请改用下面的系统分享。",
                             fontSize = 13.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -184,22 +162,6 @@ fun SharePlanScreen(
             SmallTitle(text = "其它方式")
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
-                    title = "复制到剪贴板",
-                    summary = "直接粘到聊天软件发给对方",
-                    onClick = {
-                        context.copyToClipboard(shareText)
-                        Toast.makeText(context, "已复制分享文本", Toast.LENGTH_SHORT).show()
-                    },
-                )
-                BasicComponent(
-                    title = "导出配置文件",
-                    summary = "存成 JSON 文件，对方可用「导入方案」粘贴或打开",
-                    onClick = {
-                        val name = selectedScheme?.name?.takeIf { it.isNotBlank() } ?: "排班方案"
-                        exportLauncher.launch("$name.json")
-                    },
-                )
-                BasicComponent(
                     title = "系统分享",
                     summary = "调起系统分享面板发送文本",
                     onClick = {
@@ -212,9 +174,4 @@ fun SharePlanScreen(
             Spacer(Modifier.height(24.dp).navigationBarsPadding())
         }
     }
-}
-
-private fun Context.copyToClipboard(text: String) {
-    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-    clipboard.setPrimaryClip(ClipData.newPlainText("排班方案", text))
 }

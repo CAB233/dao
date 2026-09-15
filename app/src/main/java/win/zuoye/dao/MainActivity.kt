@@ -127,13 +127,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                fun importPlan(payload: PlanShare) {
+                fun importPlan(payload: PlanShare, completeOnboarding: Boolean = false) {
                     lifecycleScope.launch {
                         var result: ImportResult? = null
                         repo.update { current ->
                             val (merged, outcome) = current.importPlan(payload)
                             result = outcome
-                            merged
+                            if (completeOnboarding && outcome.changed) {
+                                merged.copy(onboardingDone = true)
+                            } else {
+                                merged
+                            }
                         }
                         Toast.makeText(activityContext, result?.message() ?: "导入失败", Toast.LENGTH_LONG).show()
                     }
@@ -145,6 +149,10 @@ class MainActivity : ComponentActivity() {
                     doc.activeScheme() == null && !doc.onboardingDone -> OnboardingScreen(
                         doc = doc,
                         editing = null,
+                        onImportPlan = { importPlan(it, completeOnboarding = true) },
+                        onSaveDocument = { savedDocument ->
+                            lifecycleScope.launch { repo.update { savedDocument } }
+                        },
                         onSave = { cycle, templates, dayIds, anchor -> saveNewScheme(cycle, templates, dayIds, anchor) },
                         onSkip = {
                             lifecycleScope.launch {

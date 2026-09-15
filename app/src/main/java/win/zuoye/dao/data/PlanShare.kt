@@ -18,27 +18,20 @@ import kotlinx.serialization.json.Json
  * 不带本机引导状态、覆盖记录等个人数据。
  */
 @Immutable
-@Serializable(with = PlanShareSerializer::class)
 data class PlanShare(
-    val app: String = APP_ID,
-    val version: Int = 1,
-    val exportedAt: Long = 0L,
     val templates: ImmutableList<ShiftTemplate> = persistentListOf(),
     val schemes: ImmutableList<Scheme> = persistentListOf(),
     val activeSchemeId: Long? = null,
 ) {
     companion object {
-        const val APP_ID = "win.zuoye.dao"
-
         /** 聊天文本里的标记行，便于一眼认出/定位 */
         const val PREFIX = "[DAO-PLAN]"
     }
 }
 
 /**
- * 载荷编解码，两种表示：
- * - 可读 JSON（`PlanShare` 原样，导出文件用）；
- * - 紧凑载荷 `DAO1:<base64url>`（短字段 JSON → deflate → base64url），二维码和聊天文本用它，短很多。
+ * 紧凑分享载荷编解码：短字段 JSON → deflate → base64url，
+ * 供二维码、剪贴板和系统文本分享使用。
  */
 object PlanShareCodec {
 
@@ -47,11 +40,6 @@ object PlanShareCodec {
 
     private const val SCHEME_ID_BASE = 1_000_000L
 
-    private val prettyJson = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
     private val compactJson = Json {
         ignoreUnknownKeys = true
         encodeDefaults = false
@@ -60,9 +48,6 @@ object PlanShareCodec {
 
     @OptIn(ExperimentalEncodingApi::class)
     private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
-
-    /** 可读 JSON（导出文件用） */
-    fun encode(payload: PlanShare): String = prettyJson.encodeToString(payload)
 
     /** 紧凑载荷：二维码 / 聊天文本里用 */
     fun encodePayload(payload: PlanShare): String {
@@ -140,47 +125,21 @@ object PlanShareCodec {
     }
 
     /**
-     * 从文本解析载荷，三种输入都认：
+     * 从文本解析载荷，两种输入都认：
      * 1) 带 `DAO1:` 的紧凑载荷（二维码 / 剪贴板）；
-     * 2) 整段分享文本（前面带说明文字）；
-     * 3) 完整 JSON（导出的文件内容）。
+     * 2) 含紧凑载荷的整段分享文本。
      */
     fun decode(text: String): PlanShare? {
         val marker = text.indexOf(PAYLOAD_PREFIX)
-        if (marker >= 0) {
-            val token = text.substring(marker + PAYLOAD_PREFIX.length).takeWhile { !it.isWhitespace() }
-            decodePayload(token)?.let { return it }
-        }
-        val start = text.indexOf('{')
-        val end = text.lastIndexOf('}')
-        if (start < 0 || end <= start) return null
-        val payload = runCatching {
-            prettyJson.decodeFromString<PlanShare>(text.substring(start, end + 1))
-        }.getOrNull() ?: return null
-        return payload.takeIf { it.templates.isNotEmpty() || it.schemes.isNotEmpty() }
+        if (marker < 0) return null
+        val token = text.substring(marker + PAYLOAD_PREFIX.length).takeWhile { !it.isWhitespace() }
+        return decodePayload(token)
     }
 
-    /** 可直接发出去的文本：人类可读摘要 + 数据段 */
     fun shareText(doc: PlanDocument, appName: String, schemeId: Long? = null): String {
         val payload = doc.toShare(schemeId)
         val sb = StringBuilder()
         sb.append("【$appName】排班方案\n")
-        payload.templates.forEach { template ->
-            sb.append("· ${template.name}")
-            if (!template.isRest) sb.append(" ${template.timeRangeText()}")
-            sb.append('\n')
-        }
-        payload.schemes.forEach { scheme ->
-            // 不写锚点日期：方案里不展示"从哪天开始"
-            sb.append("\n「${scheme.name}」${scheme.cycleDays} 天周期\n")
-            sb.append(
-                scheme.dayTemplateIds.joinToString(" → ") { id ->
-                    payload.templates.firstOrNull { it.id == id }?.name ?: "未排班"
-                },
-            ).append('\n')
-        }
-        sb.append("\n复制整条消息，在「设置 → 导入方案」里粘贴即可导入。\n")
-        sb.append(PlanShare.PREFIX).append('\n')
         sb.append(encodePayload(payload))
         return sb.toString()
     }
@@ -214,11 +173,10 @@ object PlanShareCodec {
 }
 
 /** 取出可分享的部分；给定 [schemeId] 时只带这个方案以及它用到的班次 */
-fun PlanDocument.toShare(schemeId: Long? = null, now: Long = System.currentTimeMillis()): PlanShare {
+fun PlanDocument.toShare(schemeId: Long? = null): PlanShare {
     val picked = if (schemeId == null) schemes else schemes.filter { it.id == schemeId }
     val usedTemplateIds = picked.flatMap { it.dayTemplateIds }.toSet()
     return PlanShare(
-        exportedAt = now,
         templates = templates.filter { it.id in usedTemplateIds }.toImmutableList(),
         schemes = picked.toImmutableList(),
         activeSchemeId = activeSchemeId?.takeIf { id -> picked.any { it.id == id } },

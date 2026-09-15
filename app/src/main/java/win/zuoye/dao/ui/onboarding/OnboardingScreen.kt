@@ -1,6 +1,10 @@
 package win.zuoye.dao.ui.onboarding
 
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,7 +36,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,10 +47,13 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -73,7 +83,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.data.PlanShare
+import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
+import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.primaryAnchorEpochDay
@@ -81,14 +94,23 @@ import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.common.TemplateEditorDialog
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import win.zuoye.dao.ui.scheme.AnchorDialog
+import win.zuoye.dao.ui.scheme.SchemeEditScreen
+import win.zuoye.dao.ui.scheme.UNASSIGNED
 import win.zuoye.dao.ui.scheme.formatYmd
+import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
 private enum class Step(val label: String) {
-    TEMPLATES("班次模板"), CYCLE_ASSIGN("周期与指派"), ANCHOR("开始日期")
+    METHOD("创建方式"), TEMPLATES("班次模板"), CYCLE_ASSIGN("周期与指派"), ANCHOR("开始日期")
+}
+
+private enum class CreateMethod(val title: String, val summary: String) {
+    MANUAL("手动添加", "自己设置班次模板、周期与班组"),
+    CLIPBOARD("从剪贴板导入", "读取已经复制的倒班方案"),
+    QR_CODE("扫描二维码导入", "扫描他人分享的方案二维码"),
 }
 
 /**
- * 首次启动的三步向导：
+ * 首次启动先选择创建方式；手动添加时继续三步向导：
  * ①班次模板 → ②周期天数 + 逐日指派 → ③开始日期。
  * editing 非空 = 从现有方案预填（走修改流程）。
  */
@@ -96,6 +118,8 @@ private enum class Step(val label: String) {
 fun OnboardingScreen(
     doc: PlanDocument,
     editing: Scheme?,
+    onImportPlan: (PlanShare) -> Unit,
+    onSaveDocument: (PlanDocument) -> Unit,
     onSave: (
         cycleDays: Int,
         templates: ImmutableList<ShiftTemplate>,
@@ -107,7 +131,48 @@ fun OnboardingScreen(
 ) {
     BackHandler(enabled = editing != null) { onCancel?.invoke() }
 
-    var step by remember { mutableStateOf(Step.TEMPLATES) }
+    val context = LocalContext.current
+    var step by remember { mutableStateOf(if (editing == null) Step.METHOD else Step.TEMPLATES) }
+    var createMethod by remember { mutableStateOf<CreateMethod?>(null) }
+    var manualMode by remember { mutableStateOf(false) }
+    val manualScheme = remember {
+        val id = System.currentTimeMillis()
+        val today = Ymd.today().epochDay
+        Scheme(
+            id = id,
+            name = "方案 ${doc.schemes.size + 1}",
+            cycleDays = 1,
+            dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
+            createdAt = id,
+            groups = persistentListOf(
+                SchemeGroup(
+                    id = id,
+                    name = "班组 1",
+                    anchorEpochDay = today,
+                ),
+            ),
+            defaultGroupId = id,
+        )
+    }
+    if (manualMode) {
+        SchemeEditScreen(
+            doc = doc,
+            scheme = manualScheme,
+            autoFocusName = true,
+            onBack = { manualMode = false },
+            onSave = { savedDocument ->
+                onSaveDocument(
+                    savedDocument.copy(
+                        activeSchemeId = manualScheme.id,
+                        onboardingDone = true,
+                    ),
+                )
+            },
+            onDelete = {},
+            onboardingMode = true,
+        )
+        return
+    }
     var userTemplates by remember {
         mutableStateOf(doc.templates.toPersistentList())
     }
@@ -131,6 +196,18 @@ fun OnboardingScreen(
     var shownPickDay by remember { mutableIntStateOf(-1) }
     LaunchedEffect(pickingDay) { if (pickingDay >= 0) shownPickDay = pickingDay }
 
+    val importFrom: (String?) -> Unit = { text ->
+        val payload = text?.let(PlanShareCodec::decode)
+        if (payload == null) {
+            Toast.makeText(context, "没识别到方案数据", Toast.LENGTH_SHORT).show()
+        } else {
+            onImportPlan(payload)
+        }
+    }
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let(importFrom)
+    }
+
     val cycleDays: Int? = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
 
     fun syncAssignments(n: Int) {
@@ -142,6 +219,19 @@ fun OnboardingScreen(
 
     fun next() {
         when (step) {
+            Step.METHOD -> when (createMethod) {
+                CreateMethod.MANUAL -> manualMode = true
+                CreateMethod.CLIPBOARD -> importFrom(context.clipboardText())
+                CreateMethod.QR_CODE -> scanLauncher.launch(
+                    ScanOptions().apply {
+                        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                        setBeepEnabled(false)
+                        setOrientationLocked(true)
+                        setCaptureActivity(ScanCaptureActivity::class.java)
+                    },
+                )
+                null -> Unit
+            }
             Step.TEMPLATES -> {
                 cycleDays?.let { syncAssignments(it) }
                 step = Step.CYCLE_ASSIGN
@@ -158,13 +248,15 @@ fun OnboardingScreen(
 
     fun back() {
         step = when (step) {
+            Step.METHOD -> Step.METHOD
+            Step.TEMPLATES -> if (editing == null) Step.METHOD else Step.TEMPLATES
             Step.CYCLE_ASSIGN -> Step.TEMPLATES
             Step.ANCHOR -> Step.CYCLE_ASSIGN
-            else -> Step.TEMPLATES
         }
     }
 
     val canNext = when (step) {
+        Step.METHOD -> createMethod != null
         Step.TEMPLATES -> userTemplates.isNotEmpty()
         Step.CYCLE_ASSIGN -> cycleDays != null && assignments.size == cycleDays && assignments.all { it != null }
         Step.ANCHOR -> true
@@ -175,7 +267,7 @@ fun OnboardingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (editing == null) "创建倒班安排" else "修改方案",
+                title = if (editing == null) "引导页面" else "修改方案",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     if (editing != null && step == Step.TEMPLATES) {
@@ -215,15 +307,15 @@ fun OnboardingScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when {
-                    step == Step.TEMPLATES && onSkip != null -> TextButton(
-                        text = "跳过设置",
+                    step == Step.METHOD && onSkip != null -> TextButton(
+                        text = "跳过配置",
                         onClick = onSkip,
                         colors = ButtonDefaults.textButtonColors(
                             textColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
                         ),
                         modifier = Modifier.weight(1f),
                     )
-                    step != Step.TEMPLATES -> TextButton(
+                    step != Step.METHOD -> TextButton(
                         text = "上一步",
                         onClick = { back() },
                         modifier = Modifier.weight(1f),
@@ -233,6 +325,7 @@ fun OnboardingScreen(
                 Button(
                     onClick = { next() },
                     enabled = canNext,
+                    colors = ButtonDefaults.buttonColorsPrimary(),
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(if (step == Step.ANCHOR) "完成" else "下一步")
@@ -242,9 +335,13 @@ fun OnboardingScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            StepIndicator(step)
+            if (step != Step.METHOD) StepIndicator(step)
             Box(Modifier.weight(1f)) {
                 when (step) {
+                    Step.METHOD -> CreateMethodStep(
+                        selected = createMethod,
+                        onSelect = { createMethod = it },
+                    )
                     Step.TEMPLATES -> TemplatesStep(
                         templates = userTemplates,
                         // 小标题和行内加号都不要，加号在右下角 FAB
@@ -350,14 +447,82 @@ fun OnboardingScreen(
 }
 
 @Composable
+private fun CreateMethodStep(
+    selected: CreateMethod?,
+    onSelect: (CreateMethod) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(top = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "选择创建倒班方案方式",
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+            fontSize = 23.sp,
+            fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(24.dp))
+        CreateMethod.entries.forEach { method ->
+            val isSelected = selected == method
+            Card(
+                onClick = { onSelect(method) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = if (isSelected) {
+                        MiuixTheme.colorScheme.primary
+                    } else {
+                        MiuixTheme.colorScheme.surfaceContainer
+                    },
+                    contentColor = if (isSelected) {
+                        MiuixTheme.colorScheme.onPrimary
+                    } else {
+                        MiuixTheme.colorScheme.onSurface
+                    },
+                ),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = method.title,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isSelected) {
+                                MiuixTheme.colorScheme.onPrimary
+                            } else {
+                                MiuixTheme.colorScheme.onSurface
+                            },
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = method.summary,
+                            fontSize = 13.sp,
+                            color = if (isSelected) {
+                                MiuixTheme.colorScheme.onPrimary
+                            } else {
+                                MiuixTheme.colorScheme.onSurfaceVariantSummary
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StepIndicator(step: Step) {
-    val index = Step.entries.indexOf(step)
+    val steps = listOf(Step.TEMPLATES, Step.CYCLE_ASSIGN, Step.ANCHOR)
+    val index = steps.indexOf(step)
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Step.entries.forEachIndexed { i, _ ->
+        steps.forEachIndexed { i, _ ->
             Box(
                 Modifier
                     .size(width = if (i == index) 28.dp else 12.dp, height = 6.dp)
@@ -373,12 +538,22 @@ private fun StepIndicator(step: Step) {
         }
         Spacer(Modifier.width(8.dp))
         Text(
-            "${index + 1}/3 ${step.label}",
+            "${index + 1}/${steps.size} ${step.label}",
             fontSize = 13.sp,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
     }
 }
+
+/** 读取剪贴板第一段文本，供首次引导导入分享载荷。 */
+private fun Context.clipboardText(): String =
+    (getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+        ?.primaryClip
+        ?.takeIf { it.itemCount > 0 }
+        ?.getItemAt(0)
+        ?.coerceToText(this)
+        ?.toString()
+        .orEmpty()
 
 /**
  * 第 1 步：定义班次模板（名称 + 时间 + 颜色），后续逐日指派时点选复用。方案页复用同一组件。
@@ -414,7 +589,7 @@ internal fun TemplatesStep(
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
             if (templates.isEmpty()) {
                 Text(
-                    "还没有班次。点 + 添加一栏，例如：早班 08:00–15:00",
+                    "还没有班次，点击右下角添加",
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),

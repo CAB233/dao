@@ -36,12 +36,10 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 首页右上角进入。页内结构：选一个方案（`Card` + `BasicComponent`，选中打勾）→ 亮出该方案的二维码 → 「其它方式」三条：
 - **二维码**：内容是紧凑载荷（见下），下方提示「扫码即可导入」。
 - **复制到剪贴板**：复制整段分享文本，粘到聊天软件发给对方。
-- **导出配置文件**：`ACTION_CREATE_DOCUMENT` 存成 `<方案名>.json`（内容是**可读 JSON**，`PlanShareCodec.encode`）。
 - **系统分享**：`ACTION_SEND` 纯文本（微信/QQ 等都能发），对方整条复制即可导入。
 
 ### 载荷与导入
 - 两种表示，都在 `data/PlanShare.kt`：
-  - **可读 JSON**：`PlanShare` 原样（导出文件用）。
   - **紧凑载荷** `DAO1:<base64url>`：短字段 JSON → raw deflate → base64url（Kotlin stdlib `Base64.UrlSafe`，不用 android.util.Base64，单测能跑）。
     二维码和聊天文本用它——只有几十~一两百字符，二维码才不会太密。实测 6 个班次 3 个方案的原样 JSON 700+ 字符，紧凑载荷约 1/4。
 - `PlanShareCodec.decode(text)` 三种输入都认：紧凑载荷（二维码/剪贴板）、整段分享文本（`[DAO-PLAN]` 之后那段）、完整 JSON。

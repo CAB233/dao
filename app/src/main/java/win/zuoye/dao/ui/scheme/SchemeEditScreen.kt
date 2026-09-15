@@ -48,6 +48,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
@@ -102,6 +103,7 @@ fun SchemeEditScreen(
     onBack: () -> Unit,
     onSave: (PlanDocument) -> Unit,
     onDelete: () -> Unit,
+    onboardingMode: Boolean = false,
 ) {
     val isNewScheme = remember(scheme.id) { doc.schemes.none { it.id == scheme.id } }
     val initialDraft = remember(scheme.id) {
@@ -135,9 +137,14 @@ fun SchemeEditScreen(
         onSave(savedDocument)
     }
 
-    BackHandler { requestExit() }
-
     var tabIndex by rememberSaveable(scheme.id) { mutableIntStateOf(0) }
+    BackHandler {
+        if (onboardingMode) {
+            if (tabIndex > 0) tabIndex-- else onBack()
+        } else {
+            requestExit()
+        }
+    }
     var cycleText by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
     var showCycleDialog by remember { mutableStateOf(false) }
     var cycleDraft by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
@@ -259,32 +266,71 @@ fun SchemeEditScreen(
         showGroupEditor = false
     }
 
+    val canContinueOnboarding = when (tabIndex) {
+        0 -> draftDocument.templates.isNotEmpty()
+        1 -> draftScheme.cycleDays in 1..99 &&
+            draftScheme.dayTemplateIds.size == draftScheme.cycleDays &&
+            draftScheme.dayTemplateIds.all { id -> draftDocument.templates.any { it.id == id } }
+        else -> draftScheme.name.isNotBlank() &&
+            draftScheme.groups.isNotEmpty() &&
+            draftScheme.defaultGroup() != null
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "编辑方案",
+                title = if (onboardingMode) "引导页面" else "编辑方案",
                 navigationIcon = {
-                    IconButton(onClick = ::requestExit) {
-                        Icon(MiuixIcons.Regular.Back, contentDescription = "返回方案列表")
+                    if (!onboardingMode) {
+                        IconButton(onClick = ::requestExit) {
+                            Icon(MiuixIcons.Regular.Back, contentDescription = "返回方案列表")
+                        }
                     }
                 },
                 actions = {
-                    IconButton(
-                        enabled = draftScheme.name.isNotBlank(),
-                        onClick = ::saveAndExit,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Ok,
-                            contentDescription = "保存",
-                            tint = if (draftScheme.name.isNotBlank()) {
-                                MiuixTheme.colorScheme.primary
-                            } else {
-                                MiuixTheme.colorScheme.disabledOnSurface
-                            },
-                        )
+                    if (!onboardingMode) {
+                        IconButton(
+                            enabled = draftScheme.name.isNotBlank(),
+                            onClick = ::saveAndExit,
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Regular.Ok,
+                                contentDescription = "保存",
+                                tint = if (draftScheme.name.isNotBlank()) {
+                                    MiuixTheme.colorScheme.primary
+                                } else {
+                                    MiuixTheme.colorScheme.disabledOnSurface
+                                },
+                            )
+                        }
                     }
                 },
             )
+        },
+        bottomBar = {
+            if (onboardingMode) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        text = "上一步",
+                        onClick = { if (tabIndex > 0) tabIndex-- else onBack() },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Button(
+                        onClick = { if (tabIndex < 2) tabIndex++ else saveAndExit() },
+                        enabled = canContinueOnboarding,
+                        colors = ButtonDefaults.buttonColorsPrimary(),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(if (tabIndex == 2) "完成" else "下一步")
+                    }
+                }
+            }
         },
         floatingActionButton = {
             // 「班次模板」页签下，加号在右下角；滚动时收起
@@ -342,14 +388,16 @@ fun SchemeEditScreen(
             // 与「新增班次」里的开始/结束同一个样式（共用 SegmentedSwitch）。
             // 切换框的轨道是 surface、胶囊是 surfaceContainer，得落在 surfaceContainer 这一层
             // （卡片/弹窗）上才看得见——放在页面底色（也是 surface）上会整个隐形。
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                SegmentedSwitch(
-                    tabs = listOf("班次模板", "排班设置", "班组设置"),
-                    selectedIndex = tabIndex,
-                    onSelect = { tabIndex = it },
-                    // 连同灰色轨道一起填满整张卡片
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            if (!onboardingMode) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    SegmentedSwitch(
+                        tabs = listOf("班次模板", "排班设置", "班组设置"),
+                        selectedIndex = tabIndex,
+                        onSelect = { tabIndex = it },
+                        // 连同灰色轨道一起填满整张卡片
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             Spacer(Modifier.height(16.dp))
             // 名字行与页签固定，只滚页签内容

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
@@ -29,12 +30,15 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.ColorPicker
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.ShiftTemplate
@@ -44,15 +48,15 @@ import win.zuoye.dao.ui.ShiftPalette
 private val TIME_ITEM_HEIGHT = 48.dp
 
 /**
- * 新建/编辑班次模板：名称（右边的圆点是当前颜色，点开是颜色页）+ 「开始 / 结束」切换框
- * + 一组共用时间滚轮。existing = null 表示新建。
+ * 新建/编辑班次模板：名称（右边的圆点是当前颜色，点开是颜色页）+ 休班开关
+ * + 「开始 / 结束」切换框与共用时间滚轮。existing = null 表示新建。
  */
 @Composable
 fun TemplateEditorDialog(
     show: Boolean,
     existing: ShiftTemplate?,
     usedColors: List<Int>,
-    onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int) -> Unit,
+    onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
@@ -70,6 +74,7 @@ fun TemplateEditorDialog(
     }
     // 开始 / 结束共用一个切换框，下面那组滚轮编辑当前选中的那一头
     var editingEnd by remember(existing) { mutableStateOf(false) }
+    var isRest by remember(existing) { mutableStateOf(existing?.isRest == true) }
     var showColorDialog by remember(existing) { mutableStateOf(false) }
 
     // 每次打开都按 existing 重新初始化一次。弹窗为了退出动画是常驻组合的，
@@ -86,13 +91,14 @@ fun TemplateEditorDialog(
             ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
             ?: ShiftPalette.presets.first()
         editingEnd = false
+        isRest = existing?.isRest == true
         showColorDialog = false
     }
 
     OverlayDialog(
         show = show,
         title = if (existing == null) "新增班次" else "编辑班次",
-        summary = "例：早班 08:00–15:00；结束时间早于开始表示跨零点夜班",
+        summary = "非工作日则打开「休班」开关",
         onDismissRequest = onDismiss,
     ) {
         // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
@@ -120,33 +126,51 @@ fun TemplateEditorDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
-                SegmentedSwitch(
-                    tabs = listOf("开始", "结束"),
-                    selectedIndex = if (editingEnd) 1 else 0,
-                    onSelect = { editingEnd = it == 1 },
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    NumberPicker(
-                        value = if (editingEnd) endH else startH,
-                        onValueChange = { if (editingEnd) endH = it else startH = it },
-                        range = 0..23,
-                        wrapAround = true,
-                        label = { "%02d".format(it) },
-                        itemHeight = TIME_ITEM_HEIGHT,
-                        modifier = Modifier.weight(1f),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.surface,
+                        contentColor = MiuixTheme.colorScheme.onSurface,
+                    ),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("休班", fontSize = 16.sp, modifier = Modifier.weight(1f))
+                        Switch(checked = isRest, onCheckedChange = { isRest = it })
+                    }
+                }
+                if (!isRest) {
+                    Spacer(Modifier.height(12.dp))
+                    SegmentedSwitch(
+                        tabs = listOf("开始", "结束"),
+                        selectedIndex = if (editingEnd) 1 else 0,
+                        onSelect = { editingEnd = it == 1 },
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    Text(":", color = MiuixTheme.colorScheme.onSurface)
-                    NumberPicker(
-                        value = if (editingEnd) endM else startM,
-                        onValueChange = { if (editingEnd) endM = it else startM = it },
-                        range = 0..59,
-                        wrapAround = true,
-                        label = { "%02d".format(it) },
-                        itemHeight = TIME_ITEM_HEIGHT,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        NumberPicker(
+                            value = if (editingEnd) endH else startH,
+                            onValueChange = { if (editingEnd) endH = it else startH = it },
+                            range = 0..23,
+                            wrapAround = true,
+                            label = { "%02d".format(it) },
+                            itemHeight = TIME_ITEM_HEIGHT,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(":", color = MiuixTheme.colorScheme.onSurface)
+                        NumberPicker(
+                            value = if (editingEnd) endM else startM,
+                            onValueChange = { if (editingEnd) endM = it else startM = it },
+                            range = 0..59,
+                            wrapAround = true,
+                            label = { "%02d".format(it) },
+                            itemHeight = TIME_ITEM_HEIGHT,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -158,9 +182,15 @@ fun TemplateEditorDialog(
                 )
                 TextButton(
                     text = "保存",
-                    enabled = name.isNotBlank(),
+                    enabled = isRest || name.isNotBlank(),
                     onClick = {
-                        onSave(name.trim(), startH * 60 + startM, endH * 60 + endM, color)
+                        onSave(
+                            name.trim().ifBlank { "休班" },
+                            if (isRest) 0 else startH * 60 + startM,
+                            if (isRest) 0 else endH * 60 + endM,
+                            color,
+                            isRest,
+                        )
                     },
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                     modifier = Modifier.weight(1f),

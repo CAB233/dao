@@ -524,7 +524,7 @@ fun SchemeEditScreen(
             existing = editingTemplate,
             usedColors = doc.templates.map { it.colorArgb },
             onDismiss = { showEditor = false },
-            onSave = { name, start, end, color ->
+            onSave = { name, start, end, color, isRest ->
                 // 先抓一份：onMutate 交给协程稍后执行，别在 lambda 里读可变的组合状态
                 val editing = editingTemplate
                 onMutate { plan ->
@@ -537,6 +537,7 @@ fun SchemeEditScreen(
                                     startMinute = start,
                                     endMinute = end,
                                     colorArgb = color,
+                                    isRest = isRest,
                                 ),
                             ),
                         )
@@ -544,7 +545,13 @@ fun SchemeEditScreen(
                         plan.copy(
                             templates = plan.templates.map {
                                 if (it.id == editing.id) {
-                                    it.copy(name = name, startMinute = start, endMinute = end, colorArgb = color)
+                                    it.copy(
+                                        name = name,
+                                        startMinute = start,
+                                        endMinute = end,
+                                        colorArgb = color,
+                                        isRest = isRest,
+                                    )
                                 } else {
                                     it
                                 }

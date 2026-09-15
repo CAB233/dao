@@ -83,6 +83,7 @@ import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
+import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.data.editableGroups
 import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
@@ -341,6 +342,7 @@ private fun RosterStatusCard(
 ) {
     val activeScheme = doc.activeScheme()
     val todayShift = resolveShift(doc, today.epochDay)
+    val currentGroupName = activeScheme?.defaultGroup()?.name
     val cardColor = if (isSystemInDarkTheme()) {
         ShiftPalette.statusCardDarkBackground
     } else {
@@ -378,7 +380,7 @@ private fun RosterStatusCard(
                 modifier = Modifier.padding(start = 16.dp, top = 14.dp),
             ) {
                 Text(
-                    text = "倒班中",
+                    text = if (todayShift?.template?.isRest == true) "休班中" else "倒班中",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -390,7 +392,7 @@ private fun RosterStatusCard(
             }
 
             Text(
-                text = todayShift?.template?.name ?: "暂无班次",
+                text = currentGroupName ?: "暂无班组",
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 16.dp, bottom = 10.dp),

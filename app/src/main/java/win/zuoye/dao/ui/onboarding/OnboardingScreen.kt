@@ -108,7 +108,7 @@ fun OnboardingScreen(
 
     var step by remember { mutableStateOf(Step.TEMPLATES) }
     var userTemplates by remember {
-        mutableStateOf(doc.templates.filter { !it.isRest }.toPersistentList())
+        mutableStateOf(doc.templates.toPersistentList())
     }
     var cycleText by remember { mutableStateOf(editing?.cycleDays?.toString() ?: "") }
     var assignments by remember {
@@ -299,7 +299,7 @@ fun OnboardingScreen(
             existing = editingTemplate,
             usedColors = userTemplates.map { it.colorArgb },
             onDismiss = { showEditor = false },
-            onSave = { name, start, end, color ->
+            onSave = { name, start, end, color, isRest ->
                 val current = editingTemplate
                 if (current == null) {
                     userTemplates = userTemplates.add(
@@ -309,6 +309,7 @@ fun OnboardingScreen(
                             startMinute = start,
                             endMinute = end,
                             colorArgb = color,
+                            isRest = isRest,
                         )
                     )
                 } else {
@@ -316,7 +317,13 @@ fun OnboardingScreen(
                     if (idx >= 0) {
                         userTemplates = userTemplates.set(
                             idx,
-                            current.copy(name = name, startMinute = start, endMinute = end, colorArgb = color),
+                            current.copy(
+                                name = name,
+                                startMinute = start,
+                                endMinute = end,
+                                colorArgb = color,
+                                isRest = isRest,
+                            ),
                         )
                     }
                 }
@@ -421,9 +428,7 @@ internal fun TemplatesStep(
                     Column(Modifier.weight(1f)) {
                         Text(template.name, fontSize = 16.sp)
                         Text(
-                            ShiftTemplate.format(template.startMinute) + "–" +
-                                (if (template.crossesMidnight()) "次日" else "") +
-                                ShiftTemplate.format(template.endMinute),
+                            template.timeRangeText(),
                             fontSize = 12.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )

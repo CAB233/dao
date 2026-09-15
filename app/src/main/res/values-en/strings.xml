@@ -207,6 +207,7 @@
   <string name="unassigned_shift">Unassigned shift</string>
   <string name="on_rest">Resting</string>
   <string name="on_shift">On shift</string>
+  <string name="off_work">Off work</string>
   <string name="plan_label">Plan: %1$s</string>
   <string name="holiday_work_badge">Work</string>
   <string name="holiday_rest_badge">Off</string>

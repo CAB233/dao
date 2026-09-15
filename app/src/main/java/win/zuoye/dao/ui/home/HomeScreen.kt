@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -78,6 +79,7 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import win.zuoye.dao.data.LegalHolidays
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
@@ -92,6 +94,7 @@ import win.zuoye.dao.ui.common.localizedTimeRangeText
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import kotlin.math.roundToInt
 import java.util.Locale
+import java.util.Calendar
 
 /** 可浏览的月份范围：2000-01 .. 2100-12 */
 private const val BASE_YEAR = 2000
@@ -105,7 +108,18 @@ fun HomeScreen(
     onExportPlan: () -> Unit,
     onOpenPlan: () -> Unit,
 ) {
-    val today = remember { Ymd.today() }
+    var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            currentTimeMillis = now
+            delay(60_000L - now % 60_000L + 50L)
+        }
+    }
+    val today = remember(currentTimeMillis) { Ymd.today() }
+    val currentMinute = remember(currentTimeMillis) {
+        Calendar.getInstance().run { get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE) }
+    }
     val initialPage = (today.year - BASE_YEAR) * 12 + today.month - 1
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { MONTH_COUNT })
     val coroutineScope = rememberCoroutineScope()
@@ -181,6 +195,7 @@ fun HomeScreen(
             RosterStatusCard(
                 doc = doc,
                 today = today,
+                currentMinute = currentMinute,
                 onClick = onOpenPlan,
             )
 
@@ -349,10 +364,26 @@ private fun GroupScheduleRows(
 private fun RosterStatusCard(
     doc: PlanDocument,
     today: Ymd,
+    currentMinute: Int,
     onClick: () -> Unit,
 ) {
     val activeScheme = doc.activeScheme()
     val todayShift = resolveShift(doc, today.epochDay)
+    val previousShift = resolveShift(doc, today.epochDay - 1)
+    val isWorking = todayShift?.template?.let { template ->
+        !template.isRest && if (template.crossesMidnight()) {
+            currentMinute >= template.startMinute
+        } else {
+            currentMinute in template.startMinute until template.endMinute
+        }
+    } == true || previousShift?.template?.let { template ->
+        !template.isRest && template.crossesMidnight() && currentMinute < template.endMinute
+    } == true
+    val status = when {
+        isWorking -> RosterStatus.ON_SHIFT
+        todayShift?.template?.isRest == true -> RosterStatus.RESTING
+        else -> RosterStatus.OFF_WORK
+    }
     val currentGroupName = activeScheme?.defaultGroup()?.name
     val cardColor = if (isSystemInDarkTheme()) {
         ShiftPalette.statusCardDarkBackground
@@ -381,17 +412,23 @@ private fun RosterStatusCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .offset(x = 27.dp, y = 31.dp),
+                    .offset(x = 27.dp, y = 29.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Text("🏝", fontSize = 92.sp)
+                Text(if (status == RosterStatus.ON_SHIFT) "🏝" else "🐖", fontSize = 92.sp)
             }
 
             Column(
                 modifier = Modifier.padding(start = 16.dp, top = 14.dp),
             ) {
                 Text(
-                    text = stringResource(if (todayShift?.template?.isRest == true) R.string.on_rest else R.string.on_shift),
+                    text = stringResource(
+                        when (status) {
+                            RosterStatus.ON_SHIFT -> R.string.on_shift
+                            RosterStatus.RESTING -> R.string.on_rest
+                            RosterStatus.OFF_WORK -> R.string.off_work
+                        },
+                    ),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -415,6 +452,12 @@ private fun RosterStatusCard(
             )
         }
     }
+}
+
+private enum class RosterStatus {
+    ON_SHIFT,
+    RESTING,
+    OFF_WORK,
 }
 
 @Composable

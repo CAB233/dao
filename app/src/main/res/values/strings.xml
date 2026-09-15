@@ -202,6 +202,7 @@
   <string name="unassigned_shift">未指派班次</string>
   <string name="on_rest">休班中</string>
   <string name="on_shift">倒班中</string>
+  <string name="off_work">下班了</string>
   <string name="plan_label">方案：%1$s</string>
   <string name="holiday_work_badge">班</string>
   <string name="holiday_rest_badge">休</string>

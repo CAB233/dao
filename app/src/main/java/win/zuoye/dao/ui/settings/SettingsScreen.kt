@@ -82,7 +82,7 @@ fun SettingsScreen(
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
                     title = "关于",
-                    summary = "版本 $versionName",
+                    summary = "v$versionName",
                     endActions = { Chevron() },
                     onClick = onOpenAbout,
                 )

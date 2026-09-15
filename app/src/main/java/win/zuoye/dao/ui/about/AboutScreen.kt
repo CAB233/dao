@@ -18,38 +18,38 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
 
 /**
- * 关于页：头部是应用图标 + 名称 + 版本号，下面是"查看源代码 / 获取更新"两个入口
- * （入口样式对齐 InstallerX 的设置项：标题 + 说明 + 右侧箭头）。
+ * 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。
+ * 视觉层级参考 InstallerX-Revived 的 MiuixAboutPage，并使用本项目的主题色实现。
  * 两个入口目前是占位，没有实际功能。
  */
 @Composable
@@ -57,11 +57,14 @@ fun AboutScreen(onBack: () -> Unit) {
     BackHandler { onBack() }
     val context = LocalContext.current
     val app = remember(context) { context.loadAppInfo() }
+    val scrollBehavior = MiuixScrollBehavior()
+    val listState = rememberLazyListState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "关于",
+                title = "",
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(MiuixIcons.Regular.Back, contentDescription = "返回")
@@ -71,50 +74,79 @@ fun AboutScreen(onBack: () -> Unit) {
         },
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
-        Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            state = listState,
         ) {
-            // ---- 头部 ----
-            Column(
-                Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                app.icon?.let { icon ->
-                    Image(
-                        bitmap = icon,
-                        contentDescription = null,
-                        // 图片必须裁剪 → squircleClip
-                        modifier = Modifier.size(84.dp).squircleClip(20.dp),
+            item {
+                AboutHero(
+                    app = app,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                )
+            }
+
+            item {
+                Card(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp),
+                ) {
+                    AboutEntry(
+                        title = "查看源代码",
+                        summary = "在 GitHub 上查看项目源码",
+                        onClick = { context.notImplemented("查看源代码") },
+                    )
+                    AboutEntry(
+                        title = "获取更新",
+                        summary = "检查是否有新版本",
+                        onClick = { context.notImplemented("获取更新") },
                     )
                 }
-                Spacer(Modifier.height(14.dp))
-                Text(stringResource(R.string.app_name), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "版本 ${app.versionName}",
-                    fontSize = 13.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
             }
-
-            // ---- 入口 ----
-            SmallTitle(text = "关于")
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                AboutEntry(
-                    title = "查看源代码",
-                    summary = "在 GitHub 上查看项目源码",
-                    onClick = { context.notImplemented("查看源代码") },
-                )
-                AboutEntry(
-                    title = "获取更新",
-                    summary = "检查是否有新版本",
-                    onClick = { context.notImplemented("获取更新") },
-                )
-            }
-
-            // 二级页面：末尾 Spacer 自己吃掉导航栏内边距（签名里不放 bottomPadding）
-            Spacer(Modifier.height(24.dp).navigationBarsPadding())
+            item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
         }
+    }
+}
+
+@Composable
+private fun AboutHero(
+    app: AppInfo,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MiuixTheme.colorScheme
+
+    Column(
+        modifier = modifier
+            .height(300.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.weight(1f))
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier.size(156.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.app_name),
+            fontSize = 35.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = "v${app.versionName}",
+            fontSize = 14.sp,
+            color = colors.onSurfaceVariantSummary,
+        )
+        Spacer(Modifier.weight(1f))
     }
 }
 
@@ -145,23 +177,32 @@ private fun Context.notImplemented(name: String) {
     Toast.makeText(this, "「$name」暂未实现", Toast.LENGTH_SHORT).show()
 }
 
-private class AppInfo(val versionName: String, val icon: ImageBitmap?)
+private class AppInfo(
+    val versionName: String,
+    val versionCode: Long,
+)
 
 private fun Context.loadAppInfo(): AppInfo {
     val pm = packageManager
-    val versionName = runCatching {
+    val packageInfo = runCatching {
         val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
         } else {
             @Suppress("DEPRECATION")
             pm.getPackageInfo(packageName, 0)
         }
-        info.versionName
-    }.getOrNull().orEmpty()
-    val icon = runCatching {
-        pm.getApplicationIcon(packageName).toBitmap(width = 168, height = 168).asImageBitmap()
+        info
     }.getOrNull()
-    return AppInfo(versionName, icon)
+    val versionName = packageInfo?.versionName.orEmpty()
+    val versionCode = packageInfo?.let {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            it.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            it.versionCode.toLong()
+        }
+    } ?: 0L
+    return AppInfo(versionName, versionCode)
 }
 
 /** 应用版本名（设置页也用它显示版本） */

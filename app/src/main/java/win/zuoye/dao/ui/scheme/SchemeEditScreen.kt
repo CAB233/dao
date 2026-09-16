@@ -2,6 +2,13 @@ package win.zuoye.dao.ui.scheme
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.fadeIn
@@ -31,23 +38,41 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
@@ -61,9 +86,9 @@ import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -72,7 +97,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -109,7 +133,6 @@ fun SchemeEditScreen(
     onSave: (PlanDocument) -> Unit,
     onDelete: () -> Unit,
     onboardingMode: Boolean = false,
-    showBackButton: Boolean = true,
 ) {
     val defaultGroupNames = (1..99).map { stringResource(R.string.default_group_name, it) }
     val isNewScheme = remember(scheme.id) { doc.schemes.none { it.id == scheme.id } }
@@ -122,12 +145,8 @@ fun SchemeEditScreen(
     }
     var draftDocument by remember(scheme.id) { mutableStateOf(initialDraft) }
     val draftScheme = draftDocument.schemes.first { it.id == scheme.id }
-    val hasUnsavedChanges = draftDocument != initialDraft
-    var showExitConfirmation by remember { mutableStateOf(false) }
 
-    fun requestExit() {
-        if (hasUnsavedChanges) showExitConfirmation = true else onBack()
-    }
+    fun requestExit() = onBack()
 
     fun saveAndExit() {
         if (draftScheme.name.isBlank()) return
@@ -182,6 +201,10 @@ fun SchemeEditScreen(
     LaunchedEffect(deleteTemplate) { deleteTemplate?.let { shownDeleteTemplate = it } }
     // 新建方案时把光标直接放进名字框；打开已有方案保持不高亮
     val nameFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var nameFieldFocused by remember { mutableStateOf(false) }
+    var nameFieldBounds by remember { mutableStateOf(Rect.Zero) }
+    var contentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     LaunchedEffect(scheme.id, autoFocusName) {
         if (autoFocusName) nameFocusRequester.requestFocus()
     }
@@ -190,6 +213,56 @@ fun SchemeEditScreen(
     val fabVisible = rememberFabVisible { contentScrollState.value }
     val groups = draftScheme.groups
     val defaultGroup = draftScheme.defaultGroup()
+
+    var dismissOffset by remember(scheme.id) { mutableFloatStateOf(0f) }
+    var editorHeight by remember(scheme.id) { mutableIntStateOf(1) }
+    val dismissThreshold = with(LocalDensity.current) { 96.dp.toPx() }
+    val currentOnBack by rememberUpdatedState(onBack)
+
+    suspend fun settleDismiss(velocityY: Float): Boolean {
+        val dismiss = dismissOffset >= dismissThreshold || velocityY >= 1_200f
+        val target = if (dismiss) editorHeight.toFloat() else 0f
+        animate(
+            initialValue = dismissOffset,
+            targetValue = target,
+            animationSpec = tween(durationMillis = if (dismiss) 180 else 220),
+        ) { value, _ -> dismissOffset = value }
+        if (dismiss) currentOnBack()
+        return dismiss
+    }
+
+    val dismissDragState = rememberDraggableState { delta ->
+        dismissOffset = (dismissOffset + delta).coerceIn(0f, editorHeight.toFloat())
+    }
+    val dismissNestedScroll = remember(dismissThreshold) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput || available.y >= 0f || dismissOffset <= 0f) {
+                    return Offset.Zero
+                }
+                val consumed = available.y.coerceAtLeast(-dismissOffset)
+                dismissOffset += consumed
+                return Offset(0f, consumed)
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
+                val previous = dismissOffset
+                dismissOffset = (dismissOffset + available.y).coerceAtMost(editorHeight.toFloat())
+                return Offset(0f, dismissOffset - previous)
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (dismissOffset <= 0f) return Velocity.Zero
+                val dismissed = settleDismiss(available.y)
+                return if (dismissed) available else Velocity(0f, available.y)
+            }
+        }
+    }
 
     fun updateScheme(transform: (Scheme) -> Scheme) {
         draftDocument = draftDocument.copy(
@@ -284,32 +357,47 @@ fun SchemeEditScreen(
     }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { editorHeight = it.height.coerceAtLeast(1) }
+            .graphicsLayer { translationY = dismissOffset }
+            .nestedScroll(dismissNestedScroll),
         topBar = {
-            TopAppBar(
-                title = stringResource(if (onboardingMode) R.string.onboarding_title else R.string.plan_edit_title),
-                navigationIcon = {
-                    if (!onboardingMode && showBackButton) {
-                        IconButton(onClick = ::requestExit) {
-                            Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back_to_plan_list))
-                        }
-                    }
-                },
-                actions = {
-                    if (!onboardingMode) {
-                        Button(
+            if (onboardingMode) {
+                TopAppBar(title = stringResource(R.string.onboarding_title))
+            } else {
+                SmallTopAppBar(
+                    title = stringResource(R.string.plan_edit_title),
+                    modifier = Modifier.draggable(
+                        state = dismissDragState,
+                        orientation = Orientation.Vertical,
+                        onDragStopped = { velocity -> settleDismiss(velocity) },
+                    ),
+                    navigationIcon = {
+                        TextButton(
+                            text = stringResource(R.string.action_cancel),
+                            onClick = ::requestExit,
+                            colors = ButtonDefaults.textButtonColors(
+                                color = MiuixTheme.colorScheme.surface.copy(alpha = 0f),
+                                disabledColor = MiuixTheme.colorScheme.surface.copy(alpha = 0f),
+                                textColor = MiuixTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    actions = {
+                        TextButton(
+                            text = stringResource(R.string.action_save),
                             enabled = draftScheme.name.isNotBlank(),
                             onClick = ::saveAndExit,
-                            colors = ButtonDefaults.buttonColorsPrimary(),
-                            modifier = Modifier.padding(end = 12.dp),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.action_save),
-                                fontSize = 16.sp,
-                            )
-                        }
-                    }
-                },
-            )
+                            colors = ButtonDefaults.textButtonColors(
+                                color = MiuixTheme.colorScheme.surface.copy(alpha = 0f),
+                                disabledColor = MiuixTheme.colorScheme.surface.copy(alpha = 0f),
+                                textColor = MiuixTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                )
+            }
         },
         bottomBar = {
             if (onboardingMode) {
@@ -367,7 +455,24 @@ fun SchemeEditScreen(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .imePadding(),
+                .imePadding()
+                .onGloballyPositioned { contentCoordinates = it }
+                .pointerInput(focusManager) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(
+                            requireUnconsumed = false,
+                            pass = PointerEventPass.Initial,
+                        )
+                        val windowPosition = contentCoordinates?.localToWindow(down.position)
+                        if (
+                            nameFieldFocused &&
+                            windowPosition != null &&
+                            !nameFieldBounds.contains(windowPosition)
+                        ) {
+                            focusManager.clearFocus()
+                        }
+                    }
+                },
         ) {
             Column(
                 Modifier
@@ -392,7 +497,9 @@ fun SchemeEditScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
                     .padding(top = 12.dp, bottom = 12.dp)
-                    .focusRequester(nameFocusRequester),
+                    .focusRequester(nameFocusRequester)
+                    .onFocusChanged { nameFieldFocused = it.isFocused }
+                    .onGloballyPositioned { nameFieldBounds = it.boundsInWindow() },
             )
 
             // ---- 班次模板 / 排班设置 / 班组设置（位于方案名下面）----
@@ -703,40 +810,6 @@ fun SchemeEditScreen(
                     deleteTemplate = null
                 },
             )
-        }
-
-        OverlayDialog(
-            show = showExitConfirmation,
-            title = stringResource(R.string.unsaved_exit_title),
-            summary = if (isNewScheme) {
-                stringResource(R.string.unsaved_new_summary)
-            } else {
-                stringResource(R.string.unsaved_summary)
-            },
-            onDismissRequest = { showExitConfirmation = false },
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_not_save),
-                    onClick = {
-                        showExitConfirmation = false
-                        onBack()
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = { showExitConfirmation = false },
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_save_and_exit),
-                    enabled = draftScheme.name.isNotBlank(),
-                    onClick = ::saveAndExit,
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
         }
 
         OverlayDialog(

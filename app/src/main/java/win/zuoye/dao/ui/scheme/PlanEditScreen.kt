@@ -26,12 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
-import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
-import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
-import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
-import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -56,12 +50,6 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toPersistentList
-import kotlinx.serialization.Serializable
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.ui.NavDisplay
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -101,128 +89,27 @@ internal const val UNASSIGNED = 0L
 internal fun formatYmd(ymd: Ymd): String =
     "${ymd.year}-${"%02d".format(ymd.month)}-${"%02d".format(ymd.day)}"
 
-@Serializable
-private data object PlanListRoute : NavKey
-
-@Serializable
-private data class PlanDetailRoute(
-    val scheme: Scheme,
-    val autoFocusName: Boolean,
-) : NavKey
-
 /**
- * 倒班方案：整页是方案列表，点某张卡片时编辑页像二级页面一样从右侧滑入。
- * 列表与编辑页共用这一个路由；作为底栏根页面时可隐藏列表页的返回箭头。
+ * 倒班方案：整页是方案列表，点某张卡片时编辑页从底部以卡片形式滑入。
+ * 编辑卡片由外层主界面覆盖显示，使底栏与列表始终保留在卡片下方。
  */
 @Composable
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 fun PlanEditScreen(
     doc: PlanDocument,
     onBack: () -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     showBackButton: Boolean = true,
-    openSchemeId: Long? = null,
-    onOpenSchemeConsumed: () -> Unit = {},
+    onEditScheme: (scheme: Scheme, autoFocusName: Boolean) -> Unit,
 ) {
-    val backStack = rememberNavBackStack(PlanListRoute)
-    val adaptiveInfo = currentWindowAdaptiveInfoV2()
-    val directive = remember(adaptiveInfo) {
-        calculatePaneScaffoldDirective(adaptiveInfo).copy(horizontalPartitionSpacerSize = 0.dp)
-    }
-    val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(directive = directive)
-
-    fun popDetail() {
-        if (backStack.size > 1) backStack.removeLastOrNull() else onBack()
-    }
-
-    LaunchedEffect(openSchemeId) {
-        val schemeId = openSchemeId ?: return@LaunchedEffect
-        val scheme = doc.schemes.firstOrNull { it.id == schemeId }
-        if (scheme != null && (backStack.lastOrNull() as? PlanDetailRoute)?.scheme?.id != schemeId) {
-            while (backStack.size > 1) backStack.removeLastOrNull()
-            backStack.add(PlanDetailRoute(scheme, autoFocusName = false))
-        }
-        onOpenSchemeConsumed()
-    }
-
-    NavDisplay(
-        backStack = backStack,
-        onBack = ::popDetail,
-        sceneStrategies = listOf(listDetailStrategy),
-        entryProvider = entryProvider {
-            entry<PlanListRoute>(
-                metadata = ListDetailSceneStrategy.listPane(
-                    detailPlaceholder = {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = stringResource(R.string.plan_select_prompt),
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            )
-                        }
-                    },
-                ),
-            ) {
-                SchemeListScreen(
-                    doc = doc,
-                    onBack = onBack,
-                    showBackButton = showBackButton,
-                    onMutate = onMutate,
-                    onImportPlan = onImportPlan,
-                    onEnter = { backStack.add(PlanDetailRoute(it, autoFocusName = false)) },
-                    onCreate = { backStack.add(PlanDetailRoute(it, autoFocusName = true)) },
-                )
-            }
-            entry<PlanDetailRoute>(
-                metadata = ListDetailSceneStrategy.detailPane(),
-            ) { route ->
-                val scheme = route.scheme
-                val inListDetailScene = LocalListDetailSceneScope.current != null
-                SchemeEditScreen(
-                    doc = doc,
-                    scheme = scheme,
-                    autoFocusName = route.autoFocusName,
-                    showBackButton = !inListDetailScene,
-                    onBack = ::popDetail,
-                    onSave = { editedDocument ->
-                        val editedScheme = editedDocument.schemes.first { it.id == scheme.id }
-                        onMutate { current ->
-                            val alreadyExists = current.schemes.any { it.id == editedScheme.id }
-                            current.copy(
-                                templates = editedDocument.templates,
-                                schemes = if (alreadyExists) {
-                                    current.schemes.map {
-                                        if (it.id == editedScheme.id) editedScheme else it
-                                    }.toImmutableList()
-                                } else {
-                                    current.schemes.toPersistentList().add(editedScheme)
-                                },
-                                activeSchemeId = if (alreadyExists) {
-                                    current.activeSchemeId
-                                } else {
-                                    editedScheme.id
-                                },
-                            )
-                        }
-                        popDetail()
-                    },
-                    onDelete = {
-                        onMutate { plan ->
-                            val remaining = plan.schemes.filterNot { it.id == scheme.id }.toImmutableList()
-                            plan.copy(
-                                schemes = remaining,
-                                activeSchemeId = if (plan.activeSchemeId == scheme.id) {
-                                    remaining.firstOrNull()?.id
-                                } else {
-                                    plan.activeSchemeId
-                                },
-                            )
-                        }
-                        popDetail()
-                    },
-                )
-            }
-        },
+    SchemeListScreen(
+        doc = doc,
+        onBack = onBack,
+        showBackButton = showBackButton,
+        onMutate = onMutate,
+        onImportPlan = onImportPlan,
+        onEnter = { onEditScheme(it, false) },
+        onCreate = { onEditScheme(it, true) },
     )
 }
 

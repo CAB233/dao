@@ -12,6 +12,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,11 +45,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
+import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.ui.about.AboutScreen
@@ -58,6 +64,7 @@ import win.zuoye.dao.ui.common.localizedMessage
 import win.zuoye.dao.ui.home.HomeScreen
 import win.zuoye.dao.ui.onboarding.OnboardingScreen
 import win.zuoye.dao.ui.scheme.PlanEditScreen
+import win.zuoye.dao.ui.scheme.SchemeEditScreen
 import win.zuoye.dao.ui.settings.SettingsScreen
 import win.zuoye.dao.ui.share.SharePlanScreen
 import win.zuoye.dao.ui.theme.AppTheme
@@ -73,7 +80,6 @@ private sealed interface AppRoute : NavKey {
     @Serializable data object Main : AppRoute
     @Serializable data object About : AppRoute
     @Serializable data object SharePlan : AppRoute
-    @Serializable data object Plan : AppRoute
 }
 
 class MainActivity : ComponentActivity() {
@@ -281,12 +287,6 @@ class MainActivity : ComponentActivity() {
                                         doc = doc,
                                         onBack = ::popToMain,
                                     )
-                                    AppRoute.Plan -> PlanEditScreen(
-                                        doc = doc,
-                                        onBack = ::popToMain,
-                                        onImportPlan = { importPlan(it) },
-                                        onMutate = mainViewModel::mutate,
-                                    )
                                     AppRoute.Main -> Unit
                                     null -> Unit
                                 }
@@ -322,7 +322,15 @@ private fun MainTabs(
 ) {
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(initialPage = current.ordinal) { tabs.size }
-    var requestedSchemeId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var editingScheme by remember { mutableStateOf<Scheme?>(null) }
+    var shownEditingScheme by remember { mutableStateOf<Scheme?>(null) }
+    var editingAutoFocus by remember { mutableStateOf(false) }
+
+    fun openSchemeEditor(scheme: Scheme, autoFocusName: Boolean) {
+        shownEditingScheme = scheme
+        editingAutoFocus = autoFocusName
+        editingScheme = scheme
+    }
 
     // 点底栏：把 pager 平滑滑过去（InstallerX 同款：整页滑动，不淡入淡出）
     LaunchedEffect(current) {
@@ -366,14 +374,19 @@ private fun MainTabs(
                     // 相邻页保持组合：来回切的时候日历不会重置回本月
                     beyondViewportPageCount = 1,
                     overscrollEffect = null,
+                    userScrollEnabled = editingScheme == null,
                 ) { page ->
                     when (tabs[page]) {
                         MainTab.Home -> HomeScreen(
                             doc = doc,
                             onExportPlan = onExportPlan,
                             onOpenPlan = {
-                                requestedSchemeId = doc.activeScheme()?.id
-                                onSelectTab(MainTab.Config)
+                                val activeScheme = doc.activeScheme()
+                                if (activeScheme == null) {
+                                    onSelectTab(MainTab.Config)
+                                } else {
+                                    openSchemeEditor(activeScheme, false)
+                                }
                             },
                         )
                         MainTab.Config -> PlanEditScreen(
@@ -382,8 +395,7 @@ private fun MainTabs(
                             onImportPlan = onImportPlan,
                             onMutate = onMutate,
                             showBackButton = false,
-                            openSchemeId = requestedSchemeId,
-                            onOpenSchemeConsumed = { requestedSchemeId = null },
+                            onEditScheme = ::openSchemeEditor,
                         )
                         MainTab.Settings -> SettingsScreen(
                             doc = doc,
@@ -416,6 +428,67 @@ private fun MainTabs(
                 onDismiss = onDismissUpdate,
                 onUpdate = onStartUpdate,
             )
+        }
+
+        val editorScheme = shownEditingScheme
+        if (editorScheme != null) {
+            AnimatedVisibility(
+                visible = editingScheme != null,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = tween(durationMillis = 320, easing = EaseInOut),
+                ),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = tween(durationMillis = 280, easing = EaseInOut),
+                ),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                SchemeEditScreen(
+                    doc = doc,
+                    scheme = editorScheme,
+                    autoFocusName = editingAutoFocus,
+                    onBack = { editingScheme = null },
+                    onSave = { editedDocument ->
+                        val editedScheme = editedDocument.schemes.first { it.id == editorScheme.id }
+                        onMutate { currentDocument ->
+                            val alreadyExists = currentDocument.schemes.any { it.id == editedScheme.id }
+                            currentDocument.copy(
+                                templates = editedDocument.templates,
+                                schemes = if (alreadyExists) {
+                                    currentDocument.schemes.map { existing ->
+                                        if (existing.id == editedScheme.id) editedScheme else existing
+                                    }.toImmutableList()
+                                } else {
+                                    currentDocument.schemes.toPersistentList().add(editedScheme)
+                                },
+                                activeSchemeId = if (alreadyExists) {
+                                    currentDocument.activeSchemeId
+                                } else {
+                                    editedScheme.id
+                                },
+                            )
+                        }
+                        editingScheme = null
+                    },
+                    onDelete = {
+                        onMutate { currentDocument ->
+                            val remaining = currentDocument.schemes
+                                .filterNot { it.id == editorScheme.id }
+                                .toImmutableList()
+                            currentDocument.copy(
+                                schemes = remaining,
+                                activeSchemeId = if (currentDocument.activeSchemeId == editorScheme.id) {
+                                    remaining.firstOrNull()?.id
+                                } else {
+                                    currentDocument.activeSchemeId
+                                },
+                            )
+                        }
+                        editingScheme = null
+                    },
+                )
+            }
         }
     }
 }

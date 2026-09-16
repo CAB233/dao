@@ -1,8 +1,11 @@
 package win.zuoye.dao.ui.share
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +69,23 @@ fun SharePlanScreen(
 ) {
     BackHandler { onBack() }
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    DisposableEffect(activity) {
+        val window = activity?.window
+        val previousBrightness = window?.attributes?.screenBrightness
+        if (window != null) {
+            window.attributes = window.attributes.apply {
+                screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+            }
+        }
+        onDispose {
+            if (window != null && previousBrightness != null) {
+                window.attributes = window.attributes.apply {
+                    screenBrightness = previousBrightness
+                }
+            }
+        }
+    }
     val appName = stringResource(R.string.app_name)
     val shareHeader = stringResource(R.string.share_text_header, appName)
     val copiedMessage = stringResource(R.string.copied_plan)
@@ -193,4 +214,13 @@ fun SharePlanScreen(
 private fun Context.copyToClipboard(text: String) {
     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
     clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.share_clip_label), text))
+}
+
+private fun Context.findActivity(): Activity? {
+    var current = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return current as? Activity
 }

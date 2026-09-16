@@ -446,7 +446,7 @@ private fun GroupScheduleRows(
     }
 }
 
-/** 主页上的当前倒班状态卡片；点击后进入方案列表，可切换使用中的方案。 */
+/** 主页上的当前倒班状态卡片；点击后进入方案列表或直接编辑使用中的方案。 */
 @Composable
 private fun RosterStatusCard(
     doc: PlanDocument,

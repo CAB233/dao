@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,6 +122,8 @@ fun PlanEditScreen(
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     showBackButton: Boolean = true,
+    openSchemeId: Long? = null,
+    onOpenSchemeConsumed: () -> Unit = {},
 ) {
     val backStack = rememberNavBackStack(PlanListRoute)
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -131,6 +134,16 @@ fun PlanEditScreen(
 
     fun popDetail() {
         if (backStack.size > 1) backStack.removeLastOrNull() else onBack()
+    }
+
+    LaunchedEffect(openSchemeId) {
+        val schemeId = openSchemeId ?: return@LaunchedEffect
+        val scheme = doc.schemes.firstOrNull { it.id == schemeId }
+        if (scheme != null && (backStack.lastOrNull() as? PlanDetailRoute)?.scheme?.id != schemeId) {
+            while (backStack.size > 1) backStack.removeLastOrNull()
+            backStack.add(PlanDetailRoute(scheme, autoFocusName = false))
+        }
+        onOpenSchemeConsumed()
     }
 
     NavDisplay(

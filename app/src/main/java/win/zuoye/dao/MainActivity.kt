@@ -264,7 +264,6 @@ class MainActivity : ComponentActivity() {
                                     onSelectTab = { baseTab = it },
                                     onExportPlan = { navigateTo(AppRoute.SharePlan) },
                                     onOpenAbout = { navigateTo(AppRoute.About) },
-                                    onOpenPlan = { navigateTo(AppRoute.Plan) },
                                     onImportPlan = { importPlan(it) },
                                     onMutate = mainViewModel::mutate,
                                     updateInfo = uiState.updateInfo,
@@ -312,7 +311,6 @@ private fun MainTabs(
     onSelectTab: (MainTab) -> Unit,
     onExportPlan: () -> Unit,
     onOpenAbout: () -> Unit,
-    onOpenPlan: () -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     updateInfo: UpdateInfo?,
@@ -324,6 +322,7 @@ private fun MainTabs(
 ) {
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(initialPage = current.ordinal) { tabs.size }
+    var requestedSchemeId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     // 点底栏：把 pager 平滑滑过去（InstallerX 同款：整页滑动，不淡入淡出）
     LaunchedEffect(current) {
@@ -372,7 +371,10 @@ private fun MainTabs(
                         MainTab.Home -> HomeScreen(
                             doc = doc,
                             onExportPlan = onExportPlan,
-                            onOpenPlan = onOpenPlan,
+                            onOpenPlan = {
+                                requestedSchemeId = doc.activeScheme()?.id
+                                onSelectTab(MainTab.Config)
+                            },
                         )
                         MainTab.Config -> PlanEditScreen(
                             doc = doc,
@@ -380,6 +382,8 @@ private fun MainTabs(
                             onImportPlan = onImportPlan,
                             onMutate = onMutate,
                             showBackButton = false,
+                            openSchemeId = requestedSchemeId,
+                            onOpenSchemeConsumed = { requestedSchemeId = null },
                         )
                         MainTab.Settings -> SettingsScreen(
                             doc = doc,

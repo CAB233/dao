@@ -11,7 +11,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -49,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.stringArrayResource
@@ -472,7 +472,8 @@ private fun RosterStatusCard(
         else -> RosterStatus.OFF_WORK
     }
     val currentGroupName = activeScheme?.defaultGroup()?.name
-    val cardColor = if (isSystemInDarkTheme()) {
+    // 使用 miuix 当前实际生效的配色；这样强制深/浅色与“跟随系统”都会同步更新。
+    val cardColor = if (MiuixTheme.colorScheme.background.luminance() < 0.5f) {
         ShiftPalette.statusCardDarkBackground
     } else {
         ShiftPalette.statusCardLightBackground
@@ -575,7 +576,13 @@ private fun MonthGrid(
             showLunar = showLunar,
         )
     }
-    val colors = remember(colorScheme) {
+    // MiuixTheme 会保留同一个 Colors 实例并更新内部字段，不能只用对象身份作为缓存键。
+    val colors = remember(
+        colorScheme.surfaceVariant,
+        colorScheme.onSurface,
+        colorScheme.primary,
+        colorScheme.onSurfaceVariantSummary,
+    ) {
         GridColors(
             surfaceVariant = colorScheme.surfaceVariant,
             onSurface = colorScheme.onSurface,

@@ -39,6 +39,7 @@ import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.CalendarViewMode
+import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
@@ -50,6 +51,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenPlan: () -> Unit,
     onOpenAbout: () -> Unit,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onWeekStartDayChange: (Int) -> Unit,
     onCalendarViewModeChange: (CalendarViewMode) -> Unit,
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
@@ -59,6 +61,8 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val versionName = remember(context) { context.appVersionName() }
+    val themeModeOptions = stringArrayResource(R.array.theme_mode_options)
+    val themeModes = ThemeMode.entries
     val weekdays = stringArrayResource(R.array.weekday_full)
     val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
     val calendarViewOptions = stringArrayResource(R.array.calendar_view_options)
@@ -83,6 +87,16 @@ fun SettingsScreen(
             // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
             Spacer(Modifier.height(12.dp))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                OverlayDropdownPreference(
+                    title = stringResource(R.string.settings_theme_mode),
+                    summary = stringResource(R.string.settings_theme_mode_summary),
+                    items = themeModeOptions.toList(),
+                    selectedIndex = themeModes.indexOf(doc.themeMode),
+                    onSelectedIndexChange = { index ->
+                        themeModes.getOrNull(index)?.let(onThemeModeChange)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 OverlayDropdownPreference(
                     title = stringResource(R.string.settings_week_start),
                     summary = stringResource(R.string.settings_week_start_summary),

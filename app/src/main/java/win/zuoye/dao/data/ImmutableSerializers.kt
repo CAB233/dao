@@ -73,6 +73,7 @@ private class PlanDocumentSurrogate(
     val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
     val checkUpdatesOnLaunch: Boolean = true,
     val updateChannel: UpdateChannel = UpdateChannel.GITHUB,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
 )
 
 object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
@@ -93,6 +94,7 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
                 calendarViewMode = value.calendarViewMode,
                 checkUpdatesOnLaunch = value.checkUpdatesOnLaunch,
                 updateChannel = value.updateChannel,
+                themeMode = value.themeMode,
             ),
         )
     }
@@ -109,6 +111,7 @@ object PlanDocumentJsonSerializer : KSerializer<PlanDocument> {
             calendarViewMode = surrogate.calendarViewMode,
             checkUpdatesOnLaunch = surrogate.checkUpdatesOnLaunch,
             updateChannel = surrogate.updateChannel,
+            themeMode = surrogate.themeMode,
         )
     }
 }

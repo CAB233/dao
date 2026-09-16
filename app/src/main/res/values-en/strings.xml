@@ -24,6 +24,13 @@
   <string name="status_not_selected">Not selected</string>
   <string name="nav_home">Home</string>
   <string name="nav_settings">Settings</string>
+  <string name="settings_theme_mode">Theme mode</string>
+  <string name="settings_theme_mode_summary">Choose a light or dark appearance for the app</string>
+  <string-array name="theme_mode_options">
+    <item>Light theme</item>
+    <item>Dark theme</item>
+    <item>Follow system theme</item>
+  </string-array>
   <string name="settings_week_start">First day of week</string>
   <string name="settings_week_start_summary">Choose the day each week starts</string>
   <string name="settings_calendar_view">Holidays and lunar calendar</string>

@@ -32,6 +32,7 @@ class PlanDocumentSerializerTest {
             activeSchemeId = 2,
             overrides = persistentMapOf("20001" to template.id),
             onboardingDone = true,
+            themeMode = ThemeMode.DARK,
         )
         val output = ByteArrayOutputStream()
 
@@ -50,6 +51,7 @@ class PlanDocumentSerializerTest {
         assertEquals(0, restored.weekStartDay)
         assertEquals(CalendarViewMode.ALL, restored.calendarViewMode)
         assertEquals(UpdateChannel.GITHUB, restored.updateChannel)
+        assertEquals(ThemeMode.SYSTEM, restored.themeMode)
         assertFalse(restored.templates.isNotEmpty())
     }
 

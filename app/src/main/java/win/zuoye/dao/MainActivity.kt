@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,6 +24,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +36,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
@@ -45,6 +48,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.ShiftTemplate
+import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.ui.about.AboutScreen
 import win.zuoye.dao.ui.common.MainTab
 import win.zuoye.dao.ui.common.MainBottomBar
@@ -88,11 +92,23 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         setContent {
-            AppTheme {
-                val mainViewModel: MainViewModel = viewModel(
-                    factory = MainViewModel.factory(applicationContext),
-                )
-                val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+            val mainViewModel: MainViewModel = viewModel(
+                factory = MainViewModel.factory(applicationContext),
+            )
+            val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+            val themeMode = uiState.document?.themeMode ?: ThemeMode.SYSTEM
+            val darkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            SideEffect {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
+                }
+            }
+            AppTheme(themeMode = themeMode) {
                 // 兜底：数据读取真出问题时也别一直卡在启动图上
                 LaunchedEffect(Unit) {
                     delay(2_000.milliseconds)
@@ -361,6 +377,9 @@ private fun MainTabs(
                             onBack = { onSelectTab(MainTab.Home) },
                             onOpenPlan = onOpenPlan,
                             onOpenAbout = onOpenAbout,
+                            onThemeModeChange = { themeMode ->
+                                onMutate { plan -> plan.copy(themeMode = themeMode) }
+                            },
                             onWeekStartDayChange = { weekStartDay ->
                                 onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
                             },

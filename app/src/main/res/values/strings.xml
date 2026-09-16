@@ -24,6 +24,13 @@
   <string name="status_not_selected">未选择</string>
   <string name="nav_home">主页</string>
   <string name="nav_settings">设置</string>
+  <string name="settings_theme_mode">主题模式</string>
+  <string name="settings_theme_mode_summary">选择应用的浅色或深色外观</string>
+  <string-array name="theme_mode_options">
+    <item>浅色主题</item>
+    <item>深色主题</item>
+    <item>跟随系统主题</item>
+  </string-array>
   <string name="settings_week_start">一周开始日</string>
   <string name="settings_week_start_summary">选择每周的起始星期</string>
   <string name="settings_calendar_view">节假日与农历视图</string>

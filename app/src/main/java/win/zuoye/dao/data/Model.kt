@@ -66,6 +66,14 @@ enum class CalendarViewMode(
     ALL(showHolidays = true, showLunar = true),
 }
 
+/** 应用界面使用的明暗主题。 */
+@Serializable
+enum class ThemeMode {
+    LIGHT,
+    DARK,
+    SYSTEM,
+}
+
 /** 获取应用更新时使用的下载渠道。 */
 @Serializable
 enum class UpdateChannel(val urlPrefix: String) {
@@ -88,6 +96,7 @@ data class PlanDocument(
     val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
     val checkUpdatesOnLaunch: Boolean = true,
     val updateChannel: UpdateChannel = UpdateChannel.GITHUB,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
 ) {
     fun activeScheme(): Scheme? = schemes.firstOrNull { it.id == activeSchemeId }
 

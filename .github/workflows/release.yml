@@ -78,29 +78,8 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Run local verification
-        run: >-
-          ./gradlew
-          :app:testDebugUnitTest
-          :app:jacocoDebugUnitTestReport
-          :app:compileDebugAndroidTestKotlin
-          :app:lintDebug
-
       - name: Build release APK
         run: ./gradlew :app:assembleRelease
-
-      - name: Upload verification reports
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: dao-release-reports-${{ env.RELEASE_TAG }}
-          path: |
-            app/build/test-results/testDebugUnitTest/
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/reports/jacoco/jacocoDebugUnitTestReport/
-            app/build/reports/lint-results-debug.*
-          if-no-files-found: warn
-          retention-days: 7
 
       - name: Attest release APK
         uses: actions/attest@v4

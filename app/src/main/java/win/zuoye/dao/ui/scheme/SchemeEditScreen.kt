@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -99,6 +100,7 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
@@ -356,11 +358,33 @@ fun SchemeEditScreen(
             draftScheme.defaultGroup() != null
     }
 
+    val editorCardShape = if (onboardingMode) {
+        Modifier
+    } else {
+        Modifier.squircleClip(
+            topStart = 28.dp,
+            topEnd = 28.dp,
+            bottomEnd = 0.dp,
+            bottomStart = 0.dp,
+        )
+    }
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { editorHeight = it.height.coerceAtLeast(1) }
-            .graphicsLayer { translationY = dismissOffset }
+            .then(editorCardShape)
+            .graphicsLayer {
+                translationY = dismissOffset
+                if (!onboardingMode) {
+                    shape = RoundedCornerShape(
+                        topStart = 28.dp,
+                        topEnd = 28.dp,
+                        bottomEnd = 0.dp,
+                        bottomStart = 0.dp,
+                    )
+                    clip = true
+                }
+            }
             .nestedScroll(dismissNestedScroll),
         topBar = {
             if (onboardingMode) {

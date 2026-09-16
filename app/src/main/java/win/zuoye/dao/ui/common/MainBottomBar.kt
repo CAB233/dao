@@ -7,18 +7,20 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationRail
 import top.yukonga.miuix.kmp.basic.NavigationRailItem
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Home
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import win.zuoye.dao.R
 
-/** 底栏的两个主入口。 */
+/** 底栏的三个主入口。 */
 enum class MainTab {
     Home,
+    Config,
     Settings,
 }
 
 /**
- * 主界面底栏：主页 / 设置。
+ * 主界面底栏：主页 / 配置 / 设置。
  * 必须放在各页面 [top.yukonga.miuix.kmp.basic.Scaffold] 的 bottomBar 插槽里。
  */
 @Composable
@@ -32,6 +34,12 @@ fun MainBottomBar(
             onClick = { onSelect(MainTab.Home) },
             icon = MiuixIcons.Regular.Home,
             label = stringResource(R.string.nav_home),
+        )
+        NavigationBarItem(
+            selected = selected == MainTab.Config,
+            onClick = { onSelect(MainTab.Config) },
+            icon = MiuixIcons.Regular.Edit,
+            label = stringResource(R.string.nav_config),
         )
         NavigationBarItem(
             selected = selected == MainTab.Settings,
@@ -57,6 +65,12 @@ fun MainNavigationRail(
             onClick = { onSelect(MainTab.Home) },
             icon = MiuixIcons.Regular.Home,
             label = stringResource(R.string.nav_home),
+        )
+        NavigationRailItem(
+            selected = selected == MainTab.Config,
+            onClick = { onSelect(MainTab.Config) },
+            icon = MiuixIcons.Regular.Edit,
+            label = stringResource(R.string.nav_config),
         )
         NavigationRailItem(
             selected = selected == MainTab.Settings,

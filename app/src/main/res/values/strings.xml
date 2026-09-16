@@ -19,10 +19,12 @@
   <string name="action_skip_configuration">跳过配置</string>
   <string name="action_add_shift">新增班次</string>
   <string name="action_add_plan">添加方案</string>
+  <string name="empty_plans">暂无倒班方案，点击右下角添加</string>
   <string name="action_close_selection">取消选择</string>
   <string name="status_not_set">未设置</string>
   <string name="status_not_selected">未选择</string>
   <string name="nav_home">主页</string>
+  <string name="nav_config">配置</string>
   <string name="nav_settings">设置</string>
   <string name="settings_theme_mode">主题模式</string>
   <string name="settings_theme_mode_summary">选择应用的浅色或深色外观</string>

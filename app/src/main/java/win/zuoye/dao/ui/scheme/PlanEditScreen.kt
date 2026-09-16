@@ -110,8 +110,8 @@ private data class PlanDetailRoute(
 ) : NavKey
 
 /**
- * 倒班方案（二级页面）：整页是方案列表，点某张卡片时编辑页像二级页面一样从右侧滑入，
- * 返回键 / 顶部返回箭头再滑回去。列表与编辑页共用这一个路由。
+ * 倒班方案：整页是方案列表，点某张卡片时编辑页像二级页面一样从右侧滑入。
+ * 列表与编辑页共用这一个路由；作为底栏根页面时可隐藏列表页的返回箭头。
  */
 @Composable
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -120,6 +120,7 @@ fun PlanEditScreen(
     onBack: () -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val backStack = rememberNavBackStack(PlanListRoute)
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -152,6 +153,7 @@ fun PlanEditScreen(
                 SchemeListScreen(
                     doc = doc,
                     onBack = onBack,
+                    showBackButton = showBackButton,
                     onMutate = onMutate,
                     onImportPlan = onImportPlan,
                     onEnter = { backStack.add(PlanDetailRoute(it, autoFocusName = false)) },
@@ -219,6 +221,7 @@ fun PlanEditScreen(
 private fun SchemeListScreen(
     doc: PlanDocument,
     onBack: () -> Unit,
+    showBackButton: Boolean,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     onEnter: (Scheme) -> Unit,
@@ -302,7 +305,7 @@ private fun SchemeListScreen(
                         IconButton(onClick = { exitSelection() }) {
                             Icon(MiuixIcons.Basic.Close, contentDescription = stringResource(R.string.action_close_selection))
                         }
-                    } else {
+                    } else if (showBackButton) {
                         IconButton(onClick = onBack) {
                             Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
                         }
@@ -371,6 +374,21 @@ private fun SchemeListScreen(
             contentPadding = padding,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
+            if (doc.schemes.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillParentMaxHeight(0.8f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.empty_plans),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                }
+            }
             items(doc.schemes.sortedByDescending { it.createdAt }, key = { it.id }) { scheme ->
                 SchemeCard(
                     scheme = scheme,

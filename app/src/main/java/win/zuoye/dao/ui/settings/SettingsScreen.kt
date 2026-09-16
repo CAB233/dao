@@ -3,7 +3,6 @@ package win.zuoye.dao.ui.settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -25,13 +24,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
@@ -44,12 +41,11 @@ import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
 
-/** 设置：倒班方案（二级页面入口）、关于。 */
+/** 设置：外观、更新与关于。 */
 @Composable
 fun SettingsScreen(
     doc: PlanDocument,
     onBack: () -> Unit,
-    onOpenPlan: () -> Unit,
     onOpenAbout: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onWeekStartDayChange: (Int) -> Unit,
@@ -69,8 +65,6 @@ fun SettingsScreen(
     val calendarViewModes = CalendarViewMode.entries
     val updateChannelOptions = stringArrayResource(R.array.update_channel_options)
     val updateChannels = UpdateChannel.entries
-
-    val activeScheme = doc.activeScheme() ?: doc.schemes.firstOrNull()
 
     Scaffold(
         topBar = { TopAppBar(title = stringResource(R.string.nav_settings)) },
@@ -116,24 +110,6 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                BasicComponent(
-                    title = stringResource(R.string.settings_plans),
-                    summary = stringResource(R.string.settings_plans_summary),
-                    endActions = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = activeScheme?.name ?: stringResource(R.string.status_not_selected),
-                                fontSize = 14.sp,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            )
-                            Chevron(Modifier.padding(start = 8.dp))
-                        }
-                    },
-                    onClick = onOpenPlan,
-                )
-            }
-
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicComponent(
                     title = stringResource(R.string.settings_check_updates),

@@ -265,6 +265,7 @@ class MainActivity : ComponentActivity() {
                                     onExportPlan = { navigateTo(AppRoute.SharePlan) },
                                     onOpenAbout = { navigateTo(AppRoute.About) },
                                     onOpenPlan = { navigateTo(AppRoute.Plan) },
+                                    onImportPlan = { importPlan(it) },
                                     onMutate = mainViewModel::mutate,
                                     updateInfo = uiState.updateInfo,
                                     showUpdateDialog = uiState.showUpdateDialog,
@@ -300,7 +301,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 主页 / 设置两页共用同一个 Scaffold 与导航区：导航区固定不动，
+ * 主页 / 配置 / 设置三页共用同一个 Scaffold 与导航区：导航区固定不动，
  * 内容区是一个 `HorizontalPager`，切换时整页横向滑动（对齐 InstallerX 的卡片式切换），
  * 顺带也能横滑切页，并且相邻页保持组合、来回切不会丢日历的浏览位置。
  */
@@ -312,6 +313,7 @@ private fun MainTabs(
     onExportPlan: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenPlan: () -> Unit,
+    onImportPlan: (PlanShare) -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     updateInfo: UpdateInfo?,
     showUpdateDialog: Boolean,
@@ -372,10 +374,16 @@ private fun MainTabs(
                             onExportPlan = onExportPlan,
                             onOpenPlan = onOpenPlan,
                         )
+                        MainTab.Config -> PlanEditScreen(
+                            doc = doc,
+                            onBack = { onSelectTab(MainTab.Home) },
+                            onImportPlan = onImportPlan,
+                            onMutate = onMutate,
+                            showBackButton = false,
+                        )
                         MainTab.Settings -> SettingsScreen(
                             doc = doc,
                             onBack = { onSelectTab(MainTab.Home) },
-                            onOpenPlan = onOpenPlan,
                             onOpenAbout = onOpenAbout,
                             onThemeModeChange = { themeMode ->
                                 onMutate { plan -> plan.copy(themeMode = themeMode) }

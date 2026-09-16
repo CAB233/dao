@@ -436,7 +436,6 @@ private fun MainTabs(
             )
         }
 
-        val editorScheme = shownEditingScheme
         AnimatedVisibility(
             visible = editingScheme != null,
             enter = fadeIn(animationSpec = tween(durationMillis = 180)),
@@ -450,19 +449,19 @@ private fun MainTabs(
                     .pointerInput(Unit) { detectTapGestures { } },
             )
         }
-        if (editorScheme != null) {
-            AnimatedVisibility(
-                visible = editingScheme != null,
-                enter = slideInVertically(
-                    initialOffsetY = { it },
-                    animationSpec = tween(durationMillis = 320, easing = EaseInOut),
-                ),
-                exit = slideOutVertically(
-                    targetOffsetY = { it },
-                    animationSpec = tween(durationMillis = 280, easing = EaseInOut),
-                ),
-                modifier = Modifier.fillMaxSize(),
-            ) {
+        AnimatedVisibility(
+            visible = editingScheme != null,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = tween(durationMillis = 320, easing = EaseInOut),
+            ),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(durationMillis = 280, easing = EaseInOut),
+            ),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            shownEditingScheme?.let { editorScheme ->
                 SchemeEditScreen(
                     doc = doc,
                     scheme = editorScheme,

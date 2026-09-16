@@ -531,7 +531,7 @@ private fun Context.clipboardText(): String =
 
 /**
  * 一个方案卡片（尺寸对齐系统闹钟列表）：标题（+「使用中」小字），
- * 右侧是使用中开关；关闭的方案整体变灰；多选模式下左侧出现复选框、开关隐藏。
+ * 右侧是使用中开关；关闭的方案整体变灰；多选模式下右侧用复选框替换开关。
  */
 @Composable
 private fun SchemeCard(
@@ -564,13 +564,6 @@ private fun SchemeCard(
                 .padding(start = 16.dp, end = 12.dp, top = 18.dp, bottom = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (selecting) {
-                Checkbox(
-                    state = if (selected) ToggleableState.On else ToggleableState.Off,
-                    onClick = onToggleSelection,
-                    modifier = Modifier.padding(end = 12.dp),
-                )
-            }
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -597,6 +590,12 @@ private fun SchemeCard(
             }
             if (!selecting) {
                 Switch(checked = active, onCheckedChange = onToggleActive)
+            } else {
+                Checkbox(
+                    state = if (selected) ToggleableState.On else ToggleableState.Off,
+                    onClick = onToggleSelection,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
             }
         }
     }

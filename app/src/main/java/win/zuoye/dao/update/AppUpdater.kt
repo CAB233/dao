@@ -41,10 +41,14 @@ private data class ReleaseAsset(
     val digest: String? = null,
 )
 
-object AppUpdater {
+interface UpdateChecker {
+    suspend fun checkForUpdate(currentVersionName: String, channel: UpdateChannel): UpdateInfo?
+}
+
+object AppUpdater : UpdateChecker {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun checkForUpdate(
+    override suspend fun checkForUpdate(
         currentVersionName: String,
         channel: UpdateChannel,
     ): UpdateInfo? = withContext(Dispatchers.IO) {

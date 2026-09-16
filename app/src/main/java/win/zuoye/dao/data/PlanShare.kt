@@ -39,6 +39,13 @@ object PlanShareCodec {
     const val PAYLOAD_PREFIX = "DAO1:"
 
     private const val SCHEME_ID_BASE = 1_000_000L
+    private const val MAX_INPUT_CHARS = 1_500_000
+    private const val MAX_COMPRESSED_BYTES = 256 * 1024
+    private const val MAX_INFLATED_BYTES = 1024 * 1024
+    private const val MAX_TEMPLATES = 512
+    private const val MAX_SCHEMES = 128
+    private const val MAX_GROUPS_PER_SCHEME = 99
+    private const val MAX_NAME_LENGTH = 200
 
     private val compactJson = Json {
         ignoreUnknownKeys = true
@@ -46,11 +53,17 @@ object PlanShareCodec {
         explicitNulls = false
     }
 
+    private val fullJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
     @OptIn(ExperimentalEncodingApi::class)
     private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
 
     /** 紧凑载荷：二维码 / 聊天文本里用 */
     fun encodePayload(payload: PlanShare): String {
+        require(payload.isValid()) { "倒班方案包含无效数据" }
         val usedIds = payload.schemes.flatMap { it.dayTemplateIds }.toSet()
         val templates = payload.templates.filter { it.id in usedIds }
         val indexOf = templates.withIndex().associate { (index, template) -> template.id to index }
@@ -79,14 +92,23 @@ object PlanShareCodec {
         return PAYLOAD_PREFIX + base64.encode(deflate(raw))
     }
 
+    /** 完整 JSON：用于文件互操作和人工备份。 */
+    fun encodeJson(payload: PlanShare): String {
+        require(payload.isValid()) { "倒班方案包含无效数据" }
+        return fullJson.encodeToString(PlanShareSurrogate.from(payload))
+    }
+
     /** 解析紧凑载荷（带不带 `DAO1:` 前缀都行） */
     fun decodePayload(token: String): PlanShare? {
         val trimmed = token.trim().removePrefix(PAYLOAD_PREFIX)
-        val inflated = runCatching { base64.decode(trimmed) }.getOrNull()?.let(::inflate) ?: return null
+        if (trimmed.isEmpty() || trimmed.length > MAX_INPUT_CHARS) return null
+        val compressed = runCatching { base64.decode(trimmed) }.getOrNull() ?: return null
+        if (compressed.size > MAX_COMPRESSED_BYTES) return null
+        val inflated = inflate(compressed) ?: return null
         val compact = runCatching {
             compactJson.decodeFromString<CompactPlan>(inflated.decodeToString())
         }.getOrNull() ?: return null
-        if (compact.templates.isEmpty() && compact.schemes.isEmpty()) return null
+        if (!compact.isValid()) return null
         // 用下标当本机 id 重建；导入时会按内容去重并重新分配真实 id
         val templates = compact.templates.mapIndexed { index, t ->
             ShiftTemplate(
@@ -121,19 +143,26 @@ object PlanShareCodec {
             templates = templates,
             schemes = schemes,
             activeSchemeId = compact.active?.let { schemes.getOrNull(it)?.id },
-        )
+        ).takeIf { it.isValid() }
     }
 
     /**
-     * 从文本解析载荷，两种输入都认：
+     * 从文本解析载荷，三种输入都认：
      * 1) 带 `DAO1:` 的紧凑载荷（二维码 / 剪贴板）；
-     * 2) 含紧凑载荷的整段分享文本。
+     * 2) 含紧凑载荷的整段分享文本；
+     * 3) 完整的分享 JSON（也兼容包含额外本机字段的 PlanDocument JSON）。
      */
     fun decode(text: String): PlanShare? {
+        if (text.length > MAX_INPUT_CHARS) return null
         val marker = text.indexOf(PAYLOAD_PREFIX)
-        if (marker < 0) return null
-        val token = text.substring(marker + PAYLOAD_PREFIX.length).takeWhile { !it.isWhitespace() }
-        return decodePayload(token)
+        if (marker >= 0) {
+            val token = text.substring(marker + PAYLOAD_PREFIX.length).takeWhile { !it.isWhitespace() }
+            return decodePayload(token)
+        }
+        val surrogate = runCatching {
+            fullJson.decodeFromString<PlanShareSurrogate>(text.trim())
+        }.getOrNull() ?: return null
+        return surrogate.toPlanShare().takeIf { it.isValid() }
     }
 
     fun shareText(doc: PlanDocument, localizedHeader: String, schemeId: Long? = null): String {
@@ -159,17 +188,85 @@ object PlanShareCodec {
 
     private fun inflate(input: ByteArray): ByteArray? = runCatching {
         val inflater = Inflater(true)
-        inflater.setInput(input)
-        val out = ByteArrayOutputStream(input.size * 4)
-        val buffer = ByteArray(256)
-        while (!inflater.finished()) {
-            val read = inflater.inflate(buffer)
-            if (read == 0 && inflater.needsInput()) break
-            out.write(buffer, 0, read)
+        try {
+            inflater.setInput(input)
+            val out = ByteArrayOutputStream((input.size * 4).coerceAtMost(MAX_INFLATED_BYTES))
+            val buffer = ByteArray(4096)
+            while (!inflater.finished()) {
+                val read = inflater.inflate(buffer)
+                if (read <= 0) return@runCatching null
+                if (out.size() + read > MAX_INFLATED_BYTES) return@runCatching null
+                out.write(buffer, 0, read)
+            }
+            out.toByteArray()
+        } finally {
+            inflater.end()
         }
-        inflater.end()
-        out.toByteArray()
     }.getOrNull()
+
+    private fun CompactPlan.isValid(): Boolean {
+        if (templates.isEmpty() && schemes.isEmpty()) return false
+        if (templates.size > MAX_TEMPLATES || schemes.size > MAX_SCHEMES) return false
+        if (active != null && active !in schemes.indices) return false
+        if (templates.any { !validName(it.name) || it.start !in 0..1439 || it.end !in 0..1439 }) return false
+        return schemes.all { scheme ->
+            validName(scheme.name) &&
+                scheme.cycleDays in 1..99 &&
+                scheme.days.size == scheme.cycleDays &&
+                scheme.days.all { it in templates.indices } &&
+                scheme.groups.size in 1..MAX_GROUPS_PER_SCHEME &&
+                scheme.groups.all { validName(it.name) } &&
+                scheme.defaultGroup in scheme.groups.indices
+        }
+    }
+
+    private fun PlanShare.isValid(): Boolean {
+        if (templates.isEmpty() && schemes.isEmpty()) return false
+        if (templates.size > MAX_TEMPLATES || schemes.size > MAX_SCHEMES) return false
+        val templateIds = templates.map { it.id }
+        if (templateIds.toSet().size != templateIds.size) return false
+        if (templates.any {
+                !validName(it.name) || it.startMinute !in 0..1439 || it.endMinute !in 0..1439
+            }) return false
+        val schemeIds = schemes.map { it.id }
+        if (schemeIds.toSet().size != schemeIds.size) return false
+        if (activeSchemeId != null && activeSchemeId !in schemeIds) return false
+        val knownTemplates = templateIds.toSet()
+        return schemes.all { scheme ->
+            val groupIds = scheme.groups.map { it.id }
+            validName(scheme.name) &&
+                scheme.cycleDays in 1..99 &&
+                scheme.dayTemplateIds.size == scheme.cycleDays &&
+                scheme.dayTemplateIds.all { it in knownTemplates } &&
+                scheme.groups.size in 1..MAX_GROUPS_PER_SCHEME &&
+                groupIds.toSet().size == groupIds.size &&
+                scheme.defaultGroupId in groupIds &&
+                scheme.groups.all { validName(it.name) }
+        }
+    }
+
+    private fun validName(name: String): Boolean = name.isNotBlank() && name.length <= MAX_NAME_LENGTH
+}
+
+@Serializable
+private data class PlanShareSurrogate(
+    val templates: List<ShiftTemplate> = emptyList(),
+    val schemes: List<Scheme> = emptyList(),
+    val activeSchemeId: Long? = null,
+) {
+    fun toPlanShare(): PlanShare = PlanShare(
+        templates = templates.toImmutableList(),
+        schemes = schemes.toImmutableList(),
+        activeSchemeId = activeSchemeId,
+    )
+
+    companion object {
+        fun from(payload: PlanShare): PlanShareSurrogate = PlanShareSurrogate(
+            templates = payload.templates,
+            schemes = payload.schemes,
+            activeSchemeId = payload.activeSchemeId,
+        )
+    }
 }
 
 /** 取出可分享的部分；给定 [schemeId] 时只带这个方案以及它用到的班次 */

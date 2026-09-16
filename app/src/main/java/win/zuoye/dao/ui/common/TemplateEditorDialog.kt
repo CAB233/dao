@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -106,7 +107,11 @@ fun TemplateEditorDialog(
     ) {
         // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
         // 所以给内容一个上限、让滚动区自己滚，按钮作为非加权子项固定在底部。
-        Column(Modifier.heightIn(max = 500.dp)) {
+        Column(
+            Modifier
+                .heightIn(max = 500.dp)
+                .imePadding(),
+        ) {
             Column(
                 Modifier
                     .weight(1f, fill = false)

@@ -52,8 +52,27 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Build and run unit tests
-        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest
+      - name: Verify, test, and build
+        run: >-
+          ./gradlew
+          :app:testDebugUnitTest
+          :app:jacocoDebugUnitTestReport
+          :app:compileDebugAndroidTestKotlin
+          :app:lintDebug
+          :app:assembleDebug
+
+      - name: Upload verification reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: dao-ci-reports-${{ github.sha }}
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/reports/jacoco/jacocoDebugUnitTestReport/
+            app/build/reports/lint-results-debug.*
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7

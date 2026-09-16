@@ -4,23 +4,25 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -39,6 +41,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -108,15 +111,19 @@ private fun AboutHomeContent(
         },
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            state = listState,
-        ) {
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .widthIn(max = 720.dp)
+                    .fillMaxSize()
+                    .align(Alignment.TopCenter)
+                    .consumeWindowInsets(padding)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                state = listState,
+                contentPadding = padding,
+            ) {
             item {
                 AboutHero(
                     app = app,
@@ -145,7 +152,8 @@ private fun AboutHomeContent(
                     )
                 }
             }
-            item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
+                item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
+            }
         }
     }
 }
@@ -209,7 +217,7 @@ private fun AboutEntry(
 private const val repositoryUrl = "https://github.com/CAB233/dao"
 
 private fun Context.openUrl(url: String, failureName: String) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
         if (this@openUrl !is Activity) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -260,12 +268,13 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     ) { padding ->
         LazyColumn(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
+                .consumeWindowInsets(padding)
                 .scrollEndHaptic()
                 .overScrollVertical()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
+            contentPadding = padding,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
             items(openSourceProjects, key = { it.nameRes }) { project ->

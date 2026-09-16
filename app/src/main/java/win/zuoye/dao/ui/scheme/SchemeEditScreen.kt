@@ -17,12 +17,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -106,6 +109,7 @@ fun SchemeEditScreen(
     onSave: (PlanDocument) -> Unit,
     onDelete: () -> Unit,
     onboardingMode: Boolean = false,
+    showBackButton: Boolean = true,
 ) {
     val defaultGroupNames = (1..99).map { stringResource(R.string.default_group_name, it) }
     val isNewScheme = remember(scheme.id) { doc.schemes.none { it.id == scheme.id } }
@@ -163,7 +167,7 @@ fun SchemeEditScreen(
     var editingGroupIndex by rememberSaveable(scheme.id) { mutableIntStateOf(-1) }
     var groupNameDraft by rememberSaveable(scheme.id) { mutableStateOf("") }
     var groupAnchorEpochDay by rememberSaveable(scheme.id) {
-        mutableStateOf(scheme.primaryAnchorEpochDay() ?: Ymd.today().epochDay)
+        mutableLongStateOf(scheme.primaryAnchorEpochDay() ?: Ymd.today().epochDay)
     }
     var showGroupAnchorDialog by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
@@ -284,7 +288,7 @@ fun SchemeEditScreen(
             TopAppBar(
                 title = stringResource(if (onboardingMode) R.string.onboarding_title else R.string.plan_edit_title),
                 navigationIcon = {
-                    if (!onboardingMode) {
+                    if (!onboardingMode && showBackButton) {
                         IconButton(onClick = ::requestExit) {
                             Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back_to_plan_list))
                         }
@@ -359,11 +363,18 @@ fun SchemeEditScreen(
         },
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
-        Column(
+        Box(
             Modifier
                 .padding(padding)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .imePadding(),
         ) {
+            Column(
+                Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxSize()
+                    .align(Alignment.TopCenter),
+            ) {
             // ---- 方案名（默认不高亮，只显示当前值）----
             TextField(
                 value = draftScheme.name,
@@ -471,6 +482,7 @@ fun SchemeEditScreen(
                     }
                 }
                 Spacer(Modifier.height(24.dp).navigationBarsPadding())
+            }
             }
         }
 

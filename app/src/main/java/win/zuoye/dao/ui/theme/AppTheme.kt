@@ -9,7 +9,6 @@ import top.yukonga.miuix.kmp.theme.lightColorScheme
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
-    MiuixTheme(colors = if (dark) darkColorScheme() else lightColorScheme()) {
-        content()
-    }
+    val miuixColors = if (dark) darkColorScheme() else lightColorScheme()
+    MiuixTheme(colors = miuixColors, content = content)
 }

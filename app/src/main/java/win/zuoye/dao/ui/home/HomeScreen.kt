@@ -30,7 +30,9 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -141,6 +143,7 @@ fun HomeScreen(
     val textMeasurer = rememberTextMeasurer(cacheSize = 512)
     val scrollBehavior = MiuixScrollBehavior()
     val scrollState = rememberScrollState()
+    val summaryScrollState = rememberScrollState()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -184,72 +187,79 @@ fun HomeScreen(
         // 底部空间由外层底栏占据，这里不再重复算导航栏内边距
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             Modifier
                 .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .scrollEndHaptic()
-                .overScrollVertical(),
+                .fillMaxSize(),
         ) {
-            RosterStatusCard(
-                doc = doc,
-                today = today,
-                currentMinute = currentMinute,
-                onClick = onOpenPlan,
-            )
-
-            // 左对齐月份标题
-            Text(
-                stringResource(R.string.month_title, viewMonth),
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val page = pagerState.currentPage
-                val year = BASE_YEAR + page / 12
-                val month = page % 12 + 1
-                val rowCount = monthRowCount(year, month, weekStartDay)
-                val cellWidth = ((maxWidth - 24.dp) / 7f).coerceAtLeast(0.dp)
-                val cellHeight = ((cellWidth - 3.dp) / 0.82f) + 3.dp
-                val pagerHeight = 24.dp + cellHeight * rowCount + 3.dp
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxWidth().height(pagerHeight),
-                    beyondViewportPageCount = 1,
-                ) { pageIndex ->
-                    MonthGrid(
-                        roster = roster,
-                        measurer = textMeasurer,
-                        year = BASE_YEAR + pageIndex / 12,
-                        month = pageIndex % 12 + 1,
+            if (maxWidth >= 720.dp) {
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                ) {
+                    HomeCalendarPane(
+                        doc = doc,
                         today = today,
+                        currentMinute = currentMinute,
+                        onOpenPlan = onOpenPlan,
+                        viewMonth = viewMonth,
+                        pagerState = pagerState,
+                        roster = roster,
+                        textMeasurer = textMeasurer,
                         weekStartDay = weekStartDay,
                         weekdays = weekdays,
                         strings = calendarStrings,
                         showHolidays = showHolidays,
                         showLunar = showLunar,
-                        selected = selectedDate,
+                        selectedDate = selectedDate,
                         onDayClick = { selectedDate = it },
+                        modifier = Modifier
+                            .weight(1.45f)
+                            .verticalScroll(scrollState)
+                            .scrollEndHaptic()
+                            .overScrollVertical(),
+                    )
+                    HomeSummaryPane(
+                        doc = doc,
+                        roster = roster,
+                        today = today,
+                        modifier = Modifier
+                            .weight(1f)
+                            .widthIn(max = 420.dp)
+                            .verticalScroll(summaryScrollState)
+                            .scrollEndHaptic()
+                            .overScrollVertical(),
                     )
                 }
+            } else {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .scrollEndHaptic()
+                        .overScrollVertical(),
+                ) {
+                    HomeCalendarPane(
+                        doc = doc,
+                        today = today,
+                        currentMinute = currentMinute,
+                        onOpenPlan = onOpenPlan,
+                        viewMonth = viewMonth,
+                        pagerState = pagerState,
+                        roster = roster,
+                        textMeasurer = textMeasurer,
+                        weekStartDay = weekStartDay,
+                        weekdays = weekdays,
+                        strings = calendarStrings,
+                        showHolidays = showHolidays,
+                        showLunar = showLunar,
+                        selectedDate = selectedDate,
+                        onDayClick = { selectedDate = it },
+                    )
+                    HomeSummaryPane(doc = doc, roster = roster, today = today)
+                }
             }
-            TodayGroupsCard(
-                doc = doc,
-                roster = roster,
-                today = today,
-            )
-            if (doc.activeScheme() == null) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    stringResource(R.string.home_empty_plan),
-                    fontSize = 13.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-            Spacer(Modifier.height(24.dp))
         }
 
         // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）。
@@ -266,6 +276,92 @@ fun HomeScreen(
                 onDismiss = { selectedDate = null },
             )
         }
+    }
+}
+
+@Composable
+private fun HomeCalendarPane(
+    doc: PlanDocument,
+    today: Ymd,
+    currentMinute: Int,
+    onOpenPlan: () -> Unit,
+    viewMonth: Int,
+    pagerState: PagerState,
+    roster: Roster,
+    textMeasurer: TextMeasurer,
+    weekStartDay: Int,
+    weekdays: List<String>,
+    strings: CalendarStrings,
+    showHolidays: Boolean,
+    showLunar: Boolean,
+    selectedDate: Ymd?,
+    onDayClick: (Ymd) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        RosterStatusCard(
+            doc = doc,
+            today = today,
+            currentMinute = currentMinute,
+            onClick = onOpenPlan,
+        )
+        Text(
+            stringResource(R.string.month_title, viewMonth),
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val page = pagerState.currentPage
+            val year = BASE_YEAR + page / 12
+            val month = page % 12 + 1
+            val rowCount = monthRowCount(year, month, weekStartDay)
+            val cellWidth = ((maxWidth - 24.dp) / 7f).coerceAtLeast(0.dp)
+            val cellHeight = ((cellWidth - 3.dp) / 0.82f) + 3.dp
+            val pagerHeight = 24.dp + cellHeight * rowCount + 3.dp
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth().height(pagerHeight),
+                beyondViewportPageCount = 1,
+            ) { pageIndex ->
+                MonthGrid(
+                    roster = roster,
+                    measurer = textMeasurer,
+                    year = BASE_YEAR + pageIndex / 12,
+                    month = pageIndex % 12 + 1,
+                    today = today,
+                    weekStartDay = weekStartDay,
+                    weekdays = weekdays,
+                    strings = strings,
+                    showHolidays = showHolidays,
+                    showLunar = showLunar,
+                    selected = selectedDate,
+                    onDayClick = onDayClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeSummaryPane(
+    doc: PlanDocument,
+    roster: Roster,
+    today: Ymd,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        TodayGroupsCard(doc = doc, roster = roster, today = today)
+        if (doc.activeScheme() == null) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.home_empty_plan),
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 

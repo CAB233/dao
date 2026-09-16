@@ -25,6 +25,13 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -49,6 +56,11 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.serialization.Serializable
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -79,7 +91,6 @@ import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
-import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.common.rememberFabVisible
 import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
@@ -89,50 +100,75 @@ internal const val UNASSIGNED = 0L
 internal fun formatYmd(ymd: Ymd): String =
     "${ymd.year}-${"%02d".format(ymd.month)}-${"%02d".format(ymd.day)}"
 
+@Serializable
+private data object PlanListRoute : NavKey
+
+@Serializable
+private data class PlanDetailRoute(
+    val scheme: Scheme,
+    val autoFocusName: Boolean,
+) : NavKey
+
 /**
  * 倒班方案（二级页面）：整页是方案列表，点某张卡片时编辑页像二级页面一样从右侧滑入，
  * 返回键 / 顶部返回箭头再滑回去。列表与编辑页共用这一个路由。
  */
 @Composable
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 fun PlanEditScreen(
     doc: PlanDocument,
     onBack: () -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
 ) {
-    var editingSchemeId by rememberSaveable { mutableStateOf<Long?>(null) }
-    // 退出动画期间还要继续渲染这张卡片，所以记住最后打开的那个方案
-    var cardScheme by remember { mutableStateOf<Scheme?>(null) }
-    // 刚新建的方案进来时把焦点给名字输入框；打开已有方案则保持不高亮
-    var autoFocusName by rememberSaveable { mutableStateOf(false) }
-    val liveScheme = doc.schemes.firstOrNull { it.id == editingSchemeId }
-    val shownScheme = liveScheme ?: cardScheme
+    val backStack = rememberNavBackStack(PlanListRoute)
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val directive = remember(adaptiveInfo) {
+        calculatePaneScaffoldDirective(adaptiveInfo).copy(horizontalPartitionSpacerSize = 0.dp)
+    }
+    val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(directive = directive)
 
-    fun openScheme(scheme: Scheme, autoFocus: Boolean) {
-        cardScheme = scheme
-        autoFocusName = autoFocus
-        editingSchemeId = scheme.id
+    fun popDetail() {
+        if (backStack.size > 1) backStack.removeLastOrNull() else onBack()
     }
 
-    PageCardStack(
-        visible = editingSchemeId != null,
-        base = {
-            SchemeListScreen(
-                doc = doc,
-                onBack = onBack,
-                onMutate = onMutate,
-                onImportPlan = onImportPlan,
-                onEnter = { openScheme(it, autoFocus = false) },
-                onCreate = { openScheme(it, autoFocus = true) },
-            )
-        },
-        card = {
-            shownScheme?.let { scheme ->
+    NavDisplay(
+        backStack = backStack,
+        onBack = ::popDetail,
+        sceneStrategies = listOf(listDetailStrategy),
+        entryProvider = entryProvider {
+            entry<PlanListRoute>(
+                metadata = ListDetailSceneStrategy.listPane(
+                    detailPlaceholder = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = stringResource(R.string.plan_select_prompt),
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                    },
+                ),
+            ) {
+                SchemeListScreen(
+                    doc = doc,
+                    onBack = onBack,
+                    onMutate = onMutate,
+                    onImportPlan = onImportPlan,
+                    onEnter = { backStack.add(PlanDetailRoute(it, autoFocusName = false)) },
+                    onCreate = { backStack.add(PlanDetailRoute(it, autoFocusName = true)) },
+                )
+            }
+            entry<PlanDetailRoute>(
+                metadata = ListDetailSceneStrategy.detailPane(),
+            ) { route ->
+                val scheme = route.scheme
+                val inListDetailScene = LocalListDetailSceneScope.current != null
                 SchemeEditScreen(
                     doc = doc,
                     scheme = scheme,
-                    autoFocusName = autoFocusName,
-                    onBack = { editingSchemeId = null },
+                    autoFocusName = route.autoFocusName,
+                    showBackButton = !inListDetailScene,
+                    onBack = ::popDetail,
                     onSave = { editedDocument ->
                         val editedScheme = editedDocument.schemes.first { it.id == scheme.id }
                         onMutate { current ->
@@ -153,7 +189,7 @@ fun PlanEditScreen(
                                 },
                             )
                         }
-                        editingSchemeId = null
+                        popDetail()
                     },
                     onDelete = {
                         onMutate { plan ->
@@ -167,7 +203,7 @@ fun PlanEditScreen(
                                 },
                             )
                         }
-                        editingSchemeId = null
+                        popDetail()
                     },
                 )
             }
@@ -256,7 +292,7 @@ private fun SchemeListScreen(
         topBar = {
             TopAppBar(
                 title = if (selecting) {
-                    stringResource(R.string.plans_selected, selectedIds.size)
+                    pluralStringResource(R.plurals.plans_selected, selectedIds.size, selectedIds.size)
                 } else {
                     stringResource(R.string.settings_plans)
                 },
@@ -326,12 +362,13 @@ private fun SchemeListScreen(
     ) { padding ->
         LazyColumn(
             Modifier
-                .padding(padding)
                 .fillMaxSize()
+                .consumeWindowInsets(padding)
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
+            contentPadding = padding,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
             items(doc.schemes.sortedByDescending { it.createdAt }, key = { it.id }) { scheme ->

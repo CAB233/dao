@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources>
+    <string name="plan_data_recovered">排班数据文件已损坏，应用已恢复为空白配置。</string>
+    <string name="plan_data_recovered_with_backup">排班数据文件已损坏，原文件已备份为 %1$s，应用已恢复为空白配置。</string>
   <string name="app_name">倒班表</string>
   <string name="action_back">返回</string>
   <string name="action_back_to_plan_list">返回方案列表</string>
@@ -118,7 +120,6 @@
   </string-array>
   <string name="default_plan_name">方案 %1$d</string>
   <string name="default_group_name">班组 %1$d</string>
-  <string name="import_failed">导入失败</string>
   <string name="import_unrecognized">没识别到方案数据</string>
   <string name="import_duplicate_only">这些方案本机已经有了，没有重复导入</string>
   <string name="import_nothing">没识别到可导入的内容</string>
@@ -174,6 +175,7 @@
   <string name="plan_edit_title">编辑方案</string>
   <string name="plan_name">方案名</string>
   <string name="plan_tab_templates">班次模板</string>
+  <string name="plan_select_prompt">选择一个方案进行编辑</string>
   <string name="plan_tab_schedule">排班设置</string>
   <string name="plan_tab_groups">班组设置</string>
   <string name="plan_delete">删除方案</string>
@@ -202,7 +204,9 @@
   <string name="month_label">月</string>
   <string name="day_label">日</string>
   <string name="start_date">开始日期</string>
-  <string name="plans_selected">已选 %1$d 个</string>
+  <plurals name="plans_selected">
+    <item quantity="other">已选 %1$d 个</item>
+  </plurals>
   <string name="active_plan_required">至少保留一个使用中的方案</string>
   <string name="add_plan_title">添加倒班方案</string>
   <plurals name="delete_selected_plans_title">

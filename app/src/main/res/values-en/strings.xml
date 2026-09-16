@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources>
+  <string name="plan_data_recovered">The schedule data file was corrupted. The app recovered with an empty configuration.</string>
+  <string name="plan_data_recovered_with_backup">The schedule data file was corrupted. It was backed up as %1$s, and the app recovered with an empty configuration.</string>
   <string name="app_name">Shift Calendar</string>
   <string name="action_back">Back</string>
   <string name="action_back_to_plan_list">Back to plans</string>
@@ -118,7 +120,6 @@
   </string-array>
   <string name="default_plan_name">Plan %1$d</string>
   <string name="default_group_name">Group %1$d</string>
-  <string name="import_failed">Import failed</string>
   <string name="import_unrecognized">No plan data recognized</string>
   <string name="import_duplicate_only">These plans already exist and were not imported again</string>
   <string name="import_nothing">No importable content recognized</string>
@@ -175,7 +176,8 @@
   <string name="delete_shift_confirm">Delete this shift?</string>
   <string name="plan_edit_title">Edit plan</string>
   <string name="plan_name">Plan name</string>
-  <string name="plan_tab_templates">Shift templates</string>
+  <string name="plan_tab_templates">Shifts</string>
+  <string name="plan_select_prompt">Select a plan to edit</string>
   <string name="plan_tab_schedule">Schedule</string>
   <string name="plan_tab_groups">Groups</string>
   <string name="plan_delete">Delete plan</string>
@@ -206,7 +208,10 @@
   <string name="month_label">Month</string>
   <string name="day_label">Day</string>
   <string name="start_date">Start date</string>
-  <string name="plans_selected">%1$d selected</string>
+  <plurals name="plans_selected">
+    <item quantity="one">%1$d selected</item>
+    <item quantity="other">%1$d selected</item>
+  </plurals>
   <string name="active_plan_required">At least one plan must remain active</string>
   <string name="add_plan_title">Add shift plan</string>
   <plurals name="delete_selected_plans_title">

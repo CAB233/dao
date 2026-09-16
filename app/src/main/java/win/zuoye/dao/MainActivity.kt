@@ -1,7 +1,6 @@
 package win.zuoye.dao
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -14,7 +13,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -29,28 +31,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberNavBackStack
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.basic.Scaffold
 import win.zuoye.dao.data.PlanDocument
-import win.zuoye.dao.data.PlanRepository
 import win.zuoye.dao.data.PlanShare
-import win.zuoye.dao.data.Scheme
-import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
-import win.zuoye.dao.domain.ImportResult
-import win.zuoye.dao.domain.importPlan
 import win.zuoye.dao.ui.about.AboutScreen
-import win.zuoye.dao.ui.about.appVersionName
-import win.zuoye.dao.ui.common.MainBottomBar
 import win.zuoye.dao.ui.common.MainTab
+import win.zuoye.dao.ui.common.MainBottomBar
+import win.zuoye.dao.ui.common.MainNavigationRail
 import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.common.localizedMessage
 import win.zuoye.dao.ui.home.HomeScreen
@@ -65,11 +63,13 @@ import win.zuoye.dao.update.UpdateInfo
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
-private sealed interface Screen {
-    /** 二级页面（卡片推入；null = 停在底栏页面） */
-    data object About : Screen
-    data object SharePlan : Screen
-    data object Plan : Screen
+@Serializable
+private sealed interface AppRoute : NavKey {
+    /** 二级页面（卡片推入；Main = 停在底栏页面） */
+    @Serializable data object Main : AppRoute
+    @Serializable data object About : AppRoute
+    @Serializable data object SharePlan : AppRoute
+    @Serializable data object Plan : AppRoute
 }
 
 class MainActivity : ComponentActivity() {
@@ -84,31 +84,52 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition { !planReady }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         setContent {
             AppTheme {
+                val mainViewModel: MainViewModel = viewModel(
+                    factory = MainViewModel.factory(applicationContext),
+                )
+                val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
                 // 兜底：数据读取真出问题时也别一直卡在启动图上
                 LaunchedEffect(Unit) {
                     delay(2_000.milliseconds)
                     planReady = true
                 }
-                val repo = remember { PlanRepository.get(applicationContext) }
                 // 分享要从 Activity 发起（Application context 启动分享面板会闪退）
                 val activityContext = LocalContext.current
                 val resources = LocalResources.current
-                val currentVersionName = remember(activityContext) { activityContext.appVersionName() }
-                val docState by repo.document.collectAsStateWithLifecycle(initialValue = null)
-                val docSnapshot = docState
+                val docSnapshot = uiState.document
                 if (docSnapshot != null) planReady = true
+                LaunchedEffect(uiState.corruptionBackup) {
+                    uiState.corruptionBackup?.let { backupName ->
+                        val message = if (backupName.isNotEmpty()) {
+                            resources.getString(R.string.plan_data_recovered_with_backup, backupName)
+                        } else {
+                            resources.getString(R.string.plan_data_recovered)
+                        }
+                        Toast.makeText(activityContext, message, Toast.LENGTH_LONG).show()
+                        mainViewModel.acknowledgeCorruptionRecovery()
+                    }
+                }
                 // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
                 var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
-                var pushedPage by remember { mutableStateOf<Screen?>(null) }
-                var updateCheckStarted by rememberSaveable { mutableStateOf(false) }
-                var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
-                var showUpdateDialog by remember { mutableStateOf(false) }
-                var downloadingUpdate by remember { mutableStateOf(false) }
-                var downloadProgress by remember { mutableStateOf<Int?>(null) }
+                val navBackStack = rememberNavBackStack(AppRoute.Main)
+                val pushedPage = navBackStack.lastOrNull()?.takeUnless { it == AppRoute.Main } as? AppRoute
                 var pendingInstall by remember { mutableStateOf<File?>(null) }
-                val doc = docState
+                val doc = uiState.document
+
+                fun navigateTo(route: AppRoute) {
+                    if (route == AppRoute.Main) return
+                    while (navBackStack.size > 1) navBackStack.removeLastOrNull()
+                    navBackStack.add(route)
+                }
+
+                fun popToMain() {
+                    while (navBackStack.size > 1) navBackStack.removeLastOrNull()
+                }
 
                 fun openInstaller(apk: File) {
                     runCatching { AppUpdater.installApk(activityContext, apk) }
@@ -138,7 +159,7 @@ class MainActivity : ComponentActivity() {
                             unknownSourcesLauncher.launch(
                                 Intent(
                                     Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                    Uri.parse("package:${activityContext.packageName}"),
+                                    "package:${activityContext.packageName}".toUri(),
                                 ),
                             )
                         }.onFailure {
@@ -154,49 +175,25 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                fun startUpdateDownload() {
-                    val update = updateInfo ?: return
-                    downloadingUpdate = true
-                    downloadProgress = null
-                    lifecycleScope.launch {
-                        try {
-                            val apk = AppUpdater.downloadApk(
-                                context = applicationContext,
-                                update = update,
-                                onProgress = { progress -> downloadProgress = progress },
-                            )
-                            showUpdateDialog = false
-                            requestInstall(apk)
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (_: Throwable) {
-                            showUpdateDialog = false
-                            Toast.makeText(activityContext, R.string.update_download_failed, Toast.LENGTH_LONG).show()
-                        } finally {
-                            downloadingUpdate = false
-                        }
-                    }
-                }
-
-                LaunchedEffect(doc) {
-                    if (doc != null && !updateCheckStarted) {
-                        updateCheckStarted = true
-                        if (doc.checkUpdatesOnLaunch) {
-                            try {
-                                updateInfo = AppUpdater.checkForUpdate(
-                                    currentVersionName = currentVersionName,
-                                    channel = doc.updateChannel,
-                                )
-                                showUpdateDialog = updateInfo != null
-                            } catch (error: CancellationException) {
-                                throw error
-                            } catch (_: Throwable) {
-                                Toast.makeText(
-                                    activityContext,
-                                    R.string.update_check_failed,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            }
+                LaunchedEffect(mainViewModel) {
+                    mainViewModel.events.collect { event ->
+                        when (event) {
+                            MainEvent.UpdateCheckFailed -> Toast.makeText(
+                                activityContext,
+                                R.string.update_check_failed,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                            MainEvent.UpdateDownloadFailed -> Toast.makeText(
+                                activityContext,
+                                R.string.update_download_failed,
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            is MainEvent.InstallUpdate -> requestInstall(event.apk)
+                            is MainEvent.ImportFinished -> Toast.makeText(
+                                activityContext,
+                                event.result.localizedMessage(resources),
+                                Toast.LENGTH_LONG,
+                            ).show()
                         }
                     }
                 }
@@ -207,55 +204,21 @@ class MainActivity : ComponentActivity() {
                     dayTemplateIds: ImmutableList<Long>,
                     anchorEpochDay: Long,
                 ) {
-                    lifecycleScope.launch {
-                        repo.update { current ->
-                            val id = System.currentTimeMillis()
-                            current.copy(
-                                templates = templates,
-                                schemes = current.schemes.toPersistentList().add(
-                                    Scheme(
-                                        id = id,
-                                        name = resources.getString(R.string.default_plan_name, current.schemes.size + 1),
-                                        cycleDays = cycleDays,
-                                        dayTemplateIds = dayTemplateIds,
-                                        createdAt = id,
-                                        groups = persistentListOf(
-                                            SchemeGroup(
-                                                id = id,
-                                                name = resources.getString(R.string.default_group_name, 1),
-                                                anchorEpochDay = anchorEpochDay,
-                                            ),
-                                        ),
-                                        defaultGroupId = id,
-                                    ),
-                                ),
-                                activeSchemeId = id,
-                                onboardingDone = true,
-                            )
-                        }
-                        pushedPage = null
-                        baseTab = MainTab.Home
-                    }
+                    val nextIndex = (doc?.schemes?.size ?: 0) + 1
+                    mainViewModel.saveNewScheme(
+                        cycleDays = cycleDays,
+                        templates = templates,
+                        dayTemplateIds = dayTemplateIds,
+                        anchorEpochDay = anchorEpochDay,
+                        planName = resources.getString(R.string.default_plan_name, nextIndex),
+                        groupName = resources.getString(R.string.default_group_name, 1),
+                    )
+                    popToMain()
+                    baseTab = MainTab.Home
                 }
 
                 fun importPlan(payload: PlanShare, completeOnboarding: Boolean = false) {
-                    lifecycleScope.launch {
-                        var result: ImportResult? = null
-                        repo.update { current ->
-                            val (merged, outcome) = current.importPlan(payload)
-                            result = outcome
-                            if (completeOnboarding && outcome.changed) {
-                                merged.copy(onboardingDone = true)
-                            } else {
-                                merged
-                            }
-                        }
-                        Toast.makeText(
-                            activityContext,
-                            result?.localizedMessage(resources) ?: resources.getString(R.string.import_failed),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
+                    mainViewModel.importPlan(payload, completeOnboarding)
                 }
 
                 when {
@@ -265,20 +228,14 @@ class MainActivity : ComponentActivity() {
                         doc = doc,
                         editing = null,
                         onImportPlan = { importPlan(it, completeOnboarding = true) },
-                        onSaveDocument = { savedDocument ->
-                            lifecycleScope.launch { repo.update { savedDocument } }
-                        },
+                        onSaveDocument = mainViewModel::saveDocument,
                         onSave = { cycle, templates, dayIds, anchor -> saveNewScheme(cycle, templates, dayIds, anchor) },
-                        onSkip = {
-                            lifecycleScope.launch {
-                                repo.update { it.copy(onboardingDone = true) }
-                            }
-                        },
+                        onSkip = mainViewModel::skipOnboarding,
                         onCancel = null,
                     )
                     else -> {
                         // 退出动画期间还要继续渲染这张卡片，所以记住最后一个二级页面
-                        var cardRoute by remember { mutableStateOf<Screen?>(null) }
+                        var cardRoute by remember { mutableStateOf<AppRoute?>(null) }
                         LaunchedEffect(pushedPage) {
                             if (pushedPage != null) cardRoute = pushedPage
                         }
@@ -289,31 +246,32 @@ class MainActivity : ComponentActivity() {
                                     doc = doc,
                                     current = baseTab,
                                     onSelectTab = { baseTab = it },
-                                    onExportPlan = { pushedPage = Screen.SharePlan },
-                                    onOpenAbout = { pushedPage = Screen.About },
-                                    onOpenPlan = { pushedPage = Screen.Plan },
-                                    onMutate = { transform -> lifecycleScope.launch { repo.update(transform) } },
-                                    updateInfo = updateInfo,
-                                    showUpdateDialog = showUpdateDialog,
-                                    downloadingUpdate = downloadingUpdate,
-                                    downloadProgress = downloadProgress,
-                                    onDismissUpdate = { showUpdateDialog = false },
-                                    onStartUpdate = ::startUpdateDownload,
+                                    onExportPlan = { navigateTo(AppRoute.SharePlan) },
+                                    onOpenAbout = { navigateTo(AppRoute.About) },
+                                    onOpenPlan = { navigateTo(AppRoute.Plan) },
+                                    onMutate = mainViewModel::mutate,
+                                    updateInfo = uiState.updateInfo,
+                                    showUpdateDialog = uiState.showUpdateDialog,
+                                    downloadingUpdate = uiState.downloadingUpdate,
+                                    downloadProgress = uiState.downloadProgress,
+                                    onDismissUpdate = mainViewModel::dismissUpdate,
+                                    onStartUpdate = mainViewModel::startUpdateDownload,
                                 )
                             },
                             card = {
                                 when (val route = cardRoute) {
-                                    Screen.About -> AboutScreen(onBack = { pushedPage = null })
-                                    Screen.SharePlan -> SharePlanScreen(
+                                    AppRoute.About -> AboutScreen(onBack = ::popToMain)
+                                    AppRoute.SharePlan -> SharePlanScreen(
                                         doc = doc,
-                                        onBack = { pushedPage = null },
+                                        onBack = ::popToMain,
                                     )
-                                    Screen.Plan -> PlanEditScreen(
+                                    AppRoute.Plan -> PlanEditScreen(
                                         doc = doc,
-                                        onBack = { pushedPage = null },
+                                        onBack = ::popToMain,
                                         onImportPlan = { importPlan(it) },
-                                        onMutate = { transform -> lifecycleScope.launch { repo.update(transform) } },
+                                        onMutate = mainViewModel::mutate,
                                     )
+                                    AppRoute.Main -> Unit
                                     null -> Unit
                                 }
                             },
@@ -326,7 +284,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 主页 / 设置两页共用同一个 Scaffold 与底栏：底栏固定不动，
+ * 主页 / 设置两页共用同一个 Scaffold 与导航区：导航区固定不动，
  * 内容区是一个 `HorizontalPager`，切换时整页横向滑动（对齐 InstallerX 的卡片式切换），
  * 顺带也能横滑切页，并且相邻页保持组合、来回切不会丢日历的浏览位置。
  */
@@ -364,51 +322,69 @@ private fun MainTabs(
             ?.let { tab -> if (tab != current) onSelectTab(tab) }
     }
 
-    Scaffold(
-        bottomBar = { MainBottomBar(selected = current, onSelect = onSelectTab) },
-        // 底部空间由底栏占据；各页面自己的 Scaffold/TopAppBar 负责其余 insets
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-    ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.padding(padding).fillMaxSize(),
-            // 相邻页保持组合：来回切的时候日历不会重置回本月
-            beyondViewportPageCount = 1,
-            overscrollEffect = null,
-        ) { page ->
-            when (tabs[page]) {
-                MainTab.Home -> HomeScreen(
-                    doc = doc,
-                    onExportPlan = onExportPlan,
-                    onOpenPlan = onOpenPlan,
-                )
-                MainTab.Settings -> SettingsScreen(
-                    doc = doc,
-                    onBack = { onSelectTab(MainTab.Home) },
-                    onOpenPlan = onOpenPlan,
-                    onOpenAbout = onOpenAbout,
-                    onWeekStartDayChange = { weekStartDay ->
-                        onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
-                    },
-                    onCalendarViewModeChange = { mode ->
-                        onMutate { plan -> plan.copy(calendarViewMode = mode) }
-                    },
-                    onCheckUpdatesOnLaunchChange = { enabled ->
-                        onMutate { plan -> plan.copy(checkUpdatesOnLaunch = enabled) }
-                    },
-                    onUpdateChannelChange = { channel ->
-                        onMutate { plan -> plan.copy(updateChannel = channel) }
-                    },
-                )
+    // 只让窗口宽度决定导航的摆放位置；绘制始终交给 miuix 组件。
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val useNavigationRail = maxWidth >= 600.dp
+        Scaffold(
+            bottomBar = {
+                if (!useNavigationRail) {
+                    MainBottomBar(selected = current, onSelect = onSelectTab)
+                }
+            },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        ) { padding ->
+            Row(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+            ) {
+                if (useNavigationRail) {
+                    MainNavigationRail(selected = current, onSelect = onSelectTab)
+                }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    // 相邻页保持组合：来回切的时候日历不会重置回本月
+                    beyondViewportPageCount = 1,
+                    overscrollEffect = null,
+                ) { page ->
+                    when (tabs[page]) {
+                        MainTab.Home -> HomeScreen(
+                            doc = doc,
+                            onExportPlan = onExportPlan,
+                            onOpenPlan = onOpenPlan,
+                        )
+                        MainTab.Settings -> SettingsScreen(
+                            doc = doc,
+                            onBack = { onSelectTab(MainTab.Home) },
+                            onOpenPlan = onOpenPlan,
+                            onOpenAbout = onOpenAbout,
+                            onWeekStartDayChange = { weekStartDay ->
+                                onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
+                            },
+                            onCalendarViewModeChange = { mode ->
+                                onMutate { plan -> plan.copy(calendarViewMode = mode) }
+                            },
+                            onCheckUpdatesOnLaunchChange = { enabled ->
+                                onMutate { plan -> plan.copy(checkUpdatesOnLaunch = enabled) }
+                            },
+                            onUpdateChannelChange = { channel ->
+                                onMutate { plan -> plan.copy(updateChannel = channel) }
+                            },
+                        )
+                    }
+                }
             }
+            UpdateDialog(
+                show = showUpdateDialog,
+                update = updateInfo,
+                downloading = downloadingUpdate,
+                downloadProgress = downloadProgress,
+                onDismiss = onDismissUpdate,
+                onUpdate = onStartUpdate,
+            )
         }
-        UpdateDialog(
-            show = showUpdateDialog,
-            update = updateInfo,
-            downloading = downloadingUpdate,
-            downloadProgress = downloadProgress,
-            onDismiss = onDismissUpdate,
-            onUpdate = onStartUpdate,
-        )
     }
 }

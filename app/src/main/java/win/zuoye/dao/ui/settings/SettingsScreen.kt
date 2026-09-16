@@ -2,6 +2,7 @@ package win.zuoye.dao.ui.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -70,9 +72,14 @@ fun SettingsScreen(
         topBar = { TopAppBar(title = stringResource(R.string.nav_settings)) },
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
-        Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
-        ) {
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            Column(
+                Modifier
+                    .widthIn(max = 720.dp)
+                    .fillMaxSize()
+                    .align(Alignment.TopCenter)
+                    .verticalScroll(rememberScrollState()),
+            ) {
             // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
             Spacer(Modifier.height(12.dp))
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
@@ -147,7 +154,8 @@ fun SettingsScreen(
                     onClick = onOpenAbout,
                 )
             }
-            Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
+            }
         }
     }
 }

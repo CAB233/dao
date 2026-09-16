@@ -352,15 +352,6 @@ private fun HomeSummaryPane(
 ) {
     Column(modifier) {
         TodayGroupsCard(doc = doc, roster = roster, today = today)
-        if (doc.activeScheme() == null) {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                stringResource(R.string.home_empty_plan),
-                fontSize = 13.sp,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
         Spacer(Modifier.height(24.dp))
     }
 }

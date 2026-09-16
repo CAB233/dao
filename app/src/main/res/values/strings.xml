@@ -216,7 +216,6 @@
   <string name="share_plan_description">分享排班方案</string>
   <string name="today_short">今</string>
   <string name="month_title">%1$d月</string>
-  <string name="home_empty_plan">尚未配置倒班方案：点底部“设置”新建一个，日历会按周期自动着色。</string>
   <string name="today_schedule">今日排班</string>
   <string name="no_plan">暂无倒班方案</string>
   <string name="no_group">暂无班组</string>

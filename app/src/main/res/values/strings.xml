@@ -9,6 +9,7 @@
   <string name="action_confirm">确定</string>
   <string name="action_save">保存</string>
   <string name="action_update">更新</string>
+  <string name="action_download">下载</string>
   <string name="action_delete">删除</string>
   <string name="action_edit">编辑</string>
   <string name="action_next">下一步</string>
@@ -54,11 +55,21 @@
     <item>镜像源</item>
   </string-array>
   <string name="settings_about">关于</string>
+  <string name="settings_update_available_summary">新版本 v%1$s 已可下载</string>
   <string name="update_available_title">检测到新版本</string>
   <string name="update_available_message">发现新版本 v%1$s，是否下载安装？</string>
-  <string name="update_downloading_title">正在更新</string>
-  <string name="update_downloading">正在下载安装包…</string>
-  <string name="update_downloading_progress">正在下载安装包… %1$d%%</string>
+  <string name="update_notification_channel_download">更新下载</string>
+  <string name="update_notification_channel_result">更新结果</string>
+  <string name="update_notification_downloading_title">正在下载更新</string>
+  <string name="update_notification_downloading">正在下载安装包…</string>
+  <string name="update_notification_downloading_progress">已下载 %1$d%%</string>
+  <string name="update_notification_short_progress">%1$d%%</string>
+  <string name="update_notification_complete_title">更新已下载</string>
+  <string name="update_notification_complete">版本 v%1$s 准备就绪，点击以安装</string>
+  <string name="update_notification_failed_title">更新下载失败</string>
+  <string name="update_notification_permission_required">需要允许通知权限，才能在后台显示更新下载进度</string>
+  <string name="update_install_confirm_title">安装更新</string>
+  <string name="update_install_confirm_message">安装包已下载完成，是否现在安装？</string>
   <string name="update_check_failed">检查更新失败，请检查网络或更换更新渠道</string>
   <string name="update_download_failed">下载安装包失败，请稍后重试</string>
   <string name="update_install_failed">无法打开系统安装界面</string>

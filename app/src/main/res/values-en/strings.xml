@@ -9,6 +9,7 @@
   <string name="action_confirm">OK</string>
   <string name="action_save">Save</string>
   <string name="action_update">Update</string>
+  <string name="action_download">Download</string>
   <string name="action_delete">Delete</string>
   <string name="action_edit">Edit</string>
   <string name="action_next">Next</string>
@@ -54,11 +55,21 @@
     <item>Mirror</item>
   </string-array>
   <string name="settings_about">About</string>
+  <string name="settings_update_available_summary">Version v%1$s is ready to download</string>
   <string name="update_available_title">New version available</string>
   <string name="update_available_message">Version v%1$s is available. Download and install it?</string>
-  <string name="update_downloading_title">Updating</string>
-  <string name="update_downloading">Downloading the update…</string>
-  <string name="update_downloading_progress">Downloading the update… %1$d%%</string>
+  <string name="update_notification_channel_download">Update downloads</string>
+  <string name="update_notification_channel_result">Update results</string>
+  <string name="update_notification_downloading_title">Downloading update</string>
+  <string name="update_notification_downloading">Downloading the update…</string>
+  <string name="update_notification_downloading_progress">Downloaded %1$d%%</string>
+  <string name="update_notification_short_progress">%1$d%%</string>
+  <string name="update_notification_complete_title">Update downloaded</string>
+  <string name="update_notification_complete">Version v%1$s is ready. Tap to install.</string>
+  <string name="update_notification_failed_title">Update download failed</string>
+  <string name="update_notification_permission_required">Allow notifications to see update download progress in the background</string>
+  <string name="update_install_confirm_title">Install update</string>
+  <string name="update_install_confirm_message">The update has finished downloading. Install it now?</string>
   <string name="update_check_failed">Could not check for updates. Check your network or choose another channel.</string>
   <string name="update_download_failed">Could not download the update. Try again later.</string>
   <string name="update_install_failed">Could not open the system installer</string>

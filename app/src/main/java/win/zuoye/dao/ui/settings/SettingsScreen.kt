@@ -25,10 +25,12 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
@@ -40,13 +42,16 @@ import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
+import win.zuoye.dao.update.UpdateInfo
 
 /** 设置：外观、更新与关于。 */
 @Composable
 fun SettingsScreen(
     doc: PlanDocument,
+    updateInfo: UpdateInfo?,
     onBack: () -> Unit,
     onOpenAbout: () -> Unit,
+    onDownloadUpdate: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onWeekStartDayChange: (Int) -> Unit,
     onCalendarViewModeChange: (CalendarViewMode) -> Unit,
@@ -80,6 +85,24 @@ fun SettingsScreen(
             ) {
             // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
             Spacer(Modifier.height(12.dp))
+            if (updateInfo != null) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                    BasicComponent(
+                        title = stringResource(R.string.update_available_title),
+                        summary = stringResource(
+                            R.string.settings_update_available_summary,
+                            updateInfo.versionName,
+                        ),
+                        endActions = {
+                            TextButton(
+                                text = stringResource(R.string.action_download),
+                                onClick = onDownloadUpdate,
+                                colors = ButtonDefaults.textButtonColorsPrimary(),
+                            )
+                        },
+                    )
+                }
+            }
             Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 OverlayDropdownPreference(
                     title = stringResource(R.string.settings_theme_mode),

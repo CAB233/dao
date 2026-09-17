@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import java.io.File
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
@@ -30,7 +29,6 @@ import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.domain.importPlan
 import win.zuoye.dao.update.AppUpdater
 import win.zuoye.dao.update.UpdateChecker
-import win.zuoye.dao.update.UpdateDownloadState
 import win.zuoye.dao.update.UpdateDownloads
 import win.zuoye.dao.update.UpdateInfo
 import win.zuoye.dao.update.WorkManagerUpdateDownloads
@@ -41,14 +39,11 @@ data class MainUiState(
     val corruptionBackup: String? = null,
     val updateInfo: UpdateInfo? = null,
     val showUpdateDialog: Boolean = false,
-    val downloadingUpdate: Boolean = false,
-    val downloadProgress: Int? = null,
+    val showUpdateInSettings: Boolean = false,
 )
 
 sealed interface MainEvent {
     data object UpdateCheckFailed : MainEvent
-    data object UpdateDownloadFailed : MainEvent
-    data class InstallUpdate(val apk: File) : MainEvent
     data class ImportFinished(val result: ImportResult) : MainEvent
 }
 
@@ -69,7 +64,6 @@ class MainViewModel(
     val events = eventChannel.receiveAsFlow()
 
     private var updateCheckStarted = false
-    private val handledDownloads = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -86,15 +80,18 @@ class MainViewModel(
                 _uiState.update { it.copy(corruptionBackup = backup) }
             }
         }
-        viewModelScope.launch {
-            updateDownloads.state.collect(::handleDownloadState)
-        }
     }
 
     private suspend fun checkForUpdate(document: PlanDocument) {
         try {
             val update = updateChecker.checkForUpdate(currentVersionName, document.updateChannel)
-            _uiState.update { it.copy(updateInfo = update, showUpdateDialog = update != null) }
+            _uiState.update {
+                it.copy(
+                    updateInfo = update,
+                    showUpdateDialog = update != null,
+                    showUpdateInSettings = false,
+                )
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (_: Throwable) {
@@ -102,43 +99,15 @@ class MainViewModel(
         }
     }
 
-    private suspend fun handleDownloadState(state: UpdateDownloadState) {
-        when (state) {
-            UpdateDownloadState.Idle -> Unit
-            is UpdateDownloadState.Running -> _uiState.update {
-                it.copy(downloadingUpdate = true, downloadProgress = state.progress)
-            }
-            is UpdateDownloadState.Complete -> {
-                _uiState.update {
-                    it.copy(showUpdateDialog = false, downloadingUpdate = false, downloadProgress = null)
-                }
-                if (handledDownloads.add(state.workId)) {
-                    eventChannel.send(MainEvent.InstallUpdate(state.apk))
-                    updateDownloads.consume(state.workId)
-                }
-            }
-            is UpdateDownloadState.Failed -> {
-                val wasDownloading = _uiState.value.downloadingUpdate
-                _uiState.update {
-                    it.copy(showUpdateDialog = false, downloadingUpdate = false, downloadProgress = null)
-                }
-                if (wasDownloading && handledDownloads.add(state.workId)) {
-                    eventChannel.send(MainEvent.UpdateDownloadFailed)
-                }
-                updateDownloads.consume(state.workId)
-            }
-        }
-    }
-
     fun acknowledgeCorruptionRecovery() = planStore.acknowledgeCorruptionRecovery()
 
     fun dismissUpdate() {
-        _uiState.update { it.copy(showUpdateDialog = false) }
+        _uiState.update { it.copy(showUpdateDialog = false, showUpdateInSettings = true) }
     }
 
     fun startUpdateDownload() {
         val update = _uiState.value.updateInfo ?: return
-        _uiState.update { it.copy(downloadingUpdate = true, downloadProgress = null) }
+        _uiState.update { it.copy(showUpdateDialog = false, showUpdateInSettings = false) }
         updateDownloads.start(update)
     }
 

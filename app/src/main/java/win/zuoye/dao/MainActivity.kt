@@ -1,6 +1,8 @@
 package win.zuoye.dao
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -44,6 +46,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.net.toUri
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -75,7 +78,9 @@ import win.zuoye.dao.ui.settings.SettingsScreen
 import win.zuoye.dao.ui.share.SharePlanScreen
 import win.zuoye.dao.ui.theme.AppTheme
 import win.zuoye.dao.ui.update.UpdateDialog
+import win.zuoye.dao.ui.update.UpdateInstallDialog
 import win.zuoye.dao.update.AppUpdater
+import win.zuoye.dao.update.UpdateDownloadWorker
 import win.zuoye.dao.update.UpdateInfo
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
@@ -93,6 +98,7 @@ class MainActivity : ComponentActivity() {
     /** 首帧数据是否读完；启动图据此决定什么时候撤下 */
     @Volatile
     private var planReady = false
+    private val installRequestState = mutableStateOf<File?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 12+ 标准启动图；低版本由 core-splashscreen 兼容
@@ -103,6 +109,7 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
+        handleUpdateInstallIntent(intent)
         setContent {
             val mainViewModel: MainViewModel = viewModel(
                 factory = MainViewModel.factory(applicationContext),
@@ -121,186 +128,239 @@ class MainActivity : ComponentActivity() {
                 }
             }
             AppTheme(themeMode = themeMode) {
-                // 兜底：数据读取真出问题时也别一直卡在启动图上
-                LaunchedEffect(Unit) {
-                    delay(2_000.milliseconds)
-                    planReady = true
-                }
-                // 分享要从 Activity 发起（Application context 启动分享面板会闪退）
-                val activityContext = LocalContext.current
-                val resources = LocalResources.current
-                val docSnapshot = uiState.document
-                if (docSnapshot != null) planReady = true
-                LaunchedEffect(uiState.corruptionBackup) {
-                    uiState.corruptionBackup?.let { backupName ->
-                        val message = if (backupName.isNotEmpty()) {
-                            resources.getString(R.string.plan_data_recovered_with_backup, backupName)
+                Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { _ ->
+                    // 根 Scaffold 为更新安装确认提供常驻弹层宿主，覆盖首次引导和主界面两种状态。
+                    // 兜底：数据读取真出问题时也别一直卡在启动图上
+                    LaunchedEffect(Unit) {
+                        delay(2_000.milliseconds)
+                        planReady = true
+                    }
+                    // 分享要从 Activity 发起（Application context 启动分享面板会闪退）
+                    val activityContext = LocalContext.current
+                    val resources = LocalResources.current
+                    val docSnapshot = uiState.document
+                    if (docSnapshot != null) planReady = true
+                    LaunchedEffect(uiState.corruptionBackup) {
+                        uiState.corruptionBackup?.let { backupName ->
+                            val message = if (backupName.isNotEmpty()) {
+                                resources.getString(R.string.plan_data_recovered_with_backup, backupName)
+                            } else {
+                                resources.getString(R.string.plan_data_recovered)
+                            }
+                            Toast.makeText(activityContext, message, Toast.LENGTH_LONG).show()
+                            mainViewModel.acknowledgeCorruptionRecovery()
+                        }
+                    }
+                    // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
+                    var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
+                    val navBackStack = rememberNavBackStack(AppRoute.Main)
+                    val pushedPage = navBackStack.lastOrNull()?.takeUnless { it == AppRoute.Main } as? AppRoute
+                    var pendingPermissionInstall by remember { mutableStateOf<File?>(null) }
+                    val requestedInstallApk by installRequestState
+                    var shownInstallApk by remember { mutableStateOf<File?>(null) }
+                    val doc = uiState.document
+
+                    LaunchedEffect(requestedInstallApk) {
+                        if (requestedInstallApk != null) shownInstallApk = requestedInstallApk
+                    }
+
+                    fun navigateTo(route: AppRoute) {
+                        if (route == AppRoute.Main) return
+                        while (navBackStack.size > 1) navBackStack.removeLastOrNull()
+                        navBackStack.add(route)
+                    }
+
+                    fun popToMain() {
+                        while (navBackStack.size > 1) navBackStack.removeLastOrNull()
+                    }
+
+                    fun openInstaller(apk: File) {
+                        runCatching { AppUpdater.installApk(activityContext, apk) }
+                            .onFailure {
+                                Toast.makeText(activityContext, R.string.update_install_failed, Toast.LENGTH_LONG).show()
+                            }
+                    }
+
+                    val unknownSourcesLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.StartActivityForResult(),
+                    ) {
+                        val apk = pendingPermissionInstall
+                        pendingPermissionInstall = null
+                        if (apk != null && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                                activityContext.packageManager.canRequestPackageInstalls())) {
+                            openInstaller(apk)
                         } else {
-                            resources.getString(R.string.plan_data_recovered)
+                            Toast.makeText(activityContext, R.string.update_install_permission_required, Toast.LENGTH_LONG).show()
                         }
-                        Toast.makeText(activityContext, message, Toast.LENGTH_LONG).show()
-                        mainViewModel.acknowledgeCorruptionRecovery()
                     }
-                }
-                // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
-                var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
-                val navBackStack = rememberNavBackStack(AppRoute.Main)
-                val pushedPage = navBackStack.lastOrNull()?.takeUnless { it == AppRoute.Main } as? AppRoute
-                var pendingInstall by remember { mutableStateOf<File?>(null) }
-                val doc = uiState.document
 
-                fun navigateTo(route: AppRoute) {
-                    if (route == AppRoute.Main) return
-                    while (navBackStack.size > 1) navBackStack.removeLastOrNull()
-                    navBackStack.add(route)
-                }
-
-                fun popToMain() {
-                    while (navBackStack.size > 1) navBackStack.removeLastOrNull()
-                }
-
-                fun openInstaller(apk: File) {
-                    runCatching { AppUpdater.installApk(activityContext, apk) }
-                        .onFailure {
-                            Toast.makeText(activityContext, R.string.update_install_failed, Toast.LENGTH_LONG).show()
+                    fun requestInstall(apk: File) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                            !activityContext.packageManager.canRequestPackageInstalls()) {
+                            pendingPermissionInstall = apk
+                            runCatching {
+                                unknownSourcesLauncher.launch(
+                                    Intent(
+                                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                        "package:${activityContext.packageName}".toUri(),
+                                    ),
+                                )
+                            }.onFailure {
+                                pendingPermissionInstall = null
+                                Toast.makeText(
+                                    activityContext,
+                                    R.string.update_install_permission_required,
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        } else {
+                            openInstaller(apk)
                         }
-                }
-
-                val unknownSourcesLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.StartActivityForResult(),
-                ) {
-                    val apk = pendingInstall
-                    pendingInstall = null
-                    if (apk != null && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                            activityContext.packageManager.canRequestPackageInstalls())) {
-                        openInstaller(apk)
-                    } else {
-                        Toast.makeText(activityContext, R.string.update_install_permission_required, Toast.LENGTH_LONG).show()
                     }
-                }
 
-                fun requestInstall(apk: File) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                        !activityContext.packageManager.canRequestPackageInstalls()) {
-                        pendingInstall = apk
-                        runCatching {
-                            unknownSourcesLauncher.launch(
-                                Intent(
-                                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                    "package:${activityContext.packageName}".toUri(),
-                                ),
-                            )
-                        }.onFailure {
-                            pendingInstall = null
+                    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestPermission(),
+                    ) { granted ->
+                        if (granted) {
+                            mainViewModel.startUpdateDownload()
+                        } else {
                             Toast.makeText(
                                 activityContext,
-                                R.string.update_install_permission_required,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        }
-                    } else {
-                        openInstaller(apk)
-                    }
-                }
-
-                LaunchedEffect(mainViewModel) {
-                    mainViewModel.events.collect { event ->
-                        when (event) {
-                            MainEvent.UpdateCheckFailed -> Toast.makeText(
-                                activityContext,
-                                R.string.update_check_failed,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                            MainEvent.UpdateDownloadFailed -> Toast.makeText(
-                                activityContext,
-                                R.string.update_download_failed,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                            is MainEvent.InstallUpdate -> requestInstall(event.apk)
-                            is MainEvent.ImportFinished -> Toast.makeText(
-                                activityContext,
-                                event.result.localizedMessage(resources),
+                                R.string.update_notification_permission_required,
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
                     }
-                }
 
-                fun saveNewScheme(
-                    cycleDays: Int,
-                    templates: ImmutableList<ShiftTemplate>,
-                    dayTemplateIds: ImmutableList<Long>,
-                    anchorEpochDay: Long,
-                ) {
-                    val nextIndex = (doc?.schemes?.size ?: 0) + 1
-                    mainViewModel.saveNewScheme(
-                        cycleDays = cycleDays,
-                        templates = templates,
-                        dayTemplateIds = dayTemplateIds,
-                        anchorEpochDay = anchorEpochDay,
-                        planName = resources.getString(R.string.default_plan_name, nextIndex),
-                        groupName = resources.getString(R.string.default_group_name, 1),
-                    )
-                    popToMain()
-                    baseTab = MainTab.Home
-                }
-
-                fun importPlan(payload: PlanShare, completeOnboarding: Boolean = false) {
-                    mainViewModel.importPlan(payload, completeOnboarding)
-                }
-
-                when {
-                    // 启动图会盖住这段等待，正常看不到
-                    doc == null -> Box(Modifier.fillMaxSize())
-                    doc.activeScheme() == null && !doc.onboardingDone -> OnboardingScreen(
-                        doc = doc,
-                        editing = null,
-                        onImportPlan = { importPlan(it, completeOnboarding = true) },
-                        onSaveDocument = mainViewModel::saveDocument,
-                        onSave = { cycle, templates, dayIds, anchor -> saveNewScheme(cycle, templates, dayIds, anchor) },
-                        onSkip = mainViewModel::skipOnboarding,
-                        onCancel = null,
-                    )
-                    else -> {
-                        // 退出动画期间还要继续渲染这张卡片，所以记住最后一个二级页面
-                        var cardRoute by remember { mutableStateOf<AppRoute?>(null) }
-                        LaunchedEffect(pushedPage) {
-                            if (pushedPage != null) cardRoute = pushedPage
+                    fun startUpdateDownload() {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(
+                                activityContext,
+                                Manifest.permission.POST_NOTIFICATIONS,
+                            ) != PackageManager.PERMISSION_GRANTED) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            mainViewModel.startUpdateDownload()
                         }
-                        PageCardStack(
-                            visible = pushedPage != null,
-                            base = {
-                                MainTabs(
-                                    doc = doc,
-                                    current = baseTab,
-                                    onSelectTab = { baseTab = it },
-                                    onExportPlan = { navigateTo(AppRoute.SharePlan) },
-                                    onOpenAbout = { navigateTo(AppRoute.About) },
-                                    onImportPlan = { importPlan(it) },
-                                    onMutate = mainViewModel::mutate,
+                    }
+
+                    LaunchedEffect(mainViewModel) {
+                        mainViewModel.events.collect { event ->
+                            when (event) {
+                                MainEvent.UpdateCheckFailed -> Toast.makeText(
+                                    activityContext,
+                                    R.string.update_check_failed,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                                is MainEvent.ImportFinished -> Toast.makeText(
+                                    activityContext,
+                                    event.result.localizedMessage(resources),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        }
+                    }
+
+                    fun saveNewScheme(
+                        cycleDays: Int,
+                        templates: ImmutableList<ShiftTemplate>,
+                        dayTemplateIds: ImmutableList<Long>,
+                        anchorEpochDay: Long,
+                    ) {
+                        val nextIndex = (doc?.schemes?.size ?: 0) + 1
+                        mainViewModel.saveNewScheme(
+                            cycleDays = cycleDays,
+                            templates = templates,
+                            dayTemplateIds = dayTemplateIds,
+                            anchorEpochDay = anchorEpochDay,
+                            planName = resources.getString(R.string.default_plan_name, nextIndex),
+                            groupName = resources.getString(R.string.default_group_name, 1),
+                        )
+                        popToMain()
+                        baseTab = MainTab.Home
+                    }
+
+                    fun importPlan(payload: PlanShare, completeOnboarding: Boolean = false) {
+                        mainViewModel.importPlan(payload, completeOnboarding)
+                    }
+
+                    when {
+                        // 启动图会盖住这段等待，正常看不到
+                        doc == null -> Box(Modifier.fillMaxSize())
+                        doc.activeScheme() == null && !doc.onboardingDone -> OnboardingScreen(
+                            doc = doc,
+                            editing = null,
+                            onImportPlan = { importPlan(it, completeOnboarding = true) },
+                            onSaveDocument = mainViewModel::saveDocument,
+                            onSave = { cycle, templates, dayIds, anchor -> saveNewScheme(cycle, templates, dayIds, anchor) },
+                            onSkip = mainViewModel::skipOnboarding,
+                            onCancel = null,
+                        )
+                        else -> {
+                            // 退出动画期间还要继续渲染这张卡片，所以记住最后一个二级页面
+                            var cardRoute by remember { mutableStateOf<AppRoute?>(null) }
+                            LaunchedEffect(pushedPage) {
+                                if (pushedPage != null) cardRoute = pushedPage
+                            }
+                            PageCardStack(
+                                visible = pushedPage != null,
+                                base = {
+                                    MainTabs(
+                                        doc = doc,
+                                        current = baseTab,
+                                        onSelectTab = { baseTab = it },
+                                        onExportPlan = { navigateTo(AppRoute.SharePlan) },
+                                        onOpenAbout = { navigateTo(AppRoute.About) },
+                                        onImportPlan = { importPlan(it) },
+                                        onMutate = mainViewModel::mutate,
                                     updateInfo = uiState.updateInfo,
                                     showUpdateDialog = uiState.showUpdateDialog,
-                                    downloadingUpdate = uiState.downloadingUpdate,
-                                    downloadProgress = uiState.downloadProgress,
-                                    onDismissUpdate = mainViewModel::dismissUpdate,
-                                    onStartUpdate = mainViewModel::startUpdateDownload,
-                                )
-                            },
-                            card = {
-                                when (val route = cardRoute) {
-                                    AppRoute.About -> AboutScreen(onBack = ::popToMain)
-                                    AppRoute.SharePlan -> SharePlanScreen(
-                                        doc = doc,
-                                        onBack = ::popToMain,
+                                    showUpdateInSettings = uiState.showUpdateInSettings,
+                                        onDismissUpdate = mainViewModel::dismissUpdate,
+                                        onStartUpdate = ::startUpdateDownload,
                                     )
-                                    AppRoute.Main -> Unit
-                                    null -> Unit
-                                }
-                            },
-                        )
+                                },
+                                card = {
+                                    when (val route = cardRoute) {
+                                        AppRoute.About -> AboutScreen(onBack = ::popToMain)
+                                        AppRoute.SharePlan -> SharePlanScreen(
+                                            doc = doc,
+                                            onBack = ::popToMain,
+                                        )
+                                        AppRoute.Main -> Unit
+                                        null -> Unit
+                                    }
+                                },
+                            )
+                        }
                     }
+                    UpdateInstallDialog(
+                        show = requestedInstallApk != null,
+                        onDismiss = { installRequestState.value = null },
+                        onInstall = {
+                            val apk = shownInstallApk ?: return@UpdateInstallDialog
+                            installRequestState.value = null
+                            requestInstall(apk)
+                        },
+                    )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleUpdateInstallIntent(intent)
+    }
+
+    private fun handleUpdateInstallIntent(intent: Intent?) {
+        if (intent?.action != UpdateDownloadWorker.ACTION_CONFIRM_UPDATE_INSTALL) return
+        val path = intent.getStringExtra(UpdateDownloadWorker.EXTRA_APK_PATH) ?: return
+        val updateDirectory = runCatching { File(cacheDir, "updates").canonicalFile }.getOrNull() ?: return
+        val apk = runCatching { File(path).canonicalFile }.getOrNull() ?: return
+        if (apk.parentFile == updateDirectory && apk.isFile && apk.extension.equals("apk", ignoreCase = true)) {
+            installRequestState.value = apk
         }
     }
 }
@@ -321,8 +381,7 @@ private fun MainTabs(
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     updateInfo: UpdateInfo?,
     showUpdateDialog: Boolean,
-    downloadingUpdate: Boolean,
-    downloadProgress: Int?,
+    showUpdateInSettings: Boolean,
     onDismissUpdate: () -> Unit,
     onStartUpdate: () -> Unit,
 ) {
@@ -405,8 +464,10 @@ private fun MainTabs(
                         )
                         MainTab.Settings -> SettingsScreen(
                             doc = doc,
+                            updateInfo = updateInfo.takeIf { showUpdateInSettings },
                             onBack = { onSelectTab(MainTab.Home) },
                             onOpenAbout = onOpenAbout,
+                            onDownloadUpdate = onStartUpdate,
                             onThemeModeChange = { themeMode ->
                                 onMutate { plan -> plan.copy(themeMode = themeMode) }
                             },
@@ -429,8 +490,6 @@ private fun MainTabs(
             UpdateDialog(
                 show = showUpdateDialog,
                 update = updateInfo,
-                downloading = downloadingUpdate,
-                downloadProgress = downloadProgress,
                 onDismiss = onDismissUpdate,
                 onUpdate = onStartUpdate,
             )

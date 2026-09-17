@@ -8,22 +8,12 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 **产品目标**：基于 [miuix](https://github.com/compose-miuix-ui/miuix) 的倒班安排表应用，
 离线可用、可把自己的排班方案导出给别人导入。
 
-其余注意事项在项目 .agents/ 里（不提交到 git）。
-
 ## 产品设计
 
 ### 核心概念（两层数据模型）
 - **班次模板（"基本天"）**：名称 + 起止时间 + 颜色，只定义一次、全程复用。例：「早班 08:00–15:00」。结束时间早于开始 = 跨零点夜班（标注"次日"）。**不内置休息模板**；用户可自行建名为"休息"的班次。
 - **倒班方案**：周期天数 N（用户文本输入 1–99，不提供预设）+ 周期第 1..N 天各挂哪个模板（点选复用）+ **锚点日期**（周期第 1 天对应真实日期）。任意日期班次 = `模板[(日期 − 锚点) mod N]`，纯本地推导。
 - **换班覆盖**：个别日期手动指定班次、优先于周期推导——本期 UI 不做，数据模型预留（`overrides`）。
-
-### 首次启动引导（三步，2026-09-12 用户修订）
-1. **班次模板**：样式与方案页完全一致——`TemplatesStep(title = null, onAdd = null)` 只渲染卡片，
-   加号是右下角的 FAB（对话框就是 `TemplateEditorDialog`：名称 + 右侧圆点选颜色 + 开始/结束切换框 + 共用时间滚轮）；
-   左下角「跳过设置」（灰）+ 右下角「下一步」（高亮主按钮）。跳过后进首页并置 `onboardingDone=true`，不再强制引导。
-2. **周期与逐日指派（合并为一步）**：文本框输入周期天数（1–99，纵向 `insideMargin` 26dp，和方案页一致）；输入后下方列出"第 1..N 天"，单击某天弹出班次选择（仅列用户已定义模板）。
-3. **开始日期**：和方案页「排班设置」里同一个**点击行**（`BasicComponent` + 右侧箭头）→ 弹 `AnchorDialog`（只滚月/日、年沿用当前锚点）→ 完成进首页。
-   原来那套内联年/月/日 三列滚轮（`AnchorStep`）已经删掉了。
 
 ### 首页（日历）
 - 自绘月历网格，月份左右滑动切换；顶栏标题 = `app_name`（「倒班表」）。
@@ -192,15 +182,12 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 
 ```bash
 ./gradlew :app:assembleDebug
-./gradlew :app:testDebugUnitTest
-./gradlew :app:installDebug
 
 # 发布（签名配置见下）
 ./gradlew :app:assembleRelease  # → app/build/outputs/apk/release/app-release.apk
-./gradlew :app:bundleRelease    # → .aab（上架用）
 ```
 
-- adb 无线连接状态存于系统级 adb server（/usr/bin/adb 可直接用）。
+- 只需要由人进行安装和测试。
 
 ## 工作规程（每次改动必须遵守）
 
@@ -218,37 +205,3 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 - 密钥 `dao-release.jks` + 口令文件 `keystore.properties` 都在**项目根目录**，且**已 gitignore**（别提交、别丢：
   丢了就无法用同一签名发更新）。`app/build.gradle.kts` 读 `keystore.properties` 生成 `signingConfigs.release`；
   缺少该文件时 release 产物不签名（输出 `app-release-unsigned.apk`，装不上）。
-- 分发提醒：debug 与 release 签名不同，对方（或自己）**要先卸载 debug 版**才能装 release 版。
-
-## miuix 用法备忘
-
-- 主题：`MiuixTheme(colors = lightColorScheme()/darkColorScheme())`；组件在 `top.yukonga.miuix.kmp.basic / layout / overlay`。
-- TextField 有 String 重载；TextButton(text, onClick, colors=ButtonDefaults.textButtonColors(textColor=...))；Button(onClick, enabled) { Text(...) }（content 是 RowScope lambda，无 text 参数）；NumberPicker(value, onValueChange, range, label, wrapAround)。
-- 主题色常用字段：`colorScheme.onSurfaceVariantSummary`（次要文字）、`dividerLine`、`surfaceVariant`、`primary`。
-- 设置项：`BasicComponent(title, summary, startAction, endActions, onClick)` 是"标题+说明+左右插槽"的行组件；
-  `Icon(imageVector = MiuixIcons.Basic.ArrowRight, ...)` 是右侧箭头（`top.yukonga.miuix.kmp.icon.basic`）。
-  主题里 `LocalIndication = MiuixIndication`（弹簧式按压高亮），所以只要行是 `clickable` 或 `onClick`，按下去就有动效——不用自己写。
-- `miuix-preference`（`ArrowPreference` 等成品设置项）是**另一个 artifact**，0.9.3 在 Maven Central 上有；本项目已引（只用它的
-  `WindowDropdownDialog` 做班次单选弹窗），其余成品设置项还没用。
-- `NumberPicker(value, onValueChange, range, label, wrapAround, itemHeight)` **高度由它自己算**（`itemHeight × visibleItemCount`）；
-  外面再套 `Modifier.height(...)` 会把每行挤扁、数字挨得太近——要么别定高，要么用 `itemHeight` 调行距（日期弹窗、班次时间都用 48dp）。
-- 分段切换一律用 `ui/common/SegmentedSwitch.kt`（内部是 `TabRowWithContour`：一个外框当轨道 + 选中胶囊 `animateTo` 滑过去）。
-  不要用普通 `TabRow`（它的胶囊是直接跳的），也不要去改它的配色。默认配色是**轨道 `surface`、胶囊 `surfaceContainer`**，
-  而浅色下 `surface` = #F7F7F7、`surfaceContainer` = `background` = #FFFFFF（深色：`surface` = #000、`surfaceContainer` = `background` = #242424）——
-  也就是说**它必须放在 `surfaceContainer` 那一层上**（卡片里 / 弹窗里）才看得见：轨道是那层浅一档的灰底，选中的胶囊正好"切"回底色。
-  放到 `surface` 底色的页面上（本项目所有 Scaffold 的默认底色）轨道会整个隐形：方案编辑页就是把切换框包进一张 `Card`，
-  并且**让切换框连同轨道填满那张卡片**（`Modifier.fillMaxWidth()`，卡片内不加 padding）。
-  `SegmentedSwitch` 里把 `cornerRadius` 定成 11dp（组件的外框圆角 = 这个值 + 内部 `contourPadding` 5dp = 16dp = 卡片默认圆角），
-  这样填满卡片时外框和卡片圆角重合、四角不会露出卡片底色。
-  高度也在这里统一抬到 52dp（组件默认 45dp 偏扁）；宽度不用管——`TabRow` 的 tab 宽度按可用宽度平分
-  （`calculateTabWidth` 在 `maxWidth × tabCount` 撑不满一行时直接用 ideal 宽度），所以填满卡片后两半是均分的。
-  **别为了它去改页面底色**——页面底色一变，同页的卡片（也是 `surfaceContainer`）就和页面同色、轮廓全没了。
-  两个选项时记得 `Modifier.fillMaxWidth()`（默认单 tab 最大宽只有 84–98dp），左右边距跟同页卡片一致（12dp）。
-- 取色组件：`ColorPicker`（色相/饱和度/明度/透明度四条滑杆 + 预览）与 `ColorPalette`（HSV 色块网格）都在 `top.yukonga.miuix.kmp.basic`；
-  本项目用 `ColorPicker` + `ui/ShiftPalette.presets` 的预设色（见 TemplateEditorDialog 的颜色页）。
-- `DropdownItem` 的 `icon` 槽拿到的是**带约束的 Modifier**（`sizeIn(minWidth = 26dp, minHeight = 26dp).padding(end = 12dp)`）：
-  直接在它后面 `.size(14.dp)` 会被压成 14×26 的矩形，`background(color, CircleShape)` 画出来是**椭圆**不是圆。
-  自绘色块要外面套一层 `Box(iconModifier, contentAlignment = Alignment.Center)`，里面再画真正的 14dp 圆点。
-- 底栏结构参考 InstallerX-Revived（GitHub `wxxsfxyzm/InstallerX-Revived`）：外层 Scaffold 放底栏 + `HorizontalPager` 放标签页，
-  点底栏时 `PagerState.animateScrollToPage` 手动补间；抄动画思路可以直接浅克隆那个仓库看（GPL-3.0，注意别直接拷代码）。
-- 源码浅克隆在 `/tmp/miuix-src` 可查 API（可能被清理，需要时重新 `git clone --depth 1 https://github.com/compose-miuix-ui/miuix`）。

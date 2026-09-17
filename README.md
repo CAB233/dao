@@ -25,12 +25,6 @@
 ./gradlew :app:assembleDebug
 ```
 
-运行单元测试：
-
-```bash
-./gradlew :app:testDebugUnitTest
-```
-
 构建正式版安装包：
 
 ```bash

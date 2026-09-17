@@ -28,6 +28,15 @@ android {
         versionName = "0.1.3"
     }
 
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
     signingConfigs {
         if (keystoreProperties.isNotEmpty()) {
             create("release") {

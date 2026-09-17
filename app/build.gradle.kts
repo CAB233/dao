@@ -49,27 +49,40 @@ android {
         release {
             // keystore.properties 缺失时为 null，产物保持未签名
             signingConfig = sharedSigningConfig
+            vcsInfo.include = false
             optimization {
                 enable = true
             }
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
     }
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
 androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.androidResources.localeFilters.addAll("zh", "en")
+    }
     onVariants { variant ->
         variant.outputs.forEach { output ->
             output.outputFileName.set(output.versionName.map { versionName ->
                 "Dao-$versionName.apk"
             })
         }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 

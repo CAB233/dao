@@ -8,14 +8,14 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
@@ -37,11 +37,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.annotation.StringRes
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import com.mikepenz.aboutlibraries.Libs
+import com.mikepenz.aboutlibraries.entity.Library
+import com.mikepenz.aboutlibraries.util.withContext
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -61,8 +63,7 @@ import win.zuoye.dao.ui.common.PageCardStack
 
 /**
  * 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。
- * 视觉层级参考 InstallerX-Revived 的 MiuixAboutPage，并使用本项目的主题色实现。
- * 查看源代码与开源许可均可直接使用。
+ * 开源许可由 AboutLibraries 在构建时根据实际依赖自动生成。
  */
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -124,34 +125,34 @@ private fun AboutHomeContent(
                 state = listState,
                 contentPadding = padding,
             ) {
-            item {
-                AboutHero(
-                    app = app,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                )
-            }
-
-            item {
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp),
-                ) {
-                    AboutEntry(
-                        title = stringResource(R.string.about_source),
-                        summary = stringResource(R.string.about_source_summary),
-                        onClick = { context.openRepository() },
-                    )
-                    AboutEntry(
-                        title = stringResource(R.string.about_licenses),
-                        summary = stringResource(R.string.about_licenses_summary),
-                        onClick = onOpenLicenses,
+                item {
+                    AboutHero(
+                        app = app,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
                     )
                 }
-            }
+
+                item {
+                    Card(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        AboutEntry(
+                            title = stringResource(R.string.about_source),
+                            summary = stringResource(R.string.about_source_summary),
+                            onClick = { context.openRepository() },
+                        )
+                        AboutEntry(
+                            title = stringResource(R.string.about_licenses),
+                            summary = stringResource(R.string.about_licenses_summary),
+                            onClick = onOpenLicenses,
+                        )
+                    }
+                }
                 item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
             }
         }
@@ -166,8 +167,7 @@ private fun AboutHero(
     val colors = MiuixTheme.colorScheme
 
     Column(
-        modifier = modifier
-            .height(300.dp),
+        modifier = modifier.height(300.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
@@ -233,22 +233,14 @@ private fun Context.notImplemented(name: String) {
     Toast.makeText(this, getString(R.string.not_implemented, name), Toast.LENGTH_SHORT).show()
 }
 
-private data class OpenSourceProject(
-    @StringRes val nameRes: Int,
-    @StringRes val licenseRes: Int,
-)
-
-private val openSourceProjects = listOf(
-    OpenSourceProject(R.string.project_miuix, R.string.license_apache_2),
-    OpenSourceProject(R.string.project_androidx, R.string.license_apache_2),
-    OpenSourceProject(R.string.project_kotlin, R.string.license_apache_2),
-    OpenSourceProject(R.string.project_immutable_collections, R.string.license_apache_2),
-    OpenSourceProject(R.string.project_zxing, R.string.license_apache_2),
-)
-
 @Composable
 private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     BackHandler { onBack() }
+    val context = LocalContext.current
+    val libraries = remember(context) {
+        runCatching { Libs.Builder().withContext(context).build().libraries }
+            .getOrDefault(emptyList())
+    }
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
 
@@ -277,7 +269,7 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             contentPadding = padding,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
-            items(openSourceProjects, key = { it.nameRes }) { project ->
+            items(libraries, key = { it.artifactId }) { library ->
                 Card(
                     Modifier
                         .fillMaxWidth()
@@ -285,14 +277,31 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                         .padding(bottom = 12.dp),
                 ) {
                     BasicComponent(
-                        title = stringResource(project.nameRes),
-                        summary = stringResource(R.string.license_summary, stringResource(project.licenseRes)),
+                        title = library.displayName(),
+                        summary = library.licenseSummary(),
                     )
                 }
             }
             item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
         }
     }
+}
+
+private fun Library.displayName(): String = buildString {
+    append(name)
+    artifactVersion?.takeIf { it.isNotBlank() }?.let {
+        append(" ")
+        append(it)
+    }
+}
+
+private fun Library.licenseSummary(): String {
+    if (licenses.isEmpty()) return uniqueId
+    val licenseNames = licenses
+        .map { license -> license.spdxId?.takeIf { it.isNotBlank() } ?: license.name }
+        .distinct()
+        .joinToString(", ")
+    return "$licenseNames · $uniqueId"
 }
 
 private class AppInfo(

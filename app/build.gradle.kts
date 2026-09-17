@@ -24,8 +24,8 @@ android {
         applicationId = "win.zuoye.dao"
         minSdk = 24
         targetSdk = 37
-        versionCode = 10
-        versionName = "0.1.3"
+        versionCode = 11
+        versionName = "0.2.0"
     }
 
     splits {

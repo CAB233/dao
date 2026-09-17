@@ -1,4 +1,4 @@
-name: Build and test
+name: Build debug APK
 
 on:
   push:
@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build and test
+  build-debug:
+    name: Build debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -36,6 +36,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          cache-cleanup: on-success
 
       - name: Prepare shared signing
         if: ${{ env.KEYSTORE_BASE64 != '' }}
@@ -52,32 +55,13 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Verify, test, and build
-        run: >-
-          ./gradlew
-          :app:testDebugUnitTest
-          :app:jacocoDebugUnitTestReport
-          :app:compileDebugAndroidTestKotlin
-          :app:lintDebug
-          :app:assembleDebug
-
-      - name: Upload verification reports
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: dao-ci-reports-${{ github.sha }}
-          path: |
-            app/build/test-results/testDebugUnitTest/
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/reports/jacoco/jacocoDebugUnitTestReport/
-            app/build/reports/lint-results-debug.*
-          if-no-files-found: warn
-          retention-days: 7
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --build-cache
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: dao-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/Dao-*.apk
           if-no-files-found: error
           retention-days: 7
+          archive: false

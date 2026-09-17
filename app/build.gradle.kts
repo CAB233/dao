@@ -24,8 +24,8 @@ android {
         applicationId = "win.zuoye.dao"
         minSdk = 24
         targetSdk = 37
-        versionCode = 9
-        versionName = "0.1.2"
+        versionCode = 10
+        versionName = "0.1.3"
     }
 
     signingConfigs {

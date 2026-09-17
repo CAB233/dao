@@ -8,8 +8,10 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -38,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -269,17 +272,14 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             contentPadding = padding,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
-            items(libraries, key = { it.artifactId }) { library ->
+            items(libraries, key = { it.uniqueId }) { library ->
                 Card(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
                         .padding(bottom = 12.dp),
                 ) {
-                    BasicComponent(
-                        title = library.displayName(),
-                        summary = library.licenseSummary(),
-                    )
+                    LicenseCardContent(library)
                 }
             }
             item { Spacer(Modifier.height(24.dp).navigationBarsPadding()) }
@@ -287,22 +287,67 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     }
 }
 
-private fun Library.displayName(): String = buildString {
-    append(name)
-    artifactVersion?.takeIf { it.isNotBlank() }?.let {
-        append(" ")
-        append(it)
+@Composable
+private fun LicenseCardContent(library: Library) {
+    val summaryColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = library.name,
+                modifier = Modifier.weight(1f),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            library.artifactVersion?.takeIf { it.isNotBlank() }?.let { version ->
+                Text(
+                    text = version,
+                    modifier = Modifier.padding(start = 12.dp),
+                    fontSize = 14.sp,
+                    color = summaryColor,
+                    maxLines = 1,
+                )
+            }
+        }
+        Text(
+            text = library.authorSummary(),
+            fontSize = 14.sp,
+            color = summaryColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = library.licenseNames(),
+            fontSize = 14.sp,
+            color = summaryColor,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
-private fun Library.licenseSummary(): String {
-    if (licenses.isEmpty()) return uniqueId
-    val licenseNames = licenses
-        .map { license -> license.spdxId?.takeIf { it.isNotBlank() } ?: license.name }
-        .distinct()
-        .joinToString(", ")
-    return "$licenseNames · $uniqueId"
-}
+private fun Library.authorSummary(): String = developers
+    .map { developer -> developer.name }
+    .filter { it.isNotBlank() }
+    .distinct()
+    .joinToString(", ")
+    .ifBlank { organization?.name?.takeIf { it.isNotBlank() } ?: uniqueId.substringBefore(':') }
+
+private fun Library.licenseNames(): String = licenses
+    .map { license -> license.name.ifBlank { license.spdxId.orEmpty() } }
+    .filter { it.isNotBlank() }
+    .distinct()
+    .joinToString(", ")
+    .ifBlank { "Unknown license" }
 
 private class AppInfo(
     val versionName: String,

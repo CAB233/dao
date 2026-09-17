@@ -336,7 +336,7 @@ private fun LicenseCardContent(library: Library) {
 }
 
 private fun Library.authorSummary(): String = developers
-    .map { developer -> developer.name }
+    .mapNotNull { developer -> developer.name }
     .filter { it.isNotBlank() }
     .distinct()
     .joinToString(", ")

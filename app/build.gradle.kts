@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.aboutlibraries)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -74,6 +75,7 @@ androidComponents {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.aboutlibraries.core)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui)

@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.entity.Library
-import com.mikepenz.aboutlibraries.util.withContext
+import com.mikepenz.aboutlibraries.util.withJson
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -241,7 +241,7 @@ private fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     BackHandler { onBack() }
     val context = LocalContext.current
     val libraries = remember(context) {
-        runCatching { Libs.Builder().withContext(context).build().libraries }
+        runCatching { Libs.Builder().withJson(context, R.raw.aboutlibraries).build().libraries }
             .getOrDefault(emptyList())
     }
     val scrollBehavior = MiuixScrollBehavior()

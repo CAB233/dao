@@ -51,14 +51,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.rememberNavBackStack
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.NavKey
+import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
@@ -69,7 +70,6 @@ import win.zuoye.dao.ui.about.AboutScreen
 import win.zuoye.dao.ui.common.MainTab
 import win.zuoye.dao.ui.common.MainBottomBar
 import win.zuoye.dao.ui.common.MainNavigationRail
-import win.zuoye.dao.ui.common.PageCardStack
 import win.zuoye.dao.ui.common.localizedMessage
 import win.zuoye.dao.ui.home.HomeScreen
 import win.zuoye.dao.ui.onboarding.OnboardingScreen
@@ -154,8 +154,7 @@ class MainActivity : ComponentActivity() {
                     }
                     // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
                     var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
-                    val navBackStack = rememberNavBackStack(AppRoute.Main)
-                    val pushedPage = navBackStack.lastOrNull()?.takeUnless { it == AppRoute.Main } as? AppRoute
+                    val navBackStack = rememberNavBackStack<AppRoute>(AppRoute.Main)
                     var pendingPermissionInstall by remember { mutableStateOf<File?>(null) }
                     val requestedInstallApk by installRequestState
                     var shownInstallApk by remember { mutableStateOf<File?>(null) }
@@ -175,13 +174,10 @@ class MainActivity : ComponentActivity() {
                         while (navBackStack.size > 1) navBackStack.removeLastOrNull()
                     }
 
-                    // 仅在应用内确实有可返回状态时拦截 Back。
-                    // Home 根页面不注册回调，让系统处理返回桌面及预测性返回动画。
-                    BackHandler(enabled = pushedPage != null || baseTab != MainTab.Home) {
-                        when {
-                            pushedPage != null -> popToMain()
-                            baseTab != MainTab.Home -> baseTab = MainTab.Home
-                        }
+                    // 底栏页面不是导航目的地；只在非 Home 标签消费返回。
+                    // Home 根页面由 NavDisplay/系统继续分发，保留系统 back-to-home。
+                    BackHandler(enabled = navBackStack.size == 1 && baseTab != MainTab.Home) {
+                        baseTab = MainTab.Home
                     }
 
                     fun openInstaller(apk: File) {
@@ -306,42 +302,35 @@ class MainActivity : ComponentActivity() {
                             onSkip = mainViewModel::skipOnboarding,
                             onCancel = null,
                         )
-                        else -> {
-                            // 退出动画期间还要继续渲染这张卡片，所以记住最后一个二级页面
-                            var cardRoute by remember { mutableStateOf<AppRoute?>(null) }
-                            LaunchedEffect(pushedPage) {
-                                if (pushedPage != null) cardRoute = pushedPage
-                            }
-                            PageCardStack(
-                                visible = pushedPage != null,
-                                base = {
-                                    MainTabs(
-                                        doc = doc,
-                                        current = baseTab,
-                                        onSelectTab = { baseTab = it },
-                                        onExportPlan = { navigateTo(AppRoute.SharePlan) },
-                                        onOpenAbout = { navigateTo(AppRoute.About) },
-                                        onImportPlan = { importPlan(it) },
-                                        onMutate = mainViewModel::mutate,
+                        else -> NavDisplay(
+                            backStack = navBackStack,
+                            onBack = { navBackStack.removeLastOrNull() },
+                        ) {
+                            entry<AppRoute.Main> {
+                                MainTabs(
+                                    doc = doc,
+                                    current = baseTab,
+                                    onSelectTab = { baseTab = it },
+                                    onExportPlan = { navigateTo(AppRoute.SharePlan) },
+                                    onOpenAbout = { navigateTo(AppRoute.About) },
+                                    onImportPlan = { importPlan(it) },
+                                    onMutate = mainViewModel::mutate,
                                     updateInfo = uiState.updateInfo,
                                     showUpdateDialog = uiState.showUpdateDialog,
                                     showUpdateInSettings = uiState.showUpdateInSettings,
-                                        onDismissUpdate = mainViewModel::dismissUpdate,
-                                        onStartUpdate = ::startUpdateDownload,
-                                    )
-                                },
-                                card = {
-                                    when (val route = cardRoute) {
-                                        AppRoute.About -> AboutScreen(onBack = ::popToMain)
-                                        AppRoute.SharePlan -> SharePlanScreen(
-                                            doc = doc,
-                                            onBack = ::popToMain,
-                                        )
-                                        AppRoute.Main -> Unit
-                                        null -> Unit
-                                    }
-                                },
-                            )
+                                    onDismissUpdate = mainViewModel::dismissUpdate,
+                                    onStartUpdate = ::startUpdateDownload,
+                                )
+                            }
+                            entry<AppRoute.About> {
+                                AboutScreen(onBack = { navBackStack.removeLastOrNull() })
+                            }
+                            entry<AppRoute.SharePlan> {
+                                SharePlanScreen(
+                                    doc = doc,
+                                    onBack = { navBackStack.removeLastOrNull() },
+                                )
+                            }
                         }
                     }
                     UpdateInstallDialog(

@@ -10,7 +10,7 @@ zxing = "3.5.3"
 zxingEmbedded = "4.3.0"
 kotlin = "2.4.10"
 composeBom = "2026.02.01"
-miuix = "0.9.3"
+miuix = "0.9.4-rc01"
 datastore = "1.2.1"
 kotlinxSerialization = "1.9.0"
 kotlinxCollectionsImmutable = "0.4.0"
@@ -36,7 +36,7 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 miuix-ui = { group = "top.yukonga.miuix.kmp", name = "miuix-ui", version.ref = "miuix" }
 miuix-icons = { group = "top.yukonga.miuix.kmp", name = "miuix-icons", version.ref = "miuix" }
 miuix-preference = { group = "top.yukonga.miuix.kmp", name = "miuix-preference", version.ref = "miuix" }
-miuix-nav = { group = "top.yukonga.miuix.kmp", name = "miuix-nav-android", version.ref = "miuix" }
+miuix-nav = { group = "top.yukonga.miuix.kmp", name = "miuix-nav", version.ref = "miuix" }
 androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }

@@ -794,13 +794,13 @@ private fun calendarStrings() = CalendarStrings(
 )
 
 private fun lunarDate(date: Ymd): LunarDate {
-    val lunar = SolarDay.fromYmd(date.year, date.month, date.day).lunarDay
-    val lunarMonth = lunar.lunarMonth
+    val lunar = SolarDay.fromYmd(date.year, date.month, date.day).getLunarDay()
+    val lunarMonth = lunar.getLunarMonth()
     return LunarDate(
-        month = kotlin.math.abs(lunar.month),
-        day = lunar.day,
-        isLeapMonth = lunar.month < 0,
-        daysInMonth = lunarMonth.dayCount,
+        month = kotlin.math.abs(lunar.getMonth()),
+        day = lunar.getDay(),
+        isLeapMonth = lunar.getMonth() < 0,
+        daysInMonth = lunarMonth.getDayCount(),
     )
 }
 

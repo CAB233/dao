@@ -187,7 +187,7 @@ private fun SchemeListScreen(
         result.contents?.let { importFrom(it) }
     }
 
-    BackHandler {
+    BackHandler(enabled = selecting || showBackButton) {
         if (selecting) exitSelection() else onBack()
     }
 

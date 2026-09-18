@@ -1,4 +1,4 @@
-name: Build debug APK
+name: Build APKs
 
 on:
   push:
@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-debug:
-    name: Build debug APK
+  build:
+    name: Build debug and release APKs
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -55,13 +55,22 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --build-cache
+      - name: Build debug and release APKs
+        run: ./gradlew :app:assembleDebug :app:assembleRelease --build-cache
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
           path: app/build/outputs/apk/debug/Dao-*.apk
+          if-no-files-found: error
+          retention-days: 7
+          archive: false
+
+      - name: Upload release APK
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/release/Dao-*.apk
           if-no-files-found: error
           retention-days: 7
           archive: false

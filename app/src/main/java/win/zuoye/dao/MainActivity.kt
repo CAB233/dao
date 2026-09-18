@@ -385,6 +385,7 @@ private fun MainTabs(
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(initialPage = current.ordinal) { tabs.size }
     val editorStack = rememberNavBackStack<EditorRoute>(EditorRoute.Tabs)
+    var planSelectionActive by remember { mutableStateOf(false) }
 
     fun closeSchemeEditor() {
         if (editorStack.size > 1) editorStack.removeLastOrNull()
@@ -417,7 +418,11 @@ private fun MainTabs(
                 Scaffold(
                     bottomBar = {
                         if (!useNavigationRail) {
-                            MainBottomBar(selected = current, onSelect = onSelectTab)
+                            MainBottomBar(
+                                selected = current,
+                                onSelect = onSelectTab,
+                                enabled = !planSelectionActive,
+                            )
                         }
                     },
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -428,7 +433,11 @@ private fun MainTabs(
                             .fillMaxSize(),
                     ) {
                         if (useNavigationRail) {
-                            MainNavigationRail(selected = current, onSelect = onSelectTab)
+                            MainNavigationRail(
+                                selected = current,
+                                onSelect = onSelectTab,
+                                enabled = !planSelectionActive,
+                            )
                         }
                         HorizontalPager(
                             state = pagerState,
@@ -438,7 +447,7 @@ private fun MainTabs(
                             // 相邻页保持组合：来回切的时候日历不会重置回本月
                             beyondViewportPageCount = 1,
                             overscrollEffect = null,
-                            userScrollEnabled = editorStack.size == 1,
+                            userScrollEnabled = editorStack.size == 1 && !planSelectionActive,
                         ) { page ->
                             when (tabs[page]) {
                                 MainTab.Home -> HomeScreen(
@@ -460,6 +469,7 @@ private fun MainTabs(
                                     onMutate = onMutate,
                                     showBackButton = false,
                                     backEnabled = pagerState.settledPage == page,
+                                    onSelectionChange = { planSelectionActive = it },
                                     onEditScheme = ::openSchemeEditor,
                                 )
                                 MainTab.Settings -> SettingsScreen(

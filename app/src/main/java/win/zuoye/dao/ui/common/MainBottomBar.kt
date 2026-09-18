@@ -27,6 +27,7 @@ enum class MainTab {
 fun MainBottomBar(
     selected: MainTab,
     onSelect: (MainTab) -> Unit,
+    enabled: Boolean = true,
 ) {
     NavigationBar {
         NavigationBarItem(
@@ -34,18 +35,21 @@ fun MainBottomBar(
             onClick = { onSelect(MainTab.Home) },
             icon = MiuixIcons.Regular.Home,
             label = stringResource(R.string.nav_home),
+            enabled = enabled,
         )
         NavigationBarItem(
             selected = selected == MainTab.Config,
             onClick = { onSelect(MainTab.Config) },
             icon = MiuixIcons.Regular.Edit,
             label = stringResource(R.string.nav_config),
+            enabled = enabled,
         )
         NavigationBarItem(
             selected = selected == MainTab.Settings,
             onClick = { onSelect(MainTab.Settings) },
             icon = MiuixIcons.Regular.Settings,
             label = stringResource(R.string.nav_settings),
+            enabled = enabled,
         )
     }
 }
@@ -58,6 +62,7 @@ fun MainBottomBar(
 fun MainNavigationRail(
     selected: MainTab,
     onSelect: (MainTab) -> Unit,
+    enabled: Boolean = true,
 ) {
     NavigationRail {
         NavigationRailItem(
@@ -65,18 +70,21 @@ fun MainNavigationRail(
             onClick = { onSelect(MainTab.Home) },
             icon = MiuixIcons.Regular.Home,
             label = stringResource(R.string.nav_home),
+            enabled = enabled,
         )
         NavigationRailItem(
             selected = selected == MainTab.Config,
             onClick = { onSelect(MainTab.Config) },
             icon = MiuixIcons.Regular.Edit,
             label = stringResource(R.string.nav_config),
+            enabled = enabled,
         )
         NavigationRailItem(
             selected = selected == MainTab.Settings,
             onClick = { onSelect(MainTab.Settings) },
             icon = MiuixIcons.Regular.Settings,
             label = stringResource(R.string.nav_settings),
+            enabled = enabled,
         )
     }
 }

@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,7 +60,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -70,6 +68,8 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.Close
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -103,6 +103,7 @@ fun PlanEditScreen(
     onImportPlan: (PlanShare) -> Unit,
     showBackButton: Boolean = true,
     backEnabled: Boolean = true,
+    onSelectionChange: (Boolean) -> Unit = {},
     onEditScheme: (scheme: Scheme, autoFocusName: Boolean) -> Unit,
 ) {
     SchemeListScreen(
@@ -110,6 +111,7 @@ fun PlanEditScreen(
         onBack = onBack,
         showBackButton = showBackButton,
         backEnabled = backEnabled,
+        onSelectionChange = onSelectionChange,
         onMutate = onMutate,
         onImportPlan = onImportPlan,
         onEnter = { onEditScheme(it, false) },
@@ -119,7 +121,7 @@ fun PlanEditScreen(
 
 /**
  * 方案列表（像闹钟列表）：一张卡片一个方案，右侧是「使用中」开关，点卡片进入编辑页，
- * 右下角加号可手动新建或导入方案；长按可多选，删除按钮在屏幕底部。
+ * 右下角加号可手动新建或导入方案；长按可多选，顶栏提供复制与删除操作。
  */
 @Composable
 private fun SchemeListScreen(
@@ -127,6 +129,7 @@ private fun SchemeListScreen(
     onBack: () -> Unit,
     showBackButton: Boolean,
     backEnabled: Boolean,
+    onSelectionChange: (Boolean) -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     onEnter: (Scheme) -> Unit,
@@ -137,6 +140,7 @@ private fun SchemeListScreen(
     val defaultGroupName = stringResource(R.string.default_group_name, 1)
     val importUnrecognized = stringResource(R.string.import_unrecognized)
     val activePlanRequired = stringResource(R.string.active_plan_required)
+    val copySuffix = stringResource(R.string.plan_copy_suffix)
     var selecting by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
     var showDeleteSelected by remember { mutableStateOf(false) }
@@ -151,6 +155,7 @@ private fun SchemeListScreen(
     fun exitSelection() {
         selecting = false
         selectedIds = emptySet()
+        onSelectionChange(false)
     }
 
     fun toggleSelection(id: Long) {
@@ -218,6 +223,67 @@ private fun SchemeListScreen(
                         }
                     }
                 },
+                actions = {
+                    if (selecting) {
+                        IconButton(
+                            onClick = {
+                                val ids = selectedIds
+                                onMutate { plan ->
+                                    val usedIds = buildSet {
+                                        plan.schemes.forEach { scheme ->
+                                            add(scheme.id)
+                                            scheme.groups.forEach { add(it.id) }
+                                        }
+                                    }.toMutableSet()
+                                    var nextId = maxOf(
+                                        System.currentTimeMillis(),
+                                        (usedIds.maxOrNull() ?: 0L) + 1L,
+                                    )
+                                    fun newId(): Long {
+                                        while (nextId in usedIds) nextId++
+                                        return nextId.also {
+                                            usedIds += it
+                                            nextId++
+                                        }
+                                    }
+
+                                    val copies = plan.schemes
+                                        .filter { it.id in ids }
+                                        .map { source ->
+                                            val groupIds = source.groups.associate { it.id to newId() }
+                                            source.copy(
+                                                id = newId(),
+                                                name = source.name + copySuffix,
+                                                createdAt = newId(),
+                                                groups = source.groups.map { group ->
+                                                    group.copy(id = groupIds.getValue(group.id))
+                                                }.toImmutableList(),
+                                                defaultGroupId = groupIds.getValue(source.defaultGroupId),
+                                            )
+                                        }
+                                    plan.copy(schemes = (plan.schemes + copies).toImmutableList())
+                                }
+                                exitSelection()
+                            },
+                            enabled = selectedIds.isNotEmpty(),
+                        ) {
+                            Icon(
+                                MiuixIcons.Regular.Copy,
+                                contentDescription = stringResource(R.string.action_copy),
+                            )
+                        }
+                        IconButton(
+                            onClick = { showDeleteSelected = true },
+                            enabled = selectedIds.isNotEmpty(),
+                        ) {
+                            Icon(
+                                MiuixIcons.Regular.Delete,
+                                contentDescription = stringResource(R.string.action_delete),
+                                tint = MiuixTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                },
             )
         },
         floatingActionButton = {
@@ -241,29 +307,6 @@ private fun SchemeListScreen(
                                 tint = MiuixTheme.colorScheme.onPrimary,
                             )
                         }
-                    }
-                }
-            }
-        },
-        bottomBar = {
-            if (selecting) {
-                Surface(color = MiuixTheme.colorScheme.surface) {
-                    Button(
-                        onClick = { showDeleteSelected = true },
-                        enabled = selectedIds.isNotEmpty(),
-                        // 删除用红色底
-                        colors = ButtonDefaults.buttonColors(
-                            color = MiuixTheme.colorScheme.error,
-                            disabledColor = MiuixTheme.colorScheme.error.copy(alpha = 0.4f),
-                            contentColor = MiuixTheme.colorScheme.onError,
-                            disabledContentColor = MiuixTheme.colorScheme.onError.copy(alpha = 0.4f),
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
-                    ) {
-                        Text(stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -307,6 +350,7 @@ private fun SchemeListScreen(
                     onLongPress = {
                         selecting = true
                         selectedIds = selectedIds + scheme.id
+                        onSelectionChange(true)
                     },
                     onToggleActive = { checked ->
                         if (checked) {

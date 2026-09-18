@@ -11,6 +11,7 @@
   <string name="action_update">更新</string>
   <string name="action_download">下载</string>
   <string name="action_delete">删除</string>
+  <string name="action_copy">复制</string>
   <string name="action_edit">编辑</string>
   <string name="action_next">下一步</string>
   <string name="action_previous">上一步</string>
@@ -228,6 +229,7 @@
     <item quantity="other">已选 %1$d 个</item>
   </plurals>
   <string name="active_plan_required">至少保留一个使用中的方案</string>
+  <string name="plan_copy_suffix"> 副本</string>
   <string name="add_plan_title">添加倒班方案</string>
   <plurals name="delete_selected_plans_title">
     <item quantity="other">删除选中的 %1$d 个方案？</item>

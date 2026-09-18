@@ -11,6 +11,7 @@
   <string name="action_update">Update</string>
   <string name="action_download">Download</string>
   <string name="action_delete">Delete</string>
+  <string name="action_copy">Copy</string>
   <string name="action_edit">Edit</string>
   <string name="action_next">Next</string>
   <string name="action_previous">Previous</string>
@@ -233,6 +234,7 @@
     <item quantity="other">%1$d selected</item>
   </plurals>
   <string name="active_plan_required">At least one plan must remain active</string>
+  <string name="plan_copy_suffix"> Copy</string>
   <string name="add_plan_title">Add shift plan</string>
   <plurals name="delete_selected_plans_title">
     <item quantity="one">Delete %1$d selected plan?</item>

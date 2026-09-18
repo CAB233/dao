@@ -62,9 +62,10 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 - 右下角一个加号 `FloatingActionButton`（和首页「今」同款：`shadowElevation = 0`、54dp）新建方案；建完直接进编辑页并把光标放进名字框。
   **这个加号和「班次模板」页签里的加号，滚动时都要收起**（用 `ui/common/FabVisibility.kt` 的 `rememberFabVisible`：
   往下滚藏起来、往回滚或回到顶部再露出来，外面套 `AnimatedVisibility` 做淡入缩放）。
-- **长按任意卡片进入多选**：左侧出现复选框、右侧开关隐藏，顶栏变成「已选 N 个」+ 关闭按钮，**删除按钮固定在屏幕底部**；
-  系统返回键先退出多选；删除前二次确认（删除按钮红底 `ButtonDefaults.buttonColors(color = colorScheme.error, …)`，
-  确认弹窗里的「删除」用 `textButtonColors(textColor = colorScheme.error)`），删掉的正好是使用中的方案时剩下的第一个自动接上。
+- **长按任意卡片进入多选**：左侧出现复选框、右侧开关隐藏，顶栏变成「已选 N 个」+ 关闭按钮；右上角依次是复制图标和红色删除图标。
+  复制会给方案与班组生成新 id，方案名追加「 副本」；删除前二次确认，确认弹窗里的「删除」用
+  `textButtonColors(textColor = colorScheme.error)`。删掉的正好是使用中的方案时剩下的第一个自动接上。
+  多选期间禁用底部导航/侧栏导航与 `HorizontalPager` 手势，系统返回键先退出多选。
 - 编辑页最上面是**方案名输入框**（打开已有方案默认不高亮、只显示当前值；新建时自动聚焦），没有单独的编辑图标。
 - 下面是 miuix `TabRow` 的「班次模板 / 排班设置」切换（左右各 12dp，与下面的卡片同一条边线）；**名字行与页签固定，只滚页签内容**。
 - 「班次模板」直接复用引导向导的 `TemplatesStep`（`internal`；`title = null` + `onAdd = null` 时**只渲染卡片**，小标题和行内加号都不出现，

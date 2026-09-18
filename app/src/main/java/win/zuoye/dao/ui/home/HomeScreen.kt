@@ -821,6 +821,7 @@ private fun holidayName(date: Ymd, lunar: LunarDate, currentYear: Int): Int? {
     if (date.year !in currentYear..(currentYear + 1) || lunar.isLeapMonth) return null
 
     return when {
+        date.month == 1 && date.day == 1 -> R.string.holiday_new_year
         lunar.month == 1 && lunar.day == 1 -> R.string.holiday_spring_festival
         lunar.month == 1 && lunar.day == 15 -> R.string.holiday_lantern_festival
         lunar.month == 2 && lunar.day == 2 -> R.string.holiday_dragon_heads_raising

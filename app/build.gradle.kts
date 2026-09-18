@@ -113,6 +113,7 @@ dependencies {
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.miuix.icons)
+    implementation(libs.miuix.nav)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.ui)
     implementation(libs.tyme)

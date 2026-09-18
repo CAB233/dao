@@ -1,9 +1,5 @@
 package win.zuoye.dao.ui.home
 
-import android.icu.util.Calendar as IcuCalendar
-import android.icu.util.ChineseCalendar
-import android.icu.util.TimeZone as IcuTimeZone
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -82,6 +78,7 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import com.tyme.solar.SolarDay
 import win.zuoye.dao.data.LegalHolidays
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
@@ -95,13 +92,11 @@ import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.common.localizedTimeRangeText
 import win.zuoye.dao.ui.common.rememberHoldDownSource
 import kotlin.math.roundToInt
-import java.util.Locale
 import java.util.Calendar
 
 /** 可浏览的月份范围：2000-01 .. 2100-12 */
 private const val BASE_YEAR = 2000
 private const val MONTH_COUNT = 101 * 12
-private const val MILLIS_PER_DAY = 86_400_000L
 
 /** 首页：月历视图，按班次颜色着色。月份左右滑动切换。 */
 @Composable
@@ -701,7 +696,6 @@ private fun buildMonthSlots(
     // 只生成覆盖当前月的最少完整周数，月历高度随月份需要的周数动态变化。
     val cellCount = monthRowCount(year, month, weekStartDay) * 7
     val slots = ArrayList<DaySlot>(cellCount)
-    val lunarCalendar = ChineseCalendar(IcuTimeZone.getTimeZone("UTC"), Locale.CHINA)
     for (index in 0 until cellCount) {
         val y: Int
         val m: Int
@@ -728,7 +722,7 @@ private fun buildMonthSlots(
         }
         val date = Ymd(y, m, day)
         val lunar = if (showHolidays || showLunar) {
-            lunarDate(lunarCalendar, date.epochDay)
+            lunarDate(date)
         } else {
             null
         }
@@ -799,13 +793,14 @@ private fun calendarStrings() = CalendarStrings(
     ).associateWith { stringResource(it) },
 )
 
-private fun lunarDate(calendar: ChineseCalendar, epochDay: Long): LunarDate {
-    calendar.setTimeInMillis(epochDay * MILLIS_PER_DAY)
+private fun lunarDate(date: Ymd): LunarDate {
+    val lunar = SolarDay.fromYmd(date.year, date.month, date.day).getLunarDay()
+    val lunarMonth = lunar.getLunarMonth()
     return LunarDate(
-        month = calendar.get(IcuCalendar.MONTH) + 1,
-        day = calendar.get(IcuCalendar.DAY_OF_MONTH),
-        isLeapMonth = calendar.get(IcuCalendar.IS_LEAP_MONTH) != 0,
-        daysInMonth = calendar.getActualMaximum(IcuCalendar.DAY_OF_MONTH),
+        month = kotlin.math.abs(lunar.month),
+        day = lunar.day,
+        isLeapMonth = lunar.month < 0,
+        daysInMonth = lunarMonth.getDayCount(),
     )
 }
 

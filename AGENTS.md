@@ -71,7 +71,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 - 「班次模板」直接复用引导向导的 `TemplatesStep`（`internal`；`title = null` + `onAdd = null` 时**只渲染卡片**，小标题和行内加号都不出现，
   加号由右下角 FAB 承担），增删改即时落库；模板是**全局一份**（挂在 `PlanDocument` 上），所有方案共用。
   编辑弹窗 `TemplateEditorDialog`：名称（**框右边的圆点是当前颜色，点开是颜色页**）+ **开始/结束一个切换框**（`SegmentedSwitch`，胶囊会滑动）
-  + 共用一组时间滚轮；颜色页里上面是 `ColorPicker` 调色盘、下面是 12 个预设色，确定时把 alpha 收成 1
+  + 共用一组时间滚轮；颜色页使用 `ColorPalette` 色板，确定时把 alpha 收成 1
   （班次色要画在日历格浅底上，半透明会跟底色混）。
 - 「排班设置」顺序固定：**开始日期**（点击框 → 弹日期弹窗）→ **周期天数** → 逐日指派
   （复用 `AssignmentRow`；未指派用 `UNASSIGNED = 0L` 占位，因为 `Scheme.dayTemplateIds` 没留 null）。

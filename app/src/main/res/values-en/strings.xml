@@ -169,7 +169,6 @@
   <string name="shift_end">End</string>
   <string name="shift_next_day">Next day %1$s</string>
   <string name="color_select">Select color</string>
-  <string name="color_presets">Preset colors</string>
   <string name="onboarding_title">Setup</string>
   <string name="onboarding_edit_title">Edit plan</string>
   <string name="onboarding_method_title">Creation method</string>

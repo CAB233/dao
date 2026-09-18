@@ -166,7 +166,6 @@
   <string name="shift_end">结束</string>
   <string name="shift_next_day">次日%1$s</string>
   <string name="color_select">选择颜色</string>
-  <string name="color_presets">预设颜色</string>
   <string name="onboarding_title">引导页面</string>
   <string name="onboarding_edit_title">修改方案</string>
   <string name="onboarding_method_title">创建方式</string>

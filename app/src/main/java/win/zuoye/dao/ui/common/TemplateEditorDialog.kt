@@ -1,8 +1,6 @@
 package win.zuoye.dao.ui.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.ColorPicker
+import top.yukonga.miuix.kmp.basic.ColorPalette
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -220,8 +218,8 @@ fun TemplateEditorDialog(
 }
 
 /**
- * 颜色页：上面是调色盘（miuix [ColorPicker]，色相/饱和度/明度/透明度四条滑杆 + 预览），
- * 下面是预设色板。确定时把透明度收成 1——班次色要画在日历格上，半透明会跟底色混在一起。
+ * 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1——
+ * 班次色要画在日历格上，半透明会跟底色混在一起。
  */
 @Composable
 private fun ColorDialog(
@@ -248,19 +246,11 @@ private fun ColorDialog(
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState()),
             ) {
-                ColorPicker(
+                ColorPalette(
                     color = draft,
                     onColorChanged = { draft = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    stringResource(R.string.color_presets),
-                    fontSize = 13.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-                Spacer(Modifier.height(8.dp))
-                ColorGrid(selected = draft.toArgb(), onSelect = { draft = Color(it) })
             }
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -275,33 +265,6 @@ private fun ColorDialog(
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                     modifier = Modifier.weight(1f),
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorGrid(selected: Int, onSelect: (Int) -> Unit) {
-    val rows = ShiftPalette.presets.chunked(6)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { argb ->
-                    val isSel = argb == selected
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .background(ShiftPalette.color(argb), CircleShape)
-                            .then(
-                                if (isSel) Modifier.border(
-                                    3.dp,
-                                    MiuixTheme.colorScheme.onSurface,
-                                    CircleShape,
-                                ) else Modifier
-                            )
-                            .clickable { onSelect(argb) },
-                    )
-                }
             }
         }
     }

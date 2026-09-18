@@ -40,13 +40,13 @@ object LegalHolidays {
     }
 
     private fun isHolidayNameDay(solar: SolarDay, holiday: LegalHoliday): Boolean = when (holiday.getName()) {
-        "元旦" -> solar.getMonth() == 1 && solar.getDay() == 1
-        "春节" -> solar.getLunarDay().let { it.getMonth() == 1 && it.getDay() == 1 }
-        "清明节" -> solar.termDay.let { it.getDay()Index == 0 && it.solarTerm.name == "清明" }
-        "劳动节" -> solar.getMonth() == 5 && solar.getDay() == 1
-        "端午节" -> solar.getLunarDay().let { it.getMonth() == 5 && it.getDay() == 5 }
-        "中秋节", "国庆中秋" -> solar.getLunarDay().let { it.getMonth() == 8 && it.getDay() == 15 }
-        "国庆节" -> solar.getMonth() == 10 && solar.getDay() == 1
+        "元旦" -> solar.month == 1 && solar.day == 1
+        "春节" -> solar.getLunarDay().let { it.month == 1 && it.day == 1 }
+        "清明节" -> solar.termDay.let { it.dayIndex == 0 && it.solarTerm.name == "清明" }
+        "劳动节" -> solar.month == 5 && solar.day == 1
+        "端午节" -> solar.getLunarDay().let { it.month == 5 && it.day == 5 }
+        "中秋节", "国庆中秋" -> solar.getLunarDay().let { it.month == 8 && it.day == 15 }
+        "国庆节" -> solar.month == 10 && solar.day == 1
         else -> false
     }
 

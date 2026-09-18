@@ -30,23 +30,23 @@ object LegalHolidays {
     fun of(epochDay: Long): HolidayDay? {
         val date = Ymd.fromEpochDay(epochDay)
         val solar = SolarDay.fromYmd(date.year, date.month, date.day)
-        val holiday = solar.legalHoliday ?: return null
-        val name = holiday.name.toHolidayName() ?: return null
+        val holiday = solar.getLegalHoliday() ?: return null
+        val name = holiday.getName().toHolidayName() ?: return null
         return HolidayDay(
             name = name,
-            isMakeupWorkday = holiday.isWork,
-            isNameDay = !holiday.isWork && isHolidayNameDay(solar, holiday),
+            isMakeupWorkday = holiday.isWork(),
+            isNameDay = !holiday.isWork() && isHolidayNameDay(solar, holiday),
         )
     }
 
-    private fun isHolidayNameDay(solar: SolarDay, holiday: LegalHoliday): Boolean = when (holiday.name) {
-        "元旦" -> solar.month == 1 && solar.day == 1
-        "春节" -> solar.lunarDay.let { it.month == 1 && it.day == 1 }
-        "清明节" -> solar.termDay.let { it.dayIndex == 0 && it.solarTerm.name == "清明" }
-        "劳动节" -> solar.month == 5 && solar.day == 1
-        "端午节" -> solar.lunarDay.let { it.month == 5 && it.day == 5 }
-        "中秋节", "国庆中秋" -> solar.lunarDay.let { it.month == 8 && it.day == 15 }
-        "国庆节" -> solar.month == 10 && solar.day == 1
+    private fun isHolidayNameDay(solar: SolarDay, holiday: LegalHoliday): Boolean = when (holiday.getName()) {
+        "元旦" -> solar.getMonth() == 1 && solar.getDay() == 1
+        "春节" -> solar.getLunarDay().let { it.getMonth() == 1 && it.getDay() == 1 }
+        "清明节" -> solar.termDay.let { it.getDay()Index == 0 && it.solarTerm.name == "清明" }
+        "劳动节" -> solar.getMonth() == 5 && solar.getDay() == 1
+        "端午节" -> solar.getLunarDay().let { it.getMonth() == 5 && it.getDay() == 5 }
+        "中秋节", "国庆中秋" -> solar.getLunarDay().let { it.getMonth() == 8 && it.getDay() == 15 }
+        "国庆节" -> solar.getMonth() == 10 && solar.getDay() == 1
         else -> false
     }
 

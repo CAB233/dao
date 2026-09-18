@@ -40,7 +40,7 @@ object LegalHolidays {
     }
 
     private fun isHolidayNameDay(solar: SolarDay, holiday: LegalHoliday): Boolean = when (holiday.getName()) {
-        "元旦", "元旦节" -> solar.month == 1 && solar.day == 1
+        "元旦" -> solar.month == 1 && solar.day == 1
         "春节" -> solar.getLunarDay().let { it.month == 1 && it.day == 1 }
         "清明节" -> solar.getTermDay().let { it.getDayIndex() == 0 && it.getSolarTerm().getName() == "清明" }
         "劳动节" -> solar.month == 5 && solar.day == 1
@@ -51,7 +51,7 @@ object LegalHolidays {
     }
 
     private fun String.toHolidayName(): HolidayName? = when (this) {
-        "元旦", "元旦节" -> HolidayName.NEW_YEAR
+        "元旦" -> HolidayName.NEW_YEAR
         "春节" -> HolidayName.SPRING_FESTIVAL
         "清明节" -> HolidayName.QINGMING
         "劳动节" -> HolidayName.LABOR_DAY

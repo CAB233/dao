@@ -527,9 +527,6 @@ fun SchemeEditScreen(
             )
 
             // ---- 班次模板 / 排班设置 / 班组设置（位于方案名下面）----
-            // 与「新增班次」里的开始/结束同一个样式（共用 SegmentedSwitch）。
-            // 切换框的轨道是 surface、胶囊是 surfaceContainer，得落在 surfaceContainer 这一层
-            // （卡片/弹窗）上才看得见——放在页面底色（也是 surface）上会整个隐形。
             if (!onboardingMode) {
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     SegmentedSwitch(

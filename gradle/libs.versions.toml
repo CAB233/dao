@@ -15,6 +15,7 @@ datastore = "1.2.1"
 kotlinxSerialization = "1.9.0"
 kotlinxCollectionsImmutable = "0.4.0"
 aboutLibraries = "15.2.0"
+tyme = "1.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +40,7 @@ androidx-datastore = { group = "androidx.datastore", name = "datastore", version
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 aboutlibraries-core = { group = "com.mikepenz", name = "aboutlibraries-core", version.ref = "aboutLibraries" }
+tyme = { group = "cn.6tail", name = "tyme4kt", version.ref = "tyme" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -172,6 +173,15 @@ class MainActivity : ComponentActivity() {
 
                     fun popToMain() {
                         while (navBackStack.size > 1) navBackStack.removeLastOrNull()
+                    }
+
+                    // 仅在应用内确实有可返回状态时拦截 Back。
+                    // Home 根页面不注册回调，让系统处理返回桌面及预测性返回动画。
+                    BackHandler(enabled = pushedPage != null || baseTab != MainTab.Home) {
+                        when {
+                            pushedPage != null -> popToMain()
+                            baseTab != MainTab.Home -> baseTab = MainTab.Home
+                        }
                     }
 
                     fun openInstaller(apk: File) {

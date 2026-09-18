@@ -104,15 +104,18 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 ## UI 规范
 
 - **界面标题一律读 `R.string.app_name`，不要硬编码应用名**（`ShareUtils` 的渲染函数用参数传 appName）。
-- **标签页状态只有一个来源**：`baseTab`（`rememberSaveable`）+ `pushedPage`（二级页面，可为 null）。
+- **标签页状态只有一个来源**：`baseTab`（`rememberSaveable`）+ miuix-nav 返回栈（二级页面）。
   别引入第二个标签页状态（`rememberPagerState` 自带保存恢复会与冷启动重置打架，导致冷启动时 pager 半页错位）。
 - **`onMutate` 的 transform 是稍后执行的**（MainActivity 里丢给 `lifecycleScope.launch { repo.update(transform) }`），
   里面**不能读可变的组合状态**——同一帧里先把状态清掉（比如退出多选）再交给它，等它跑到时值已经变了。
   要用的值先在外面 `val ids = …` 抓一份再进 lambda（多选删除踩过这个坑：清空选中集合后一个都没删掉）。
 - 底栏（主页/设置）在外层 `Scaffold`，两个标签页共用一个 `HorizontalPager`：点底栏走 `animateScrollToPage`，
   `beyondViewportPageCount = 1` 让相邻页保持组合（来回切不丢日历位置）。
-- 二级页面走 `PageCardStack`（`ui/common/PageCardStack.kt`，方案编辑页也从它进来）：底层标签页**原地不动只压暗**，卡片从右侧整页滑入（前段 32dp 圆角、贴合时归零）。
+- 二级页面走 `PageCardStack`（`ui/common/PageCardStack.kt`，封装 miuix-nav `NavDisplay`，方案编辑页也从它进来）：底层标签页**原地不动只压暗**，卡片从右侧整页滑入（前段 32dp 圆角、贴合时归零）。
   **不要**让底层整页滑走/淡出，也不要把 `Screen.toTab()` 用成 `else -> Home`（推入二级页面时底层会滑回主页）。
+  返回栈用 miuix-nav `rememberNavBackStack<Route>`（显式传可序列化的路由父类型），不要重新引入 Navigation3。
+  页面滑动与系统预测性返回交给 `NavDisplay`；不要在页面里额外用普通返回处理器拦截出栈。
+  多选/引导步骤等页内返回用 `NavigationBackHandler`，标签页只启用当前页的处理器。
   页面自己的 Scaffold 要设 `contentWindowInsets = WindowInsets.systemBars.only(Top + Horizontal)`，否则底部重复算导航栏内边距。
 - 首页「今」悬浮按钮：滑到别的月份时出现，蓝色圆形、**不加阴影**（`shadowElevation = 0`，默认阴影会建离屏图层导致掉帧）。
 - 日历性能规范：`MonthGrid` 每页数据 `remember` 预计算（`DaySlot`）；`Roster` 查询零分配；单元格用一个
@@ -169,7 +172,8 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 ## 关键版本
 
 - AGP 9.4.0（内置 Kotlin，**不要** apply `org.jetbrains.kotlin.android`）；Kotlin/compose 插件 **2.4.10**；Gradle 9.6.0
-- miuix **0.9.3**（`top.yukonga.miuix.kmp:miuix-ui`，Maven Central；勿升 0.9.4-rc）；Compose BOM 2026.02.01；**activity-compose ≥ 1.13.0**（miuix 0.9.3 对话框内部用 `NavigationBackHandler`/androidx.navigationevent，旧版 ComponentActivity 不提供 NavigationEventDispatcher，点开对话框即 `IllegalStateException` 闪退）
+- miuix **0.9.4-rc01**（`top.yukonga.miuix.kmp:miuix-ui` / `miuix-nav`，Maven Central；为使用独立导航及预测性返回升级）；Compose BOM 2026.02.01；**activity-compose ≥ 1.13.0**（miuix 0.9.3 对话框内部用 `NavigationBackHandler`/androidx.navigationevent，旧版 ComponentActivity 不提供 NavigationEventDispatcher，点开对话框即 `IllegalStateException` 闪退）
+- Java toolchain / JVM target **21**（miuix-nav 0.9.4-rc01 内联 API 的字节码要求）。
 - core-splashscreen 1.2.0（Android 12 标准启动图，低版本兼容）
 - ZXing：`com.google.zxing:core` 3.5.3（生成二维码）+ `com.journeyapps:zxing-android-embedded` 4.3.0（相机扫码页）
 - miuix-icons（`MiuixIcons.Regular.*` 那套图标）与 miuix-preference（`WindowDropdownDialog` 单选弹窗）版本号跟 miuix 一致

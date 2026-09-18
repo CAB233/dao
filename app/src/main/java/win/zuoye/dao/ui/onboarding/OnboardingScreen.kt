@@ -3,7 +3,9 @@ package win.zuoye.dao.ui.onboarding
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -136,7 +138,11 @@ fun OnboardingScreen(
     onSkip: (() -> Unit)?,
     onCancel: (() -> Unit)?,
 ) {
-    BackHandler(enabled = editing != null) { onCancel?.invoke() }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
+        isBackEnabled = editing != null,
+        onBackCompleted = { onCancel?.invoke() },
+    )
 
     val context = LocalContext.current
     val importUnrecognized = stringResource(R.string.import_unrecognized)

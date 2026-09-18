@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,7 +66,6 @@ fun SharePlanScreen(
     doc: PlanDocument,
     onBack: () -> Unit,
 ) {
-    BackHandler { onBack() }
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     DisposableEffect(activity) {

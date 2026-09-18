@@ -1,6 +1,8 @@
 package win.zuoye.dao.ui.scheme
 
-import androidx.activity.compose.BackHandler
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
@@ -166,13 +168,11 @@ fun SchemeEditScreen(
     }
 
     var tabIndex by rememberSaveable(scheme.id) { mutableIntStateOf(0) }
-    BackHandler {
-        if (onboardingMode) {
-            if (tabIndex > 0) tabIndex-- else onBack()
-        } else {
-            requestExit()
-        }
-    }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
+        isBackEnabled = onboardingMode,
+        onBackCompleted = { if (tabIndex > 0) tabIndex-- else onBack() },
+    )
     var cycleText by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
     var showCycleDialog by remember { mutableStateOf(false) }
     var cycleDraft by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }

@@ -9,7 +9,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.activity.compose.BackHandler
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,12 +102,14 @@ fun PlanEditScreen(
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     showBackButton: Boolean = true,
+    backEnabled: Boolean = true,
     onEditScheme: (scheme: Scheme, autoFocusName: Boolean) -> Unit,
 ) {
     SchemeListScreen(
         doc = doc,
         onBack = onBack,
         showBackButton = showBackButton,
+        backEnabled = backEnabled,
         onMutate = onMutate,
         onImportPlan = onImportPlan,
         onEnter = { onEditScheme(it, false) },
@@ -122,6 +126,7 @@ private fun SchemeListScreen(
     doc: PlanDocument,
     onBack: () -> Unit,
     showBackButton: Boolean,
+    backEnabled: Boolean,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     onEnter: (Scheme) -> Unit,
@@ -187,9 +192,11 @@ private fun SchemeListScreen(
         result.contents?.let { importFrom(it) }
     }
 
-    BackHandler {
-        if (selecting) exitSelection() else onBack()
-    }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
+        isBackEnabled = backEnabled,
+        onBackCompleted = { if (selecting) exitSelection() else onBack() },
+    )
 
     Scaffold(
         topBar = {

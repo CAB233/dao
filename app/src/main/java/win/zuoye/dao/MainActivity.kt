@@ -14,13 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
@@ -30,8 +24,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -50,21 +42,21 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.rememberNavBackStack
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.nav.core.NavKey
+import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.ui.about.AboutScreen
+import win.zuoye.dao.ui.about.OpenSourceLicensesScreen
 import win.zuoye.dao.ui.common.MainTab
 import win.zuoye.dao.ui.common.MainBottomBar
 import win.zuoye.dao.ui.common.MainNavigationRail
@@ -90,7 +82,14 @@ private sealed interface AppRoute : NavKey {
     /** 二级页面（卡片推入；Main = 停在底栏页面） */
     @Serializable data object Main : AppRoute
     @Serializable data object About : AppRoute
+    @Serializable data object Licenses : AppRoute
     @Serializable data object SharePlan : AppRoute
+}
+
+@Serializable
+private sealed interface EditorRoute : NavKey {
+    @Serializable data object Tabs : EditorRoute
+    @Serializable data class Edit(val scheme: Scheme, val autoFocusName: Boolean) : EditorRoute
 }
 
 class MainActivity : ComponentActivity() {
@@ -153,8 +152,7 @@ class MainActivity : ComponentActivity() {
                     }
                     // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
                     var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
-                    val navBackStack = rememberNavBackStack(AppRoute.Main)
-                    val pushedPage = navBackStack.lastOrNull()?.takeUnless { it == AppRoute.Main } as? AppRoute
+                    val navBackStack = rememberNavBackStack<AppRoute>(AppRoute.Main)
                     var pendingPermissionInstall by remember { mutableStateOf<File?>(null) }
                     val requestedInstallApk by installRequestState
                     var shownInstallApk by remember { mutableStateOf<File?>(null) }
@@ -165,7 +163,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     fun navigateTo(route: AppRoute) {
-                        if (route == AppRoute.Main) return
+                        if (route == AppRoute.Main || route in navBackStack) return
                         while (navBackStack.size > 1) navBackStack.removeLastOrNull()
                         navBackStack.add(route)
                     }
@@ -297,14 +295,8 @@ class MainActivity : ComponentActivity() {
                             onCancel = null,
                         )
                         else -> {
-                            // 退出动画期间还要继续渲染这张卡片，所以记住最后一个二级页面
-                            var cardRoute by remember { mutableStateOf<AppRoute?>(null) }
-                            LaunchedEffect(pushedPage) {
-                                if (pushedPage != null) cardRoute = pushedPage
-                            }
-                            PageCardStack(
-                                visible = pushedPage != null,
-                                base = {
+                            PageCardStack(backStack = navBackStack) {
+                                entry<AppRoute.Main> {
                                     MainTabs(
                                         doc = doc,
                                         current = baseTab,
@@ -313,25 +305,30 @@ class MainActivity : ComponentActivity() {
                                         onOpenAbout = { navigateTo(AppRoute.About) },
                                         onImportPlan = { importPlan(it) },
                                         onMutate = mainViewModel::mutate,
-                                    updateInfo = uiState.updateInfo,
-                                    showUpdateDialog = uiState.showUpdateDialog,
-                                    showUpdateInSettings = uiState.showUpdateInSettings,
+                                        updateInfo = uiState.updateInfo,
+                                        showUpdateDialog = uiState.showUpdateDialog,
+                                        showUpdateInSettings = uiState.showUpdateInSettings,
                                         onDismissUpdate = mainViewModel::dismissUpdate,
                                         onStartUpdate = ::startUpdateDownload,
                                     )
-                                },
-                                card = {
-                                    when (val route = cardRoute) {
-                                        AppRoute.About -> AboutScreen(onBack = ::popToMain)
-                                        AppRoute.SharePlan -> SharePlanScreen(
-                                            doc = doc,
-                                            onBack = ::popToMain,
-                                        )
-                                        AppRoute.Main -> Unit
-                                        null -> Unit
-                                    }
-                                },
-                            )
+                                }
+                                entry<AppRoute.About> {
+                                    AboutScreen(
+                                        onBack = ::popToMain,
+                                        onOpenLicenses = {
+                                            if (AppRoute.Licenses !in navBackStack) navBackStack.add(AppRoute.Licenses)
+                                        },
+                                    )
+                                }
+                                entry<AppRoute.Licenses> {
+                                    OpenSourceLicensesScreen(onBack = {
+                                        if (navBackStack.lastOrNull() == AppRoute.Licenses) navBackStack.removeLastOrNull()
+                                    })
+                                }
+                                entry<AppRoute.SharePlan> {
+                                    SharePlanScreen(doc = doc, onBack = ::popToMain)
+                                }
+                            }
                         }
                     }
                     UpdateInstallDialog(
@@ -387,14 +384,14 @@ private fun MainTabs(
 ) {
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(initialPage = current.ordinal) { tabs.size }
-    var editingScheme by remember { mutableStateOf<Scheme?>(null) }
-    var shownEditingScheme by remember { mutableStateOf<Scheme?>(null) }
-    var editingAutoFocus by remember { mutableStateOf(false) }
+    val editorStack = rememberNavBackStack<EditorRoute>(EditorRoute.Tabs)
+
+    fun closeSchemeEditor() {
+        if (editorStack.size > 1) editorStack.removeLastOrNull()
+    }
 
     fun openSchemeEditor(scheme: Scheme, autoFocusName: Boolean) {
-        shownEditingScheme = scheme
-        editingAutoFocus = autoFocusName
-        editingScheme = scheme
+        if (editorStack.size == 1) editorStack.add(EditorRoute.Edit(scheme, autoFocusName))
     }
 
     // 点底栏：把 pager 平滑滑过去（InstallerX 同款：整页滑动，不淡入淡出）
@@ -413,159 +410,139 @@ private fun MainTabs(
     }
 
     // 只让窗口宽度决定导航的摆放位置；绘制始终交给 miuix 组件。
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val useNavigationRail = maxWidth >= 600.dp
-        Scaffold(
-            bottomBar = {
-                if (!useNavigationRail) {
-                    MainBottomBar(selected = current, onSelect = onSelectTab)
+    PageCardStack(backStack = editorStack) {
+        entry<EditorRoute.Tabs> {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val useNavigationRail = maxWidth >= 600.dp
+                Scaffold(
+                    bottomBar = {
+                        if (!useNavigationRail) {
+                            MainBottomBar(selected = current, onSelect = onSelectTab)
+                        }
+                    },
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                ) { padding ->
+                    Row(
+                        modifier = Modifier
+                            .padding(padding)
+                            .fillMaxSize(),
+                    ) {
+                        if (useNavigationRail) {
+                            MainNavigationRail(selected = current, onSelect = onSelectTab)
+                        }
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            // 相邻页保持组合：来回切的时候日历不会重置回本月
+                            beyondViewportPageCount = 1,
+                            overscrollEffect = null,
+                            userScrollEnabled = editorStack.size == 1,
+                        ) { page ->
+                            when (tabs[page]) {
+                                MainTab.Home -> HomeScreen(
+                                    doc = doc,
+                                    onExportPlan = onExportPlan,
+                                    onOpenPlan = {
+                                        val activeScheme = doc.activeScheme()
+                                        if (activeScheme == null) {
+                                            onSelectTab(MainTab.Config)
+                                        } else {
+                                            openSchemeEditor(activeScheme, false)
+                                        }
+                                    },
+                                )
+                                MainTab.Config -> PlanEditScreen(
+                                    doc = doc,
+                                    onBack = { onSelectTab(MainTab.Home) },
+                                    onImportPlan = onImportPlan,
+                                    onMutate = onMutate,
+                                    showBackButton = false,
+                                    backEnabled = pagerState.settledPage == page,
+                                    onEditScheme = ::openSchemeEditor,
+                                )
+                                MainTab.Settings -> SettingsScreen(
+                                    doc = doc,
+                                    updateInfo = updateInfo.takeIf { showUpdateInSettings },
+                                    backEnabled = pagerState.settledPage == page,
+                                    onBack = { onSelectTab(MainTab.Home) },
+                                    onOpenAbout = onOpenAbout,
+                                    onDownloadUpdate = onStartUpdate,
+                                    onThemeModeChange = { themeMode ->
+                                        onMutate { plan -> plan.copy(themeMode = themeMode) }
+                                    },
+                                    onWeekStartDayChange = { weekStartDay ->
+                                        onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
+                                    },
+                                    onCalendarViewModeChange = { mode ->
+                                        onMutate { plan -> plan.copy(calendarViewMode = mode) }
+                                    },
+                                    onCheckUpdatesOnLaunchChange = { enabled ->
+                                        onMutate { plan -> plan.copy(checkUpdatesOnLaunch = enabled) }
+                                    },
+                                    onUpdateChannelChange = { channel ->
+                                        onMutate { plan -> plan.copy(updateChannel = channel) }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    UpdateDialog(
+                        show = showUpdateDialog,
+                        update = updateInfo,
+                        onDismiss = onDismissUpdate,
+                        onUpdate = onStartUpdate,
+                    )
                 }
-            },
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        ) { padding ->
-            Row(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize(),
-            ) {
-                if (useNavigationRail) {
-                    MainNavigationRail(selected = current, onSelect = onSelectTab)
-                }
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    // 相邻页保持组合：来回切的时候日历不会重置回本月
-                    beyondViewportPageCount = 1,
-                    overscrollEffect = null,
-                    userScrollEnabled = editingScheme == null,
-                ) { page ->
-                    when (tabs[page]) {
-                        MainTab.Home -> HomeScreen(
-                            doc = doc,
-                            onExportPlan = onExportPlan,
-                            onOpenPlan = {
-                                val activeScheme = doc.activeScheme()
-                                if (activeScheme == null) {
-                                    onSelectTab(MainTab.Config)
-                                } else {
-                                    openSchemeEditor(activeScheme, false)
-                                }
+            }
+        }
+        entry<EditorRoute.Edit> { route ->
+            val editorScheme = route.scheme
+            SchemeEditScreen(
+                doc = doc,
+                scheme = editorScheme,
+                autoFocusName = route.autoFocusName,
+                onBack = { closeSchemeEditor() },
+                onSave = { editedDocument ->
+                    val editedScheme = editedDocument.schemes.first { it.id == editorScheme.id }
+                    onMutate { currentDocument ->
+                        val alreadyExists = currentDocument.schemes.any { it.id == editedScheme.id }
+                        currentDocument.copy(
+                            templates = editedDocument.templates,
+                            schemes = if (alreadyExists) {
+                                currentDocument.schemes.map { existing ->
+                                    if (existing.id == editedScheme.id) editedScheme else existing
+                                }.toImmutableList()
+                            } else {
+                                currentDocument.schemes.toPersistentList().add(editedScheme)
                             },
-                        )
-                        MainTab.Config -> PlanEditScreen(
-                            doc = doc,
-                            onBack = { onSelectTab(MainTab.Home) },
-                            onImportPlan = onImportPlan,
-                            onMutate = onMutate,
-                            showBackButton = false,
-                            onEditScheme = ::openSchemeEditor,
-                        )
-                        MainTab.Settings -> SettingsScreen(
-                            doc = doc,
-                            updateInfo = updateInfo.takeIf { showUpdateInSettings },
-                            onBack = { onSelectTab(MainTab.Home) },
-                            onOpenAbout = onOpenAbout,
-                            onDownloadUpdate = onStartUpdate,
-                            onThemeModeChange = { themeMode ->
-                                onMutate { plan -> plan.copy(themeMode = themeMode) }
-                            },
-                            onWeekStartDayChange = { weekStartDay ->
-                                onMutate { plan -> plan.copy(weekStartDay = weekStartDay) }
-                            },
-                            onCalendarViewModeChange = { mode ->
-                                onMutate { plan -> plan.copy(calendarViewMode = mode) }
-                            },
-                            onCheckUpdatesOnLaunchChange = { enabled ->
-                                onMutate { plan -> plan.copy(checkUpdatesOnLaunch = enabled) }
-                            },
-                            onUpdateChannelChange = { channel ->
-                                onMutate { plan -> plan.copy(updateChannel = channel) }
+                            activeSchemeId = if (alreadyExists) {
+                                currentDocument.activeSchemeId
+                            } else {
+                                editedScheme.id
                             },
                         )
                     }
-                }
-            }
-            UpdateDialog(
-                show = showUpdateDialog,
-                update = updateInfo,
-                onDismiss = onDismissUpdate,
-                onUpdate = onStartUpdate,
+                    closeSchemeEditor()
+                },
+                onDelete = {
+                    onMutate { currentDocument ->
+                        val remaining = currentDocument.schemes
+                            .filterNot { it.id == editorScheme.id }
+                            .toImmutableList()
+                        currentDocument.copy(
+                            schemes = remaining,
+                            activeSchemeId = if (currentDocument.activeSchemeId == editorScheme.id) {
+                                remaining.firstOrNull()?.id
+                            } else {
+                                currentDocument.activeSchemeId
+                            },
+                        )
+                    }
+                    closeSchemeEditor()
+                },
             )
-        }
-
-        AnimatedVisibility(
-            visible = editingScheme != null,
-            enter = fadeIn(animationSpec = tween(durationMillis = 180)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 160)),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(MiuixTheme.colorScheme.windowDimming)
-                    .pointerInput(Unit) { detectTapGestures { } },
-            )
-        }
-        AnimatedVisibility(
-            visible = editingScheme != null,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(durationMillis = 320, easing = EaseInOut),
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(durationMillis = 280, easing = EaseInOut),
-            ),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            shownEditingScheme?.let { editorScheme ->
-                SchemeEditScreen(
-                    doc = doc,
-                    scheme = editorScheme,
-                    autoFocusName = editingAutoFocus,
-                    onBack = { editingScheme = null },
-                    onSave = { editedDocument ->
-                        val editedScheme = editedDocument.schemes.first { it.id == editorScheme.id }
-                        onMutate { currentDocument ->
-                            val alreadyExists = currentDocument.schemes.any { it.id == editedScheme.id }
-                            currentDocument.copy(
-                                templates = editedDocument.templates,
-                                schemes = if (alreadyExists) {
-                                    currentDocument.schemes.map { existing ->
-                                        if (existing.id == editedScheme.id) editedScheme else existing
-                                    }.toImmutableList()
-                                } else {
-                                    currentDocument.schemes.toPersistentList().add(editedScheme)
-                                },
-                                activeSchemeId = if (alreadyExists) {
-                                    currentDocument.activeSchemeId
-                                } else {
-                                    editedScheme.id
-                                },
-                            )
-                        }
-                        editingScheme = null
-                    },
-                    onDelete = {
-                        onMutate { currentDocument ->
-                            val remaining = currentDocument.schemes
-                                .filterNot { it.id == editorScheme.id }
-                                .toImmutableList()
-                            currentDocument.copy(
-                                schemes = remaining,
-                                activeSchemeId = if (currentDocument.activeSchemeId == editorScheme.id) {
-                                    remaining.firstOrNull()?.id
-                                } else {
-                                    currentDocument.activeSchemeId
-                                },
-                            )
-                        }
-                        editingScheme = null
-                    },
-                )
-            }
         }
     }
 }

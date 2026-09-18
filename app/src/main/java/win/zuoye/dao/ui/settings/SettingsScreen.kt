@@ -1,6 +1,8 @@
 package win.zuoye.dao.ui.settings
 
-import androidx.activity.compose.BackHandler
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -50,6 +52,7 @@ fun SettingsScreen(
     doc: PlanDocument,
     updateInfo: UpdateInfo?,
     onBack: () -> Unit,
+    backEnabled: Boolean = true,
     onOpenAbout: () -> Unit,
     onDownloadUpdate: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
@@ -58,7 +61,11 @@ fun SettingsScreen(
     onCheckUpdatesOnLaunchChange: (Boolean) -> Unit,
     onUpdateChannelChange: (UpdateChannel) -> Unit,
 ) {
-    BackHandler { onBack() }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
+        isBackEnabled = backEnabled,
+        onBackCompleted = onBack,
+    )
 
     val context = LocalContext.current
     val versionName = remember(context) { context.appVersionName() }

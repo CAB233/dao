@@ -83,7 +83,7 @@ androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
             output.outputFileName.set(output.versionName.map { versionName ->
-                "Dao-$versionName.apk"
+                "Dao-$versionName-${variant.buildType}.apk"
             })
         }
     }

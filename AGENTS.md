@@ -176,7 +176,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 ## 关键版本
 
 - AGP 9.4.0（内置 Kotlin，**不要** apply `org.jetbrains.kotlin.android`）；Kotlin/compose 插件 **2.4.10**；Gradle 9.6.0
-- miuix **0.9.4-rc01**（`top.yukonga.miuix.kmp:miuix-ui` / `miuix-nav`，Maven Central；为使用独立导航及预测性返回升级）；Compose BOM 2026.02.01；**activity-compose ≥ 1.13.0**（miuix 0.9.3 对话框内部用 `NavigationBackHandler`/androidx.navigationevent，旧版 ComponentActivity 不提供 NavigationEventDispatcher，点开对话框即 `IllegalStateException` 闪退）
+- miuix **0.9.4**（`top.yukonga.miuix.kmp:miuix-ui` / `miuix-nav`，Maven Central；稳定版）；Compose BOM 2026.02.01；**activity-compose ≥ 1.13.0**（miuix 0.9.3 对话框内部用 `NavigationBackHandler`/androidx.navigationevent，旧版 ComponentActivity 不提供 NavigationEventDispatcher，点开对话框即 `IllegalStateException` 闪退）
 - Java toolchain / JVM target **21**（miuix-nav 0.9.4-rc01 内联 API 的字节码要求）。
 - core-splashscreen 1.2.0（Android 12 标准启动图，低版本兼容）
 - ZXing：`com.google.zxing:core` 3.5.3（生成二维码）+ `com.journeyapps:zxing-android-embedded` 4.3.0（相机扫码页）

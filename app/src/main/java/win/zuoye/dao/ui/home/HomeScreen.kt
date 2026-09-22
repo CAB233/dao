@@ -1,5 +1,8 @@
 package win.zuoye.dao.ui.home
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.DisposableEffect
+import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -89,8 +92,6 @@ import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
-import win.zuoye.dao.ui.common.localizedTimeRangeText
-import win.zuoye.dao.ui.common.rememberHoldDownSource
 import kotlin.math.roundToInt
 import java.util.Calendar
 
@@ -1066,4 +1067,56 @@ private fun DayDetailDialog(
             Spacer(Modifier.height(8.dp))
         }
     }
+}
+
+/**
+ * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可；
+ * 自绘的 `clickable` 行走这里——把状态作为 [HoldDownInteraction] 注入 interactionSource，
+ * 再交给 `Modifier.clickable(interactionSource = …, indication = LocalIndication.current, …)`，
+ * 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
+ */
+@Composable
+private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
+    val interactionSource = remember { MutableInteractionSource() }
+    val active = remember { mutableStateOf<HoldDownInteraction.HoldDown?>(null) }
+
+    LaunchedEffect(holdDownState, interactionSource) {
+        suspend fun release() {
+            active.value?.let { current ->
+                interactionSource.emit(HoldDownInteraction.Release(current))
+                active.value = null
+            }
+        }
+        if (holdDownState) {
+            release()
+            val interaction = HoldDownInteraction.HoldDown()
+            active.value = interaction
+            interactionSource.emit(interaction)
+        } else {
+            release()
+        }
+    }
+
+    // 行被移出组合（例如弹层关掉后整行消失）时也要释放，别把高亮留在 source 里
+    DisposableEffect(interactionSource) {
+        onDispose {
+            active.value?.let { current ->
+                interactionSource.tryEmit(HoldDownInteraction.Release(current))
+            }
+            active.value = null
+        }
+    }
+    return interactionSource
+}
+
+@Composable
+private fun ShiftTemplate.localizedTimeRangeText(): String {
+    if (isRest) return stringResource(R.string.shift_rest_time)
+    val end = ShiftTemplate.format(endMinute)
+    val localizedEnd = if (crossesMidnight()) {
+        stringResource(R.string.shift_next_day, end)
+    } else {
+        end
+    }
+    return "${ShiftTemplate.format(startMinute)}–$localizedEnd"
 }

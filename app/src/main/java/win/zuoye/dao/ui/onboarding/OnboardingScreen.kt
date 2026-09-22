@@ -1,5 +1,18 @@
 package win.zuoye.dao.ui.onboarding
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.DisposableEffect
+import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import top.yukonga.miuix.kmp.basic.ColorPalette
+import top.yukonga.miuix.kmp.basic.NumberPicker
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.TabRowDefaults
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
@@ -44,7 +57,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.collections.immutable.ImmutableList
@@ -71,7 +83,6 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
@@ -96,9 +107,6 @@ import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.primaryAnchorEpochDay
 import win.zuoye.dao.ui.ShiftPalette
-import win.zuoye.dao.ui.common.TemplateEditorDialog
-import win.zuoye.dao.ui.common.localizedTimeRangeText
-import win.zuoye.dao.ui.common.rememberHoldDownSource
 import win.zuoye.dao.ui.scheme.AnchorDialog
 import win.zuoye.dao.ui.scheme.SchemeEditScreen
 import win.zuoye.dao.ui.scheme.UNASSIGNED
@@ -729,18 +737,12 @@ private fun CycleAssignStep(
         contentPadding = PaddingValues(top = 4.dp),
     ) {
         item {
-            // TextField 表单不包 Card，直接同样的 12dp 间距
             TextField(
                 value = cycleText,
                 onValueChange = onCycleChange,
                 label = stringResource(R.string.cycle_days_hint),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                // 和方案页的周期天数表单一样高（纵向 26dp）
-                insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 12.dp),
+                modifier = Modifier,
             )
         }
         if (cycleDays != null) {
@@ -877,6 +879,290 @@ internal fun DeleteTemplateDialog(
                 colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),
             )
+        }
+    }
+}
+
+/**
+ * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可；
+ * 自绘的 `clickable` 行走这里——把状态作为 [HoldDownInteraction] 注入 interactionSource，
+ * 再交给 `Modifier.clickable(interactionSource = …, indication = LocalIndication.current, …)`，
+ * 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
+ */
+@Composable
+private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
+    val interactionSource = remember { MutableInteractionSource() }
+    val active = remember { mutableStateOf<HoldDownInteraction.HoldDown?>(null) }
+
+    LaunchedEffect(holdDownState, interactionSource) {
+        suspend fun release() {
+            active.value?.let { current ->
+                interactionSource.emit(HoldDownInteraction.Release(current))
+                active.value = null
+            }
+        }
+        if (holdDownState) {
+            release()
+            val interaction = HoldDownInteraction.HoldDown()
+            active.value = interaction
+            interactionSource.emit(interaction)
+        } else {
+            release()
+        }
+    }
+
+    // 行被移出组合（例如弹层关掉后整行消失）时也要释放，别把高亮留在 source 里
+    DisposableEffect(interactionSource) {
+        onDispose {
+            active.value?.let { current ->
+                interactionSource.tryEmit(HoldDownInteraction.Release(current))
+            }
+            active.value = null
+        }
+    }
+    return interactionSource
+}
+
+@Composable
+private fun ShiftTemplate.localizedTimeRangeText(): String {
+    if (isRest) return stringResource(R.string.shift_rest_time)
+    val end = ShiftTemplate.format(endMinute)
+    val localizedEnd = if (crossesMidnight()) {
+        stringResource(R.string.shift_next_day, end)
+    } else {
+        end
+    }
+    return "${ShiftTemplate.format(startMinute)}–$localizedEnd"
+}
+
+/** 时间滚轮的行高：miuix 默认 45dp，这里跟日期弹窗保持一致，数字别挨得太近 */
+private val TIME_ITEM_HEIGHT = 48.dp
+
+/**
+ * 新建/编辑班次模板：名称（右边的圆点是当前颜色，点开是颜色页）+ 休班开关
+ * + 「开始 / 结束」切换框与共用时间滚轮。existing = null 表示新建。
+ */
+@Composable
+private fun TemplateEditorDialog(
+    show: Boolean,
+    existing: ShiftTemplate?,
+    usedColors: List<Int>,
+    onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val defaultRestName = stringResource(R.string.shift_rest)
+    // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
+    var name by remember(existing) { mutableStateOf(existing?.name ?: "") }
+    var startH by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
+    var startM by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }
+    var endH by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute / 60 } ?: 15) }
+    var endM by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute % 60 } ?: 0) }
+    var color by remember(existing) {
+        mutableIntStateOf(
+            existing?.colorArgb
+                ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+                ?: ShiftPalette.presets.first()
+        )
+    }
+    // 开始 / 结束共用一个切换框，下面那组滚轮编辑当前选中的那一头
+    var editingEnd by remember(existing) { mutableStateOf(false) }
+    var isRest by remember(existing) { mutableStateOf(existing?.isRest == true) }
+    var showColorDialog by remember(existing) { mutableStateOf(false) }
+
+    // 每次打开都按 existing 重新初始化一次。弹窗为了退出动画是常驻组合的，
+    // 只靠 remember(existing) 会在"新建 → 关闭 → 再新建"时留下上一次填的内容
+    // （existing 一直是 null，key 没变），也会留下上次取消掉的编辑。
+    LaunchedEffect(show, existing) {
+        if (!show) return@LaunchedEffect
+        name = existing?.name ?: ""
+        startH = existing?.let { it.startMinute / 60 } ?: 8
+        startM = existing?.let { it.startMinute % 60 } ?: 0
+        endH = existing?.let { it.endMinute / 60 } ?: 15
+        endM = existing?.let { it.endMinute % 60 } ?: 0
+        color = existing?.colorArgb
+            ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+            ?: ShiftPalette.presets.first()
+        editingEnd = false
+        isRest = existing?.isRest == true
+        showColorDialog = false
+    }
+
+    OverlayDialog(
+        show = show,
+        title = stringResource(if (existing == null) R.string.shift_add_title else R.string.shift_edit_title),
+        summary = stringResource(R.string.shift_editor_summary),
+        onDismissRequest = onDismiss,
+    ) {
+        // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
+        // 所以给内容一个上限、让滚动区自己滚，按钮作为非加权子项固定在底部。
+        Column(
+            Modifier
+                .heightIn(max = 500.dp)
+                .imePadding(),
+        ) {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.shift_name),
+                    trailingIcon = {
+                        // 颜色收进名称框右边这个圆点里，点它进颜色页
+                        IconButton(onClick = { showColorDialog = true }) {
+                            Box(
+                                Modifier
+                                    .size(24.dp)
+                                    .background(ShiftPalette.color(color), CircleShape),
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.surface,
+                        contentColor = MiuixTheme.colorScheme.onSurface,
+                    ),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.shift_rest), fontSize = 16.sp, modifier = Modifier.weight(1f))
+                        Switch(checked = isRest, onCheckedChange = { isRest = it })
+                    }
+                }
+                if (!isRest) {
+                    Spacer(Modifier.height(12.dp))
+                    TabRowWithContour(
+                        tabs = listOf(stringResource(R.string.shift_start), stringResource(R.string.shift_end)),
+                        selectedTabIndex = if (editingEnd) 1 else 0,
+                        onTabSelected = { editingEnd = it == 1 },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TabRowDefaults.tabRowColors(
+                            backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
+                            contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            selectedBackgroundColor = MiuixTheme.colorScheme.primary,
+                            selectedContentColor = MiuixTheme.colorScheme.onPrimary,
+                        ),
+                        height = 50.dp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        NumberPicker(
+                            value = if (editingEnd) endH else startH,
+                            onValueChange = { if (editingEnd) endH = it else startH = it },
+                            range = 0..23,
+                            wrapAround = true,
+                            label = { "%02d".format(it) },
+                            itemHeight = TIME_ITEM_HEIGHT,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(":", color = MiuixTheme.colorScheme.onSurface)
+                        NumberPicker(
+                            value = if (editingEnd) endM else startM,
+                            onValueChange = { if (editingEnd) endM = it else startM = it },
+                            range = 0..59,
+                            wrapAround = true,
+                            label = { "%02d".format(it) },
+                            itemHeight = TIME_ITEM_HEIGHT,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    text = stringResource(R.string.action_save),
+                    enabled = isRest || name.isNotBlank(),
+                    onClick = {
+                        onSave(
+                            name.trim().ifBlank { defaultRestName },
+                            if (isRest) 0 else startH * 60 + startM,
+                            if (isRest) 0 else endH * 60 + endM,
+                            color,
+                            isRest,
+                        )
+                    },
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+
+    // 颜色弹窗与主弹窗同时存在时，主弹窗收起就一起收
+    ColorDialog(
+        show = show && showColorDialog,
+        current = color,
+        onDismiss = { showColorDialog = false },
+        onConfirm = {
+            color = it
+            showColorDialog = false
+        },
+    )
+}
+
+/**
+ * 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1——
+ * 班次色要画在日历格上，半透明会跟底色混在一起。
+ */
+@Composable
+private fun ColorDialog(
+    show: Boolean,
+    current: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+) {
+    // 同主弹窗：每次打开都从当前颜色重新开始，别让上次取消的改动留在里面
+    var draft by remember(current) { mutableStateOf(Color(current)) }
+    LaunchedEffect(show, current) {
+        if (show) draft = Color(current)
+    }
+
+    OverlayDialog(
+        show = show,
+        title = stringResource(R.string.color_select),
+        onDismissRequest = onDismiss,
+    ) {
+        // 调色盘本身挺高，长内容按 Dialog 规范交给滚动区
+        Column(Modifier.heightIn(max = 500.dp)) {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                ColorPalette(
+                    color = draft,
+                    onColorChanged = { draft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    text = stringResource(R.string.action_confirm),
+                    onClick = { onConfirm(draft.copy(alpha = 1f).toArgb()) },
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

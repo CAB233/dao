@@ -163,6 +163,8 @@
   <string name="shift_rest">休班</string>
   <string name="shift_rest_time">休息</string>
   <string name="shift_start">开始</string>
+  <string name="shift_start_time">开始时间</string>
+  <string name="shift_end_time">结束时间</string>
   <string name="shift_end">结束</string>
   <string name="shift_next_day">次日%1$s</string>
   <string name="color_select">选择颜色</string>
@@ -193,7 +195,7 @@
   <string name="delete_shift_in_use">该班次正被方案使用，删除后相关日期会显示“未排班”。</string>
   <string name="delete_shift_confirm">确定删除该班次吗？</string>
   <string name="plan_edit_title">编辑方案</string>
-  <string name="plan_name">方案名</string>
+  <string name="plan_name">方案名称</string>
   <string name="plan_tab_templates">班次模板</string>
   <string name="plan_select_prompt">选择一个方案进行编辑</string>
   <string name="plan_tab_schedule">排班设置</string>

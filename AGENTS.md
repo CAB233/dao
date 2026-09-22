@@ -60,18 +60,20 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
   关闭的方案标题/摘要用 `disabledOnSurface` 整体变灰。
 - **使用中同一时刻只有一个**：开另一个时前一个自动关闭；**不允许全关**，点已启用那个的开关只弹 Toast 提示。
 - 右下角一个加号 `FloatingActionButton`（和首页「今」同款：`shadowElevation = 0`、54dp）新建方案；建完直接进编辑页并把光标放进名字框。
-  **这个加号和「班次模板」页签里的加号，滚动时都要收起**（用 `ui/common/FabVisibility.kt` 的 `rememberFabVisible`：
+  **这个加号和「班次模板」页签里的加号，滚动时都要收起**（各页面私有的 `rememberFabVisible`：
   往下滚藏起来、往回滚或回到顶部再露出来，外面套 `AnimatedVisibility` 做淡入缩放）。
 - **长按任意卡片进入多选**：左侧出现复选框、右侧开关隐藏，顶栏变成「已选 N 个」+ 关闭按钮；右上角依次是复制图标和红色删除图标。
   复制会给方案与班组生成新 id，方案名追加「 副本」；删除前二次确认，确认弹窗里的「删除」用
   `textButtonColors(textColor = colorScheme.error)`。删掉的正好是使用中的方案时剩下的第一个自动接上。
   多选期间禁用底部导航/侧栏导航与 `HorizontalPager` 手势，系统返回键先退出多选。
-- 编辑页最上面是**方案名输入框**（打开已有方案默认不高亮、只显示当前值；新建时自动聚焦），没有单独的编辑图标。
+- 编辑页使用与其他二级页面相同的 `PageCardStack` 横向转场，不额外实现上下拖动退出或顶部圆角裁剪；顶栏取消用叉号、保存用勾号，保留对应无障碍描述。
+- 编辑页最上面是**方案名输入框**：左侧固定显示“方案名称”，右侧单行输入并右对齐，不使用浮动 label（打开已有方案默认不高亮；新建时自动聚焦），没有单独的编辑图标。
 - 下面是 miuix `TabRow` 的「班次模板 / 排班设置」切换（左右各 12dp，与下面的卡片同一条边线）；**名字行与页签固定，只滚页签内容**。
 - 「班次模板」直接复用引导向导的 `TemplatesStep`（`internal`；`title = null` + `onAdd = null` 时**只渲染卡片**，小标题和行内加号都不出现，
   加号由右下角 FAB 承担），增删改即时落库；模板是**全局一份**（挂在 `PlanDocument` 上），所有方案共用。
-  编辑弹窗 `TemplateEditorDialog`：名称（**框右边的圆点是当前颜色，点开是颜色页**）+ **开始/结束一个切换框**（`SegmentedSwitch`，胶囊会滑动）
-  + 共用一组时间滚轮；颜色页使用 `ColorPalette` 色板，确定时把 alpha 收成 1
+  编辑弹窗 `TemplateEditorDialog`（引导页和编辑页分别维护私有实现）：名称（**框右边的圆点是当前颜色，点开是颜色页**）。
+  方案编辑页把休班开关、开始时间、结束时间放在同一张 Card 内，时间行右侧显示当前值与箭头，两条时间文字统一使用 `onSurfaceVariantSummary`，分别点击打开时间滚轮弹窗，确认后更新；休班时通过高度收缩和淡出动画折叠时间行，关闭休班时展开并淡入，跨午夜的结束时间标注“次日”。名称输入框与下方 Card 统一使用普通卡片的 `surfaceContainer` 背景。引导页的私有弹窗仍使用开始/结束切换框。
+  颜色页使用 `ColorPalette` 色板，确定时把 alpha 收成 1
   （班次色要画在日历格浅底上，半透明会跟底色混）。
 - 「排班设置」顺序固定：**开始日期**（点击框 → 弹日期弹窗）→ **周期天数** → 逐日指派
   （复用 `AssignmentRow`；未指派用 `UNASSIGNED = 0L` 占位，因为 `Scheme.dayTemplateIds` 没留 null）。
@@ -104,6 +106,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 
 ## UI 规范
 
+- 页面专用 UI 和交互辅助函数放在使用页面内并设为 `private`，按页面需要独立调整，不再集中到 `ui/common`。
 - **界面标题一律读 `R.string.app_name`，不要硬编码应用名**（`ShareUtils` 的渲染函数用参数传 appName）。
 - **标签页状态只有一个来源**：`baseTab`（`rememberSaveable`）+ miuix-nav 返回栈（二级页面）。
   别引入第二个标签页状态（`rememberPagerState` 自带保存恢复会与冷启动重置打架，导致冷启动时 pager 半页错位）。
@@ -112,7 +115,7 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
   要用的值先在外面 `val ids = …` 抓一份再进 lambda（多选删除踩过这个坑：清空选中集合后一个都没删掉）。
 - 底栏（主页/设置）在外层 `Scaffold`，两个标签页共用一个 `HorizontalPager`：点底栏走 `animateScrollToPage`，
   `beyondViewportPageCount = 1` 让相邻页保持组合（来回切不丢日历位置）。
-- 二级页面走 `PageCardStack`（`ui/common/PageCardStack.kt`，封装 miuix-nav `NavDisplay`，方案编辑页也从它进来）：底层标签页**原地不动只压暗**，卡片从右侧整页滑入（前段 32dp 圆角、贴合时归零）。
+- 二级页面走 `PageCardStack`（`MainActivity.kt` 内的私有函数，封装 miuix-nav `NavDisplay`，方案编辑页也从它进来）：底层标签页**原地不动只压暗**，卡片从右侧整页滑入（前段 32dp 圆角、贴合时归零）。
   **不要**让底层整页滑走/淡出，也不要把 `Screen.toTab()` 用成 `else -> Home`（推入二级页面时底层会滑回主页）。
   返回栈用 miuix-nav `rememberNavBackStack<Route>`（显式传可序列化的路由父类型），不要重新引入 Navigation3。
   页面滑动与系统预测性返回交给 `NavDisplay`；不要在页面里额外用普通返回处理器拦截出栈。

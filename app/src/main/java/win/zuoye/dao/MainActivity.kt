@@ -1,5 +1,24 @@
 package win.zuoye.dao
 
+import androidx.compose.ui.res.stringResource
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.NavigationRail
+import top.yukonga.miuix.kmp.basic.NavigationRailItem
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Home
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.nav.core.NavBackStack
+import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
+import top.yukonga.miuix.kmp.nav.core.NavEntryBuilder
+import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
+import top.yukonga.miuix.kmp.nav.transition.navGraphicsTransition
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import android.content.res.Resources
+import win.zuoye.dao.domain.ImportResult
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -57,11 +76,6 @@ import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.ui.about.AboutScreen
 import win.zuoye.dao.ui.about.OpenSourceLicensesScreen
-import win.zuoye.dao.ui.common.MainTab
-import win.zuoye.dao.ui.common.MainBottomBar
-import win.zuoye.dao.ui.common.MainNavigationRail
-import win.zuoye.dao.ui.common.PageCardStack
-import win.zuoye.dao.ui.common.localizedMessage
 import win.zuoye.dao.ui.home.HomeScreen
 import win.zuoye.dao.ui.onboarding.OnboardingScreen
 import win.zuoye.dao.ui.scheme.PlanEditScreen
@@ -554,5 +568,130 @@ private fun MainTabs(
                 },
             )
         }
+    }
+}
+
+/** 底栏的三个主入口。 */
+private enum class MainTab {
+    Home,
+    Config,
+    Settings,
+}
+
+/**
+ * 主界面底栏：主页 / 配置 / 设置。
+ * 必须放在各页面 [top.yukonga.miuix.kmp.basic.Scaffold] 的 bottomBar 插槽里。
+ */
+@Composable
+private fun MainBottomBar(
+    selected: MainTab,
+    onSelect: (MainTab) -> Unit,
+    enabled: Boolean = true,
+) {
+    NavigationBar {
+        NavigationBarItem(
+            selected = selected == MainTab.Home,
+            onClick = { onSelect(MainTab.Home) },
+            icon = MiuixIcons.Regular.Home,
+            label = stringResource(R.string.nav_home),
+            enabled = enabled,
+        )
+        NavigationBarItem(
+            selected = selected == MainTab.Config,
+            onClick = { onSelect(MainTab.Config) },
+            icon = MiuixIcons.Regular.Edit,
+            label = stringResource(R.string.nav_config),
+            enabled = enabled,
+        )
+        NavigationBarItem(
+            selected = selected == MainTab.Settings,
+            onClick = { onSelect(MainTab.Settings) },
+            icon = MiuixIcons.Regular.Settings,
+            label = stringResource(R.string.nav_settings),
+            enabled = enabled,
+        )
+    }
+}
+
+/**
+ * The wide-window equivalent of [MainBottomBar].  This deliberately uses miuix's own rail so
+ * adaptive placement does not bring Material 3 navigation colors into the app.
+ */
+@Composable
+private fun MainNavigationRail(
+    selected: MainTab,
+    onSelect: (MainTab) -> Unit,
+    enabled: Boolean = true,
+) {
+    NavigationRail {
+        NavigationRailItem(
+            selected = selected == MainTab.Home,
+            onClick = { onSelect(MainTab.Home) },
+            icon = MiuixIcons.Regular.Home,
+            label = stringResource(R.string.nav_home),
+            enabled = enabled,
+        )
+        NavigationRailItem(
+            selected = selected == MainTab.Config,
+            onClick = { onSelect(MainTab.Config) },
+            icon = MiuixIcons.Regular.Edit,
+            label = stringResource(R.string.nav_config),
+            enabled = enabled,
+        )
+        NavigationRailItem(
+            selected = selected == MainTab.Settings,
+            onClick = { onSelect(MainTab.Settings) },
+            icon = MiuixIcons.Regular.Settings,
+            label = stringResource(R.string.nav_settings),
+            enabled = enabled,
+        )
+    }
+}
+
+// 被覆盖页面留在原地；按钮、页面滑动和系统预测性返回共用同一转场。
+private val CardTransition = navGraphicsTransition(
+    dismissDirection = NavSwipeDirection.LeftToRight,
+) { scope ->
+    translationX = -scope.relativeDepth.coerceAtMost(0f) * scope.layoutSize.width
+}
+
+@Composable
+private fun PageCardStack(
+    backStack: NavBackStack,
+    modifier: Modifier = Modifier,
+    entries: NavEntryBuilder.() -> Unit,
+) {
+    NavDisplay(
+        backStack = backStack,
+        modifier = modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface),
+        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+        transition = CardTransition,
+        effects = NavDisplayEffects(
+            cornerClipRadius = 32.dp,
+            backdropColor = MiuixTheme.colorScheme.surface,
+        ),
+        content = entries,
+    )
+}
+
+private fun ImportResult.localizedMessage(resources: Resources): String {
+    if (!changed && schemesSkipped > 0) return resources.getString(R.string.import_duplicate_only)
+    if (!changed) return resources.getString(R.string.import_nothing)
+    val shifts = resources.getQuantityString(R.plurals.shift_count, templatesAdded, templatesAdded)
+    val plans = resources.getQuantityString(R.plurals.plan_count, schemesAdded, schemesAdded)
+    val result = if (schemesSkipped > 0) {
+        val duplicates = resources.getQuantityString(
+            R.plurals.duplicate_plan_count,
+            schemesSkipped,
+            schemesSkipped,
+        )
+        resources.getString(R.string.import_success_skipped, shifts, plans, duplicates)
+    } else {
+        resources.getString(R.string.import_success, shifts, plans)
+    }
+    return if (!activated && schemesAdded > 0) {
+        result + resources.getString(R.string.import_switch_hint)
+    } else {
+        result
     }
 }

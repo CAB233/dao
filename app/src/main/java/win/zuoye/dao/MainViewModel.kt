@@ -44,13 +44,11 @@ data class MainUiState(
 
 sealed interface MainEvent {
     data object UpdateCheckFailed : MainEvent
+
     data class ImportFinished(val result: ImportResult) : MainEvent
 }
 
-/**
- * 持有应用数据与更新流程。构造函数只依赖小接口，单测可直接注入内存 fake；
- * 单模块当前没有足够复杂的对象图，因此不用 Hilt，避免为两个依赖增加生成代码和启动成本。
- */
+/** 持有应用数据与更新流程。构造函数只依赖小接口，单测可直接注入内存 fake； 单模块当前没有足够复杂的对象图，因此不用 Hilt，避免为两个依赖增加生成代码和启动成本。 */
 class MainViewModel(
     private val planStore: PlanStore,
     private val updateChecker: UpdateChecker,
@@ -131,23 +129,27 @@ class MainViewModel(
             val id = System.currentTimeMillis()
             current.copy(
                 templates = templates,
-                schemes = current.schemes.toPersistentList().add(
-                    Scheme(
-                        id = id,
-                        name = planName,
-                        cycleDays = cycleDays,
-                        dayTemplateIds = dayTemplateIds,
-                        createdAt = id,
-                        groups = persistentListOf(
-                            SchemeGroup(
+                schemes =
+                    current.schemes
+                        .toPersistentList()
+                        .add(
+                            Scheme(
                                 id = id,
-                                name = groupName,
-                                anchorEpochDay = anchorEpochDay,
-                            ),
+                                name = planName,
+                                cycleDays = cycleDays,
+                                dayTemplateIds = dayTemplateIds,
+                                createdAt = id,
+                                groups =
+                                    persistentListOf(
+                                        SchemeGroup(
+                                            id = id,
+                                            name = groupName,
+                                            anchorEpochDay = anchorEpochDay,
+                                        )
+                                    ),
+                                defaultGroupId = id,
+                            )
                         ),
-                        defaultGroupId = id,
-                    ),
-                ),
                 activeSchemeId = id,
                 onboardingDone = true,
             )
@@ -160,7 +162,8 @@ class MainViewModel(
             planStore.update { current ->
                 val (merged, outcome) = current.importPlan(payload)
                 result = outcome
-                if (completeOnboarding && outcome.changed) merged.copy(onboardingDone = true) else merged
+                if (completeOnboarding && outcome.changed) merged.copy(onboardingDone = true)
+                else merged
             }
             result?.let { eventChannel.send(MainEvent.ImportFinished(it)) }
         }
@@ -170,8 +173,9 @@ class MainViewModel(
         fun factory(context: Context): ViewModelProvider.Factory {
             val application = context.applicationContext
             @Suppress("DEPRECATION")
-            val versionName = application.packageManager
-                .getPackageInfo(application.packageName, 0).versionName ?: "0"
+            val versionName =
+                application.packageManager.getPackageInfo(application.packageName, 0).versionName
+                    ?: "0"
             return viewModelFactory {
                 initializer {
                     MainViewModel(

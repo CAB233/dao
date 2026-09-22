@@ -1,9 +1,9 @@
 package win.zuoye.dao.data
 
+import androidx.compose.runtime.Immutable
 import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 import java.util.zip.Inflater
-import androidx.compose.runtime.Immutable
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.collections.immutable.ImmutableList
@@ -13,10 +13,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-/**
- * 分享/导入用的排班方案载荷：只带"配置"（班次模板 + 倒班方案），
- * 不带本机引导状态、覆盖记录等个人数据。
- */
+/** 分享/导入用的排班方案载荷：只带"配置"（班次模板 + 倒班方案）， 不带本机引导状态、覆盖记录等个人数据。 */
 @Immutable
 data class PlanShare(
     val templates: ImmutableList<ShiftTemplate> = persistentListOf(),
@@ -29,10 +26,7 @@ data class PlanShare(
     }
 }
 
-/**
- * 紧凑分享载荷编解码：短字段 JSON → deflate → base64url，
- * 供二维码、剪贴板和系统文本分享使用。
- */
+/** 紧凑分享载荷编解码：短字段 JSON → deflate → base64url， 供二维码、剪贴板和系统文本分享使用。 */
 object PlanShareCodec {
 
     /** 紧凑载荷前缀（二维码内容就是 `DAO1:` 开头的一串） */
@@ -67,27 +61,39 @@ object PlanShareCodec {
         val usedIds = payload.schemes.flatMap { it.dayTemplateIds }.toSet()
         val templates = payload.templates.filter { it.id in usedIds }
         val indexOf = templates.withIndex().associate { (index, template) -> template.id to index }
-        val compact = CompactPlan(
-            templates = templates.map {
-                CompactTemplate(it.name, it.startMinute, it.endMinute, it.colorArgb, it.isRest)
-            },
-            schemes = payload.schemes.map { scheme ->
-                val groups = scheme.groups
-                val defaultGroup = groups.indexOfFirst { it.id == scheme.defaultGroupId }
-                require(defaultGroup >= 0) { "方案缺少默认班组" }
-                CompactScheme(
-                    name = scheme.name,
-                    cycleDays = scheme.cycleDays,
-                    days = scheme.dayTemplateIds.map { indexOf[it] ?: -1 },
-                    groups = groups.map { group ->
-                        CompactGroup(name = group.name, anchor = group.anchorEpochDay)
+        val compact =
+            CompactPlan(
+                templates =
+                    templates.map {
+                        CompactTemplate(
+                            it.name,
+                            it.startMinute,
+                            it.endMinute,
+                            it.colorArgb,
+                            it.isRest,
+                        )
                     },
-                    defaultGroup = defaultGroup,
-                )
-            },
-            active = payload.activeSchemeId
-                ?.let { id -> payload.schemes.indexOfFirst { it.id == id }.takeIf { it >= 0 } },
-        )
+                schemes =
+                    payload.schemes.map { scheme ->
+                        val groups = scheme.groups
+                        val defaultGroup = groups.indexOfFirst { it.id == scheme.defaultGroupId }
+                        require(defaultGroup >= 0) { "方案缺少默认班组" }
+                        CompactScheme(
+                            name = scheme.name,
+                            cycleDays = scheme.cycleDays,
+                            days = scheme.dayTemplateIds.map { indexOf[it] ?: -1 },
+                            groups =
+                                groups.map { group ->
+                                    CompactGroup(name = group.name, anchor = group.anchorEpochDay)
+                                },
+                            defaultGroup = defaultGroup,
+                        )
+                    },
+                active =
+                    payload.activeSchemeId?.let { id ->
+                        payload.schemes.indexOfFirst { it.id == id }.takeIf { it >= 0 }
+                    },
+            )
         val raw = compactJson.encodeToString(compact).encodeToByteArray()
         return PAYLOAD_PREFIX + base64.encode(deflate(raw))
     }
@@ -105,45 +111,57 @@ object PlanShareCodec {
         val compressed = runCatching { base64.decode(trimmed) }.getOrNull() ?: return null
         if (compressed.size > MAX_COMPRESSED_BYTES) return null
         val inflated = inflate(compressed) ?: return null
-        val compact = runCatching {
-            compactJson.decodeFromString<CompactPlan>(inflated.decodeToString())
-        }.getOrNull() ?: return null
+        val compact =
+            runCatching {
+                compactJson.decodeFromString<CompactPlan>(inflated.decodeToString())
+            }
+                .getOrNull() ?: return null
         if (!compact.isValid()) return null
         // 用下标当本机 id 重建；导入时会按内容去重并重新分配真实 id
-        val templates = compact.templates.mapIndexed { index, t ->
-            ShiftTemplate(
-                id = index.toLong(),
-                name = t.name,
-                startMinute = t.start,
-                endMinute = t.end,
-                colorArgb = t.color,
-                isRest = t.isRest,
-            )
-        }.toImmutableList()
-        val schemes = compact.schemes.mapIndexed { index, s ->
-            val groups = s.groups.mapIndexed { groupIndex, group ->
-                SchemeGroup(
-                    id = SCHEME_ID_BASE + index * 1_000L + groupIndex,
-                    name = group.name,
-                    anchorEpochDay = group.anchor,
-                )
-            }.toImmutableList()
-            val defaultGroup = groups.getOrNull(s.defaultGroup) ?: return null
-            Scheme(
-                id = SCHEME_ID_BASE + index,
-                name = s.name,
-                cycleDays = s.cycleDays,
-                dayTemplateIds = s.days.map { it.toLong() }.toImmutableList(),
-                createdAt = SCHEME_ID_BASE + index,
-                groups = groups,
-                defaultGroupId = defaultGroup.id,
-            )
-        }.toImmutableList()
+        val templates =
+            compact.templates
+                .mapIndexed { index, t ->
+                    ShiftTemplate(
+                        id = index.toLong(),
+                        name = t.name,
+                        startMinute = t.start,
+                        endMinute = t.end,
+                        colorArgb = t.color,
+                        isRest = t.isRest,
+                    )
+                }
+                .toImmutableList()
+        val schemes =
+            compact.schemes
+                .mapIndexed { index, s ->
+                    val groups =
+                        s.groups
+                            .mapIndexed { groupIndex, group ->
+                                SchemeGroup(
+                                    id = SCHEME_ID_BASE + index * 1_000L + groupIndex,
+                                    name = group.name,
+                                    anchorEpochDay = group.anchor,
+                                )
+                            }
+                            .toImmutableList()
+                    val defaultGroup = groups.getOrNull(s.defaultGroup) ?: return null
+                    Scheme(
+                        id = SCHEME_ID_BASE + index,
+                        name = s.name,
+                        cycleDays = s.cycleDays,
+                        dayTemplateIds = s.days.map { it.toLong() }.toImmutableList(),
+                        createdAt = SCHEME_ID_BASE + index,
+                        groups = groups,
+                        defaultGroupId = defaultGroup.id,
+                    )
+                }
+                .toImmutableList()
         return PlanShare(
-            templates = templates,
-            schemes = schemes,
-            activeSchemeId = compact.active?.let { schemes.getOrNull(it)?.id },
-        ).takeIf { it.isValid() }
+                templates = templates,
+                schemes = schemes,
+                activeSchemeId = compact.active?.let { schemes.getOrNull(it)?.id },
+            )
+            .takeIf { it.isValid() }
     }
 
     /**
@@ -156,12 +174,15 @@ object PlanShareCodec {
         if (text.length > MAX_INPUT_CHARS) return null
         val marker = text.indexOf(PAYLOAD_PREFIX)
         if (marker >= 0) {
-            val token = text.substring(marker + PAYLOAD_PREFIX.length).takeWhile { !it.isWhitespace() }
+            val token =
+                text.substring(marker + PAYLOAD_PREFIX.length).takeWhile { !it.isWhitespace() }
             return decodePayload(token)
         }
-        val surrogate = runCatching {
-            fullJson.decodeFromString<PlanShareSurrogate>(text.trim())
-        }.getOrNull() ?: return null
+        val surrogate =
+            runCatching {
+                fullJson.decodeFromString<PlanShareSurrogate>(text.trim())
+            }
+                .getOrNull() ?: return null
         return surrogate.toPlanShare().takeIf { it.isValid() }
     }
 
@@ -202,13 +223,15 @@ object PlanShareCodec {
         } finally {
             inflater.end()
         }
-    }.getOrNull()
+    }
+        .getOrNull()
 
     private fun CompactPlan.isValid(): Boolean {
         if (templates.isEmpty() && schemes.isEmpty()) return false
         if (templates.size > MAX_TEMPLATES || schemes.size > MAX_SCHEMES) return false
         if (active != null && active !in schemes.indices) return false
-        if (templates.any { !validName(it.name) || it.start !in 0..1439 || it.end !in 0..1439 }) return false
+        if (templates.any { !validName(it.name) || it.start !in 0..1439 || it.end !in 0..1439 })
+            return false
         return schemes.all { scheme ->
             validName(scheme.name) &&
                 scheme.cycleDays in 1..99 &&
@@ -225,9 +248,12 @@ object PlanShareCodec {
         if (templates.size > MAX_TEMPLATES || schemes.size > MAX_SCHEMES) return false
         val templateIds = templates.map { it.id }
         if (templateIds.toSet().size != templateIds.size) return false
-        if (templates.any {
+        if (
+            templates.any {
                 !validName(it.name) || it.startMinute !in 0..1439 || it.endMinute !in 0..1439
-            }) return false
+            }
+        )
+            return false
         val schemeIds = schemes.map { it.id }
         if (schemeIds.toSet().size != schemeIds.size) return false
         if (activeSchemeId != null && activeSchemeId !in schemeIds) return false
@@ -245,7 +271,8 @@ object PlanShareCodec {
         }
     }
 
-    private fun validName(name: String): Boolean = name.isNotBlank() && name.length <= MAX_NAME_LENGTH
+    private fun validName(name: String): Boolean =
+        name.isNotBlank() && name.length <= MAX_NAME_LENGTH
 }
 
 @Serializable
@@ -254,18 +281,20 @@ private data class PlanShareSurrogate(
     val schemes: List<Scheme> = emptyList(),
     val activeSchemeId: Long? = null,
 ) {
-    fun toPlanShare(): PlanShare = PlanShare(
-        templates = templates.toImmutableList(),
-        schemes = schemes.toImmutableList(),
-        activeSchemeId = activeSchemeId,
-    )
+    fun toPlanShare(): PlanShare =
+        PlanShare(
+            templates = templates.toImmutableList(),
+            schemes = schemes.toImmutableList(),
+            activeSchemeId = activeSchemeId,
+        )
 
     companion object {
-        fun from(payload: PlanShare): PlanShareSurrogate = PlanShareSurrogate(
-            templates = payload.templates,
-            schemes = payload.schemes,
-            activeSchemeId = payload.activeSchemeId,
-        )
+        fun from(payload: PlanShare): PlanShareSurrogate =
+            PlanShareSurrogate(
+                templates = payload.templates,
+                schemes = payload.schemes,
+                activeSchemeId = payload.activeSchemeId,
+            )
     }
 }
 

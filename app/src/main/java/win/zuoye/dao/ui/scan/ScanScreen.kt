@@ -19,8 +19,7 @@ import win.zuoye.dao.R
 /**
  * 扫码页：相机预览铺满整屏（含状态栏区域），只把返回键浮在左上角，不占可见高度。
  *
- * 预览视图由 [ScanCaptureActivity] 建好传进来，这里只负责摆位。
- * 取景框外的区域本来就被压暗了一层，白箭头看得清，不用再加底。
+ * 预览视图由 [ScanCaptureActivity] 建好传进来，这里只负责摆位。 取景框外的区域本来就被压暗了一层，白箭头看得清，不用再加底。
  */
 @Composable
 fun ScanScreen(

@@ -3,26 +3,37 @@ package win.zuoye.dao.data
 import kotlinx.serialization.Serializable
 
 /**
- * 纯数学实现的公历日期（minSdk 24 下避开 java.time desugaring）。
- * epochDay 与 java.time.LocalDate.toEpochDay() 完全一致（1970-01-01 = 0）。
+ * 纯数学实现的公历日期（minSdk 24 下避开 java.time desugaring）。 epochDay 与 java.time.LocalDate.toEpochDay()
+ * 完全一致（1970-01-01 = 0）。
  */
 @Serializable
 data class Ymd(val year: Int, val month: Int, val day: Int) {
 
-    val epochDay: Long get() = ymdToEpochDay(year, month, day)
+    val epochDay: Long
+        get() = ymdToEpochDay(year, month, day)
 
     /** 0 = 周一 ... 6 = 周日（1970-01-01 为周四 → floorMod(epochDay + 3, 7)） */
-    val weekdayIndex: Int get() = Math.floorMod(epochDay + 3, 7)
+    val weekdayIndex: Int
+        get() = Math.floorMod(epochDay + 3, 7)
 
     companion object {
-        fun daysInMonth(year: Int, month: Int): Int = when (month) {
-            1, 3, 5, 7, 8, 10, 12 -> 31
-            4, 6, 9, 11 -> 30
-            else -> if (isLeapYear(year)) 29 else 28
-        }
+        fun daysInMonth(year: Int, month: Int): Int =
+            when (month) {
+                1,
+                3,
+                5,
+                7,
+                8,
+                10,
+                12 -> 31
+                4,
+                6,
+                9,
+                11 -> 30
+                else -> if (isLeapYear(year)) 29 else 28
+            }
 
-        fun isLeapYear(year: Int): Boolean =
-            (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+        fun isLeapYear(year: Int): Boolean = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 
         fun fromEpochDay(epochDay: Long): Ymd {
             val z = epochDay + 719468

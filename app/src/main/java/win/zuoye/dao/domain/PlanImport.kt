@@ -16,8 +16,8 @@ data class ImportResult(
     val schemesSkipped: Int = 0,
     val activated: Boolean = false,
 ) {
-    val changed: Boolean get() = templatesAdded > 0 || schemesAdded > 0
-
+    val changed: Boolean
+        get() = templatesAdded > 0 || schemesAdded > 0
 }
 
 /**
@@ -83,38 +83,41 @@ fun PlanDocument.importPlan(
             return@forEach
         }
         val id = newId()
-        mergedSchemes = mergedSchemes.add(
-            incoming.copy(
-                id = id,
-                name = uniqueName(incoming.name, usedNames),
-                dayTemplateIds = dayIds.toImmutableList(),
-                groups = incomingGroups.toImmutableList(),
-                defaultGroupId = incomingDefaultGroup.id,
-                createdAt = now + schemesAdded,
-            ),
-        )
+        mergedSchemes =
+            mergedSchemes.add(
+                incoming.copy(
+                    id = id,
+                    name = uniqueName(incoming.name, usedNames),
+                    dayTemplateIds = dayIds.toImmutableList(),
+                    groups = incomingGroups.toImmutableList(),
+                    defaultGroupId = incomingDefaultGroup.id,
+                    createdAt = now + schemesAdded,
+                )
+            )
         schemeIdMap[incoming.id] = id
         schemesAdded++
     }
 
     // ---- 启用方案 ----
-    val importedActiveId = payload.activeSchemeId
-        ?.let { schemeIdMap[it] }
-        ?: payload.schemes.firstOrNull()?.let { schemeIdMap[it.id] }
+    val importedActiveId =
+        payload.activeSchemeId?.let { schemeIdMap[it] }
+            ?: payload.schemes.firstOrNull()?.let { schemeIdMap[it.id] }
     val activated = activeSchemeId == null && importedActiveId != null
 
-    val merged = copy(
-        templates = mergedTemplates,
-        schemes = mergedSchemes,
-        activeSchemeId = if (activated) importedActiveId else activeSchemeId,
-    )
-    return merged to ImportResult(
-        templatesAdded = templatesAdded,
-        templatesReused = templatesReused,
-        schemesAdded = schemesAdded,
-        schemesSkipped = schemesSkipped,
-        activated = activated,
-    )
+    val merged =
+        copy(
+            templates = mergedTemplates,
+            schemes = mergedSchemes,
+            activeSchemeId = if (activated) importedActiveId else activeSchemeId,
+        )
+    return merged to
+        ImportResult(
+            templatesAdded = templatesAdded,
+            templatesReused = templatesReused,
+            schemesAdded = schemesAdded,
+            schemesSkipped = schemesSkipped,
+            activated = activated,
+        )
 }
 
 private fun ShiftTemplate.sameContentAs(other: ShiftTemplate): Boolean =
@@ -124,16 +127,17 @@ private fun ShiftTemplate.sameContentAs(other: ShiftTemplate): Boolean =
         colorArgb == other.colorArgb &&
         isRest == other.isRest
 
-private fun List<SchemeGroup>.sameGroupConfigAs(
-    other: List<SchemeGroup>,
-): Boolean = size == other.size && zip(other).all { (left, right) ->
-    left.name == right.name && left.anchorEpochDay == right.anchorEpochDay
-}
+private fun List<SchemeGroup>.sameGroupConfigAs(other: List<SchemeGroup>): Boolean =
+    size == other.size &&
+        zip(other).all { (left, right) ->
+            left.name == right.name && left.anchorEpochDay == right.anchorEpochDay
+        }
 
-private fun SchemeGroup?.sameGroupConfigAs(other: SchemeGroup?): Boolean = when {
-    this == null || other == null -> this == other
-    else -> name == other.name && anchorEpochDay == other.anchorEpochDay
-}
+private fun SchemeGroup?.sameGroupConfigAs(other: SchemeGroup?): Boolean =
+    when {
+        this == null || other == null -> this == other
+        else -> name == other.name && anchorEpochDay == other.anchorEpochDay
+    }
 
 private fun uniqueName(base: String, used: MutableSet<String>): String {
     if (used.add(base)) return base

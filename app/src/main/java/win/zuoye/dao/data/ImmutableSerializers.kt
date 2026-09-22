@@ -9,14 +9,12 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
 /**
- * kotlinx.serialization 没有给 kotlinx.collections.immutable 的集合提供序列化器：
- * 直接给接口类型（`ImmutableList` / `ImmutableMap`）挂 `@Serializable` 只会拿到一个
- * 多态序列化器，写盘时就抛 `SerializationException: Serializer for subclass … is not found`。
+ * kotlinx.serialization 没有给 kotlinx.collections.immutable 的集合提供序列化器： 直接给接口类型（`ImmutableList` /
+ * `ImmutableMap`）挂 `@Serializable` 只会拿到一个 多态序列化器，写盘时就抛 `SerializationException: Serializer for
+ * subclass … is not found`。
  *
- * 所以这里给持久化类型各配一个"代理"序列化器：**线上格式不变**（还是普通数组/对象），
- * 只在编解码边界把普通集合和不可变集合互转。数据模型可以全程用不可变类型（可 skip 的状态）。
+ * 所以这里给持久化类型各配一个"代理"序列化器：**线上格式不变**（还是普通数组/对象）， 只在编解码边界把普通集合和不可变集合互转。数据模型可以全程用不可变类型（可 skip 的状态）。
  */
-
 @Serializable
 private class SchemeSurrogate(
     val id: Long,

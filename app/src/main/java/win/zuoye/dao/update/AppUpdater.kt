@@ -51,87 +51,96 @@ object AppUpdater : UpdateChecker {
     override suspend fun checkForUpdate(
         currentVersionName: String,
         channel: UpdateChannel,
-    ): UpdateInfo? = withContext(Dispatchers.IO) {
-        val response = requestText(channel.resolve(latestReleaseUrl))
-        val release = json.decodeFromString<ReleaseResponse>(response)
-        val versionName = release.tagName.removePrefix("v").removePrefix("V")
-        if (!isNewerVersion(versionName, currentVersionName)) return@withContext null
+    ): UpdateInfo? =
+        withContext(Dispatchers.IO) {
+            val response = requestText(channel.resolve(latestReleaseUrl))
+            val release = json.decodeFromString<ReleaseResponse>(response)
+            val versionName = release.tagName.removePrefix("v").removePrefix("V")
+            if (!isNewerVersion(versionName, currentVersionName)) return@withContext null
 
-        val asset = release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
-            ?: throw IOException("The latest release does not contain an APK")
-        UpdateInfo(
-            versionName = versionName,
-            releaseNotes = release.body.trim(),
-            downloadUrl = channel.resolve(asset.browserDownloadUrl),
-            sha256 = asset.digest
-                ?.takeIf { it.startsWith("sha256:", ignoreCase = true) }
-                ?.substringAfter(':'),
-        )
-    }
+            val asset =
+                release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
+                    ?: throw IOException("The latest release does not contain an APK")
+            UpdateInfo(
+                versionName = versionName,
+                releaseNotes = release.body.trim(),
+                downloadUrl = channel.resolve(asset.browserDownloadUrl),
+                sha256 =
+                    asset.digest
+                        ?.takeIf { it.startsWith("sha256:", ignoreCase = true) }
+                        ?.substringAfter(':'),
+            )
+        }
 
     suspend fun downloadApk(
         context: Context,
         update: UpdateInfo,
         onProgress: suspend (Int?) -> Unit,
-    ): File = withContext(Dispatchers.IO) {
-        val directory = File(context.cacheDir, "updates").apply { mkdirs() }
-        val target = File(directory, "Dao-${update.versionName}.apk")
-        val temporary = File(directory, "Dao-${update.versionName}.download")
-        val connection = openConnection(update.downloadUrl)
-        try {
-            val totalBytes = connection.contentLengthLong.takeIf { it > 0L }
-            val digest = MessageDigest.getInstance("SHA-256")
-            var copiedBytes = 0L
-            var lastProgress: Int? = null
-            connection.inputStream.buffered().use { input ->
-                FileOutputStream(temporary).buffered().use { output ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        output.write(buffer, 0, count)
-                        digest.update(buffer, 0, count)
-                        copiedBytes += count
-                        val progress = totalBytes?.let { ((copiedBytes * 100L) / it).toInt().coerceAtMost(100) }
-                        if (progress != lastProgress) {
-                            lastProgress = progress
-                            withContext(Dispatchers.Main.immediate) { onProgress(progress) }
+    ): File =
+        withContext(Dispatchers.IO) {
+            val directory = File(context.cacheDir, "updates").apply { mkdirs() }
+            val target = File(directory, "Dao-${update.versionName}.apk")
+            val temporary = File(directory, "Dao-${update.versionName}.download")
+            val connection = openConnection(update.downloadUrl)
+            try {
+                val totalBytes = connection.contentLengthLong.takeIf { it > 0L }
+                val digest = MessageDigest.getInstance("SHA-256")
+                var copiedBytes = 0L
+                var lastProgress: Int? = null
+                connection.inputStream.buffered().use { input ->
+                    FileOutputStream(temporary).buffered().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            output.write(buffer, 0, count)
+                            digest.update(buffer, 0, count)
+                            copiedBytes += count
+                            val progress = totalBytes?.let {
+                                ((copiedBytes * 100L) / it).toInt().coerceAtMost(100)
+                            }
+                            if (progress != lastProgress) {
+                                lastProgress = progress
+                                withContext(Dispatchers.Main.immediate) { onProgress(progress) }
+                            }
                         }
                     }
                 }
-            }
-            val actualSha256 = digest.digest().joinToString("") { "%02x".format(it) }
-            if (update.sha256 != null && !actualSha256.equals(update.sha256, ignoreCase = true)) {
+                val actualSha256 = digest.digest().joinToString("") { "%02x".format(it) }
+                if (
+                    update.sha256 != null && !actualSha256.equals(update.sha256, ignoreCase = true)
+                ) {
+                    temporary.delete()
+                    throw IOException("Downloaded APK checksum does not match the release")
+                }
+                if (target.exists() && !target.delete()) {
+                    throw IOException("Could not replace the cached APK")
+                }
+                if (!temporary.renameTo(target)) {
+                    throw IOException("Could not finish the APK download")
+                }
+                target
+            } catch (error: Throwable) {
                 temporary.delete()
-                throw IOException("Downloaded APK checksum does not match the release")
+                throw error
+            } finally {
+                connection.disconnect()
             }
-            if (target.exists() && !target.delete()) {
-                throw IOException("Could not replace the cached APK")
-            }
-            if (!temporary.renameTo(target)) {
-                throw IOException("Could not finish the APK download")
-            }
-            target
-        } catch (error: Throwable) {
-            temporary.delete()
-            throw error
-        } finally {
-            connection.disconnect()
         }
-    }
 
     fun installApk(context: Context, apk: File) {
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            apk,
-        )
+        val uri =
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                apk,
+            )
         context.startActivity(
             Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
+            }
         )
     }
 
@@ -162,20 +171,21 @@ object AppUpdater : UpdateChecker {
 }
 
 internal fun isNewerVersion(candidate: String, current: String): Boolean {
-    fun components(value: String): List<Int> = value
-        .removePrefix("v")
-        .removePrefix("V")
-        .substringBefore('-')
-        .substringBefore('+')
-        .split('.')
-        .map { it.toIntOrNull() ?: return emptyList() }
+    fun components(value: String): List<Int> =
+        value
+            .removePrefix("v")
+            .removePrefix("V")
+            .substringBefore('-')
+            .substringBefore('+')
+            .split('.')
+            .map { it.toIntOrNull() ?: return emptyList() }
 
     val candidateParts = components(candidate)
     val currentParts = components(current)
     if (candidateParts.isEmpty() || currentParts.isEmpty()) return false
     repeat(maxOf(candidateParts.size, currentParts.size)) { index ->
-        val comparison = candidateParts.getOrElse(index) { 0 }
-            .compareTo(currentParts.getOrElse(index) { 0 })
+        val comparison =
+            candidateParts.getOrElse(index) { 0 }.compareTo(currentParts.getOrElse(index) { 0 })
         if (comparison != 0) return comparison > 0
     }
     return false

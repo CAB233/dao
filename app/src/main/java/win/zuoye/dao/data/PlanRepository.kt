@@ -6,18 +6,21 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
 
 object PlanDocumentSerializer : Serializer<PlanDocument> {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     override val defaultValue: PlanDocument = PlanDocument()
 
@@ -37,7 +40,9 @@ object PlanDocumentSerializer : Serializer<PlanDocument> {
 interface PlanStore {
     val document: Flow<PlanDocument>
     val corruptionRecovery: StateFlow<String?>
+
     suspend fun update(transform: (PlanDocument) -> PlanDocument)
+
     fun acknowledgeCorruptionRecovery()
 }
 
@@ -46,14 +51,18 @@ class PlanRepository private constructor(context: Context) : PlanStore {
     private val planFile = File(context.filesDir, PLAN_FILE_NAME)
     private val _corruptionRecovery = MutableStateFlow<String?>(null)
 
-    private val store: DataStore<PlanDocument> = DataStoreFactory.create(
-        serializer = PlanDocumentSerializer,
-        corruptionHandler = ReplaceFileCorruptionHandler {
-            val backup = backupCorruptPlan(planFile)
-            _corruptionRecovery.value = backup?.name.orEmpty()
-            PlanDocumentSerializer.defaultValue
-        },
-    ) { planFile }
+    private val store: DataStore<PlanDocument> =
+        DataStoreFactory.create(
+            serializer = PlanDocumentSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    val backup = backupCorruptPlan(planFile)
+                    _corruptionRecovery.value = backup?.name.orEmpty()
+                    PlanDocumentSerializer.defaultValue
+                },
+        ) {
+            planFile
+        }
 
     override val document: Flow<PlanDocument> = store.data
     override val corruptionRecovery: StateFlow<String?> = _corruptionRecovery.asStateFlow()
@@ -69,13 +78,13 @@ class PlanRepository private constructor(context: Context) : PlanStore {
     companion object {
         private const val PLAN_FILE_NAME = "plan.json"
 
-        @Volatile
-        private var instance: PlanRepository? = null
+        @Volatile private var instance: PlanRepository? = null
 
         fun get(context: Context): PlanRepository =
-            instance ?: synchronized(this) {
-                instance ?: PlanRepository(context.applicationContext).also { instance = it }
-            }
+            instance
+                ?: synchronized(this) {
+                    instance ?: PlanRepository(context.applicationContext).also { instance = it }
+                }
     }
 }
 

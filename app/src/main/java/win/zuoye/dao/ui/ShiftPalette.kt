@@ -15,20 +15,21 @@ object ShiftPalette {
     val statusCardLightBackground: Color = Color(0xFFDFFAE4)
     val statusCardDarkBackground: Color = Color(0xFF1A3825)
 
-    val presets: List<Int> = listOf(
-        0xFFE53935.toInt(), // 红
-        0xFFFB8C00.toInt(), // 橙
-        0xFFFDD835.toInt(), // 黄
-        0xFF43A047.toInt(), // 绿
-        0xFF00ACC1.toInt(), // 青
-        0xFF1E88E5.toInt(), // 蓝
-        0xFF3949AB.toInt(), // 靛
-        0xFF8E24AA.toInt(), // 紫
-        0xFFD81B60.toInt(), // 粉
-        0xFF6D4C41.toInt(), // 棕
-        0xFF546E7A.toInt(), // 蓝灰
-        0xFF7CB342.toInt(), // 草绿
-    )
+    val presets: List<Int> =
+        listOf(
+            0xFFE53935.toInt(), // 红
+            0xFFFB8C00.toInt(), // 橙
+            0xFFFDD835.toInt(), // 黄
+            0xFF43A047.toInt(), // 绿
+            0xFF00ACC1.toInt(), // 青
+            0xFF1E88E5.toInt(), // 蓝
+            0xFF3949AB.toInt(), // 靛
+            0xFF8E24AA.toInt(), // 紫
+            0xFFD81B60.toInt(), // 粉
+            0xFF6D4C41.toInt(), // 棕
+            0xFF546E7A.toInt(), // 蓝灰
+            0xFF7CB342.toInt(), // 草绿
+        )
 
     fun color(argb: Int): Color = Color(argb)
 }

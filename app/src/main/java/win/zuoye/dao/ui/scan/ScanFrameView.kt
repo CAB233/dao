@@ -10,12 +10,10 @@ import com.journeyapps.barcodescanner.ViewfinderView
 import win.zuoye.dao.R
 
 /**
- * 取景框：父类 [ViewfinderView] 挖的是**直角**洞，再叠一圈圆角描边的话，
- * 四个角上描边和洞口对不上、会留出缝隙；所以这里不再用父类的遮罩，
+ * 取景框：父类 [ViewfinderView] 挖的是**直角**洞，再叠一圈圆角描边的话， 四个角上描边和洞口对不上、会留出缝隙；所以这里不再用父类的遮罩，
  * 改为自己画：压暗遮罩和白色描边用**同一条圆角路径**，两者严丝合缝。
  *
- * 取景区域仍是父类算好的 `framingRect`（由 `app:zxing_framing_rect_*` 定成正方形），
- * 所以框和真正拿去解码的区域也始终一致。
+ * 取景区域仍是父类算好的 `framingRect`（由 `app:zxing_framing_rect_*` 定成正方形）， 所以框和真正拿去解码的区域也始终一致。
  */
 class ScanFrameView(
     context: Context,
@@ -25,15 +23,14 @@ class ScanFrameView(
     private val density = resources.displayMetrics.density
     private val cornerRadius = CORNER_DP * density
 
-    private val maskPaint = Paint().apply {
-        color = context.getColor(R.color.scan_viewfinder_mask)
-    }
+    private val maskPaint = Paint().apply { color = context.getColor(R.color.scan_viewfinder_mask) }
 
-    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = FRAME_STROKE_DP * density
-        color = context.getColor(R.color.scan_viewfinder_frame)
-    }
+    private val framePaint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = FRAME_STROKE_DP * density
+            color = context.getColor(R.color.scan_viewfinder_frame)
+        }
 
     private val maskPath = Path()
     private val frameRect = RectF()

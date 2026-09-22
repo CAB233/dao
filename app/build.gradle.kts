@@ -1,24 +1,26 @@
 import java.util.Properties
 
 plugins {
+    alias(libs.plugins.ktfmt)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.aboutlibraries)
 }
 
+ktfmt { kotlinLangStyle() }
+
 val keystorePropertiesFile = rootProject.file("keystore.properties")
-val keystoreProperties = Properties().apply {
-    if (keystorePropertiesFile.exists()) {
-        keystorePropertiesFile.inputStream().use { load(it) }
+val keystoreProperties =
+    Properties().apply {
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.inputStream().use { load(it) }
+        }
     }
-}
 
 android {
     namespace = "win.zuoye.dao"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk { version = release(37) }
 
     defaultConfig {
         applicationId = "win.zuoye.dao"
@@ -59,21 +61,15 @@ android {
             // keystore.properties 缺失时为 null，产物保持未签名
             signingConfig = sharedSigningConfig
             vcsInfo.include = false
-            optimization {
-                enable = true
-            }
+            optimization { enable = true }
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    buildFeatures {
-        compose = true
-    }
-    androidResources {
-        generateLocaleConfig = true
-    }
+    buildFeatures { compose = true }
+    androidResources { generateLocaleConfig = true }
 }
 
 androidComponents {
@@ -82,18 +78,16 @@ androidComponents {
     }
     onVariants { variant ->
         variant.outputs.forEach { output ->
-            output.outputFileName.set(output.versionName.map { versionName ->
-                "Dao-$versionName-${variant.buildType}.apk"
-            })
+            output.outputFileName.set(
+                output.versionName.map { versionName ->
+                    "Dao-$versionName-${variant.buildType}.apk"
+                }
+            )
         }
     }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))

@@ -1,10 +1,7 @@
 package win.zuoye.dao.ui.settings
 
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -26,6 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -38,11 +38,11 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.R
 import win.zuoye.dao.data.CalendarViewMode
+import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.data.UpdateChannel
-import win.zuoye.dao.R
 import win.zuoye.dao.ui.about.appVersionName
 import win.zuoye.dao.update.UpdateInfo
 
@@ -80,100 +80,101 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = stringResource(R.string.nav_settings)) },
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        contentWindowInsets =
+            WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             Column(
-                Modifier
-                    .widthIn(max = 720.dp)
+                Modifier.widthIn(max = 720.dp)
                     .fillMaxSize()
                     .align(Alignment.TopCenter)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
             ) {
-            // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
-            Spacer(Modifier.height(12.dp))
-            if (updateInfo != null) {
+                // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
+                Spacer(Modifier.height(12.dp))
+                if (updateInfo != null) {
+                    Card(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
+                    ) {
+                        BasicComponent(
+                            title = stringResource(R.string.update_available_title),
+                            summary =
+                                stringResource(
+                                    R.string.settings_update_available_summary,
+                                    updateInfo.versionName,
+                                ),
+                            endActions = {
+                                TextButton(
+                                    text = stringResource(R.string.action_download),
+                                    onClick = onDownloadUpdate,
+                                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                                )
+                            },
+                        )
+                    }
+                }
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                    BasicComponent(
-                        title = stringResource(R.string.update_available_title),
-                        summary = stringResource(
-                            R.string.settings_update_available_summary,
-                            updateInfo.versionName,
-                        ),
-                        endActions = {
-                            TextButton(
-                                text = stringResource(R.string.action_download),
-                                onClick = onDownloadUpdate,
-                                colors = ButtonDefaults.textButtonColorsPrimary(),
-                            )
+                    OverlayDropdownPreference(
+                        title = stringResource(R.string.settings_theme_mode),
+                        summary = stringResource(R.string.settings_theme_mode_summary),
+                        items = themeModeOptions.toList(),
+                        selectedIndex = themeModes.indexOf(doc.themeMode),
+                        onSelectedIndexChange = { index ->
+                            themeModes.getOrNull(index)?.let(onThemeModeChange)
                         },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OverlayDropdownPreference(
+                        title = stringResource(R.string.settings_week_start),
+                        summary = stringResource(R.string.settings_week_start_summary),
+                        items = weekdays.toList(),
+                        selectedIndex = weekStartDay,
+                        onSelectedIndexChange = onWeekStartDayChange,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OverlayDropdownPreference(
+                        title = stringResource(R.string.settings_calendar_view),
+                        summary = stringResource(R.string.settings_calendar_view_summary),
+                        items = calendarViewOptions.toList(),
+                        selectedIndex = calendarViewModes.indexOf(doc.calendarViewMode),
+                        onSelectedIndexChange = { index ->
+                            calendarViewModes.getOrNull(index)?.let(onCalendarViewModeChange)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            }
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                OverlayDropdownPreference(
-                    title = stringResource(R.string.settings_theme_mode),
-                    summary = stringResource(R.string.settings_theme_mode_summary),
-                    items = themeModeOptions.toList(),
-                    selectedIndex = themeModes.indexOf(doc.themeMode),
-                    onSelectedIndexChange = { index ->
-                        themeModes.getOrNull(index)?.let(onThemeModeChange)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OverlayDropdownPreference(
-                    title = stringResource(R.string.settings_week_start),
-                    summary = stringResource(R.string.settings_week_start_summary),
-                    items = weekdays.toList(),
-                    selectedIndex = weekStartDay,
-                    onSelectedIndexChange = onWeekStartDayChange,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OverlayDropdownPreference(
-                    title = stringResource(R.string.settings_calendar_view),
-                    summary = stringResource(R.string.settings_calendar_view_summary),
-                    items = calendarViewOptions.toList(),
-                    selectedIndex = calendarViewModes.indexOf(doc.calendarViewMode),
-                    onSelectedIndexChange = { index ->
-                        calendarViewModes.getOrNull(index)?.let(onCalendarViewModeChange)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                BasicComponent(
-                    title = stringResource(R.string.settings_check_updates),
-                    summary = stringResource(R.string.settings_check_updates_summary),
-                    endActions = {
-                        Switch(
-                            checked = doc.checkUpdatesOnLaunch,
-                            onCheckedChange = onCheckUpdatesOnLaunchChange,
-                        )
-                    },
-                    onClick = {
-                        onCheckUpdatesOnLaunchChange(!doc.checkUpdatesOnLaunch)
-                    },
-                )
-                OverlayDropdownPreference(
-                    title = stringResource(R.string.settings_update_channel),
-                    summary = stringResource(R.string.settings_update_channel_summary),
-                    items = updateChannelOptions.toList(),
-                    selectedIndex = updateChannels.indexOf(doc.updateChannel),
-                    onSelectedIndexChange = { index ->
-                        updateChannels.getOrNull(index)?.let(onUpdateChannelChange)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                    BasicComponent(
+                        title = stringResource(R.string.settings_check_updates),
+                        summary = stringResource(R.string.settings_check_updates_summary),
+                        endActions = {
+                            Switch(
+                                checked = doc.checkUpdatesOnLaunch,
+                                onCheckedChange = onCheckUpdatesOnLaunchChange,
+                            )
+                        },
+                        onClick = { onCheckUpdatesOnLaunchChange(!doc.checkUpdatesOnLaunch) },
+                    )
+                    OverlayDropdownPreference(
+                        title = stringResource(R.string.settings_update_channel),
+                        summary = stringResource(R.string.settings_update_channel_summary),
+                        items = updateChannelOptions.toList(),
+                        selectedIndex = updateChannels.indexOf(doc.updateChannel),
+                        onSelectedIndexChange = { index ->
+                            updateChannels.getOrNull(index)?.let(onUpdateChannelChange)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                BasicComponent(
-                    title = stringResource(R.string.settings_about),
-                    summary = stringResource(R.string.version_text, versionName),
-                    endActions = { Chevron() },
-                    onClick = onOpenAbout,
-                )
-            }
+                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+                    BasicComponent(
+                        title = stringResource(R.string.settings_about),
+                        summary = stringResource(R.string.version_text, versionName),
+                        endActions = { Chevron() },
+                        onClick = onOpenAbout,
+                    )
+                }
                 Spacer(Modifier.height(24.dp))
             }
         }

@@ -1,40 +1,18 @@
 package win.zuoye.dao.ui.scheme
 
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.graphics.SolidColor
-import top.yukonga.miuix.kmp.squircle.squircleBackground
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.runtime.DisposableEffect
-import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.ColorPalette
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Switch
-import win.zuoye.dao.ui.ShiftPalette
-import top.yukonga.miuix.kmp.basic.TabRowDefaults
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.clickable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,8 +22,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -53,34 +32,46 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
@@ -89,35 +80,44 @@ import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.ColorPalette
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.TabRowDefaults
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
+import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
+import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.data.primaryAnchorEpochDay
+import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.onboarding.AssignmentRow
 import win.zuoye.dao.ui.onboarding.DeleteTemplateDialog
 import win.zuoye.dao.ui.onboarding.TemplatePickDialog
@@ -138,13 +138,14 @@ fun SchemeEditScreen(
 ) {
     val defaultGroupNames = (1..99).map { stringResource(R.string.default_group_name, it) }
     val isNewScheme = remember(scheme.id) { doc.schemes.none { it.id == scheme.id } }
-    val initialDraft = remember(scheme.id) {
-        if (isNewScheme) {
-            doc.copy(schemes = doc.schemes.toPersistentList().add(scheme))
-        } else {
-            doc
+    val initialDraft =
+        remember(scheme.id) {
+            if (isNewScheme) {
+                doc.copy(schemes = doc.schemes.toPersistentList().add(scheme))
+            } else {
+                doc
+            }
         }
-    }
     var draftDocument by remember(scheme.id) { mutableStateOf(initialDraft) }
     val draftScheme = draftDocument.schemes.first { it.id == scheme.id }
 
@@ -153,15 +154,19 @@ fun SchemeEditScreen(
     fun saveAndExit() {
         if (draftScheme.name.isBlank()) return
         val normalizedName = draftScheme.name.trim()
-        val savedDocument = if (normalizedName == draftScheme.name) {
-            draftDocument
-        } else {
-            draftDocument.copy(
-                schemes = draftDocument.schemes.map {
-                    if (it.id == draftScheme.id) it.copy(name = normalizedName) else it
-                }.toImmutableList(),
-            )
-        }
+        val savedDocument =
+            if (normalizedName == draftScheme.name) {
+                draftDocument
+            } else {
+                draftDocument.copy(
+                    schemes =
+                        draftDocument.schemes
+                            .map {
+                                if (it.id == draftScheme.id) it.copy(name = normalizedName) else it
+                            }
+                            .toImmutableList()
+                )
+            }
         onSave(savedDocument)
     }
 
@@ -174,21 +179,20 @@ fun SchemeEditScreen(
     var cycleText by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
     var showCycleDialog by remember { mutableStateOf(false) }
     var cycleDraft by rememberSaveable(scheme.id) { mutableStateOf(scheme.cycleDays.toString()) }
-    var groupCountText by rememberSaveable(scheme.id) {
-        mutableStateOf(scheme.groups.size.toString())
-    }
+    var groupCountText by
+        rememberSaveable(scheme.id) { mutableStateOf(scheme.groups.size.toString()) }
     var showGroupCountDialog by remember { mutableStateOf(false) }
-    var groupCountDraft by rememberSaveable(scheme.id) {
-        mutableStateOf(scheme.groups.size.toString())
-    }
+    var groupCountDraft by
+        rememberSaveable(scheme.id) { mutableStateOf(scheme.groups.size.toString()) }
     var showDefaultGroupDialog by remember { mutableStateOf(false) }
     var showGroupEditor by remember { mutableStateOf(false) }
     var showGroupAnchorDialog by remember { mutableStateOf(false) }
     var editingGroupIndex by rememberSaveable(scheme.id) { mutableIntStateOf(-1) }
     var groupNameDraft by rememberSaveable(scheme.id) { mutableStateOf("") }
-    var groupAnchorEpochDay by rememberSaveable(scheme.id) {
-        mutableLongStateOf(scheme.primaryAnchorEpochDay() ?: Ymd.today().epochDay)
-    }
+    var groupAnchorEpochDay by
+        rememberSaveable(scheme.id) {
+            mutableLongStateOf(scheme.primaryAnchorEpochDay() ?: Ymd.today().epochDay)
+        }
     var showEditor by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<ShiftTemplate?>(null) }
     var deleteTemplate by remember { mutableStateOf<ShiftTemplate?>(null) }
@@ -215,11 +219,13 @@ fun SchemeEditScreen(
     val defaultGroup = draftScheme.defaultGroup()
 
     fun updateScheme(transform: (Scheme) -> Scheme) {
-        draftDocument = draftDocument.copy(
-            schemes = draftDocument.schemes.map {
-                if (it.id == draftScheme.id) transform(it) else it
-            }.toImmutableList(),
-        )
+        draftDocument =
+            draftDocument.copy(
+                schemes =
+                    draftDocument.schemes
+                        .map { if (it.id == draftScheme.id) transform(it) else it }
+                        .toImmutableList()
+            )
     }
 
     fun updateCycle(input: String) {
@@ -228,9 +234,9 @@ fun SchemeEditScreen(
         updateScheme { current ->
             current.copy(
                 cycleDays = days,
-                dayTemplateIds = List(days) { index ->
-                    current.dayTemplateIds.getOrNull(index) ?: UNASSIGNED
-                }.toImmutableList(),
+                dayTemplateIds =
+                    List(days) { index -> current.dayTemplateIds.getOrNull(index) ?: UNASSIGNED }
+                        .toImmutableList(),
             )
         }
     }
@@ -240,16 +246,19 @@ fun SchemeEditScreen(
         groupCountText = count.toString()
         updateScheme { current ->
             val existing = current.groups
-            val next = List(count) { index ->
-                existing.getOrNull(index) ?: SchemeGroup(
-                    id = System.currentTimeMillis() + index,
-                    name = defaultGroupNames[index],
-                    anchorEpochDay = existing.firstOrNull()?.anchorEpochDay
-                        ?: Ymd.today().epochDay,
-                )
-            }.toImmutableList()
-            val defaultGroupId = next.firstOrNull { it.id == current.defaultGroupId }?.id
-                ?: next.first().id
+            val next =
+                List(count) { index ->
+                        existing.getOrNull(index)
+                            ?: SchemeGroup(
+                                id = System.currentTimeMillis() + index,
+                                name = defaultGroupNames[index],
+                                anchorEpochDay =
+                                    existing.firstOrNull()?.anchorEpochDay ?: Ymd.today().epochDay,
+                            )
+                    }
+                    .toImmutableList()
+            val defaultGroupId =
+                next.firstOrNull { it.id == current.defaultGroupId }?.id ?: next.first().id
             current.copy(
                 groups = next,
                 defaultGroupId = defaultGroupId,
@@ -279,15 +288,18 @@ fun SchemeEditScreen(
         if (index < 0 || name.isEmpty()) return
         updateScheme { current ->
             val existing = current.groups
-            val next = existing.mapIndexed { groupIndex, group ->
-                if (groupIndex == index) {
-                    group.copy(name = name, anchorEpochDay = groupAnchorEpochDay)
-                } else {
-                    group
-                }
-            }.toImmutableList()
-            val defaultGroupId = next.firstOrNull { it.id == current.defaultGroupId }?.id
-                ?: next.first().id
+            val next =
+                existing
+                    .mapIndexed { groupIndex, group ->
+                        if (groupIndex == index) {
+                            group.copy(name = name, anchorEpochDay = groupAnchorEpochDay)
+                        } else {
+                            group
+                        }
+                    }
+                    .toImmutableList()
+            val defaultGroupId =
+                next.firstOrNull { it.id == current.defaultGroupId }?.id ?: next.first().id
             current.copy(
                 groups = next,
                 defaultGroupId = defaultGroupId,
@@ -296,15 +308,20 @@ fun SchemeEditScreen(
         showGroupEditor = false
     }
 
-    val canContinueOnboarding = when (tabIndex) {
-        0 -> draftDocument.templates.isNotEmpty()
-        1 -> draftScheme.cycleDays in 1..99 &&
-            draftScheme.dayTemplateIds.size == draftScheme.cycleDays &&
-            draftScheme.dayTemplateIds.all { id -> draftDocument.templates.any { it.id == id } }
-        else -> draftScheme.name.isNotBlank() &&
-            draftScheme.groups.isNotEmpty() &&
-            draftScheme.defaultGroup() != null
-    }
+    val canContinueOnboarding =
+        when (tabIndex) {
+            0 -> draftDocument.templates.isNotEmpty()
+            1 ->
+                draftScheme.cycleDays in 1..99 &&
+                    draftScheme.dayTemplateIds.size == draftScheme.cycleDays &&
+                    draftScheme.dayTemplateIds.all { id ->
+                        draftDocument.templates.any { it.id == id }
+                    }
+            else ->
+                draftScheme.name.isNotBlank() &&
+                    draftScheme.groups.isNotEmpty() &&
+                    draftScheme.defaultGroup() != null
+        }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -331,7 +348,9 @@ fun SchemeEditScreen(
                             Icon(
                                 imageVector = MiuixIcons.Regular.Ok,
                                 contentDescription = stringResource(R.string.action_save),
-                                tint = if (draftScheme.name.isNotBlank()) MiuixTheme.colorScheme.onSurface
+                                tint =
+                                    if (draftScheme.name.isNotBlank())
+                                        MiuixTheme.colorScheme.onSurface
                                     else MiuixTheme.colorScheme.disabledOnSurface,
                             )
                         }
@@ -342,8 +361,7 @@ fun SchemeEditScreen(
         bottomBar = {
             if (onboardingMode) {
                 Row(
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .navigationBarsPadding()
                         .padding(horizontal = 12.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -359,7 +377,11 @@ fun SchemeEditScreen(
                         colors = ButtonDefaults.buttonColorsPrimary(),
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(stringResource(if (tabIndex == 2) R.string.action_done else R.string.action_next))
+                        Text(
+                            stringResource(
+                                if (tabIndex == 2) R.string.action_done else R.string.action_next
+                            )
+                        )
                     }
                 }
             }
@@ -374,7 +396,10 @@ fun SchemeEditScreen(
                         exit = fadeOut() + scaleOut(targetScale = 0.8f),
                     ) {
                         FloatingActionButton(
-                            onClick = { editingTemplate = null; showEditor = true },
+                            onClick = {
+                                editingTemplate = null
+                                showEditor = true
+                            },
                             shadowElevation = 0.dp,
                             minWidth = 54.dp,
                             minHeight = 54.dp,
@@ -389,143 +414,142 @@ fun SchemeEditScreen(
                 }
             }
         },
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        contentWindowInsets =
+            WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         Box(
-            Modifier
-                .padding(padding)
+            Modifier.padding(padding)
                 .fillMaxSize()
                 .imePadding()
                 .onGloballyPositioned { contentCoordinates = it }
                 .pointerInput(focusManager) {
                     awaitEachGesture {
-                        val down = awaitFirstDown(
-                            requireUnconsumed = false,
-                            pass = PointerEventPass.Initial,
-                        )
+                        val down =
+                            awaitFirstDown(
+                                requireUnconsumed = false,
+                                pass = PointerEventPass.Initial,
+                            )
                         val windowPosition = contentCoordinates?.localToWindow(down.position)
                         if (
                             nameFieldFocused &&
-                            windowPosition != null &&
-                            !nameFieldBounds.contains(windowPosition)
+                                windowPosition != null &&
+                                !nameFieldBounds.contains(windowPosition)
                         ) {
                             focusManager.clearFocus()
                         }
                     }
-                },
+                }
         ) {
-            Column(
-                Modifier
-                    .widthIn(max = 760.dp)
-                    .fillMaxSize()
-                    .align(Alignment.TopCenter),
-            ) {
-            MiuixHintTextField(
-                value = draftScheme.name,
-                onValueChange = { input ->
-                    updateScheme { it.copy(name = input) }
-                },
-                labelText = stringResource(id = R.string.plan_name),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp)
-                    .focusRequester(nameFocusRequester)
-                    .onFocusChanged { nameFieldFocused = it.isFocused }
-                    .onGloballyPositioned { nameFieldBounds = it.boundsInWindow() },
-            )
+            Column(Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter)) {
+                MiuixHintTextField(
+                    value = draftScheme.name,
+                    onValueChange = { input -> updateScheme { it.copy(name = input) } },
+                    labelText = stringResource(id = R.string.plan_name),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp)
+                            .focusRequester(nameFocusRequester)
+                            .onFocusChanged { nameFieldFocused = it.isFocused }
+                            .onGloballyPositioned { nameFieldBounds = it.boundsInWindow() },
+                )
 
-            // ---- 班次模板 / 排班设置 / 班组设置（位于方案名下面）----
-            if (!onboardingMode) {
-                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                    TabRowWithContour(
-                        tabs = listOf(
-                            stringResource(R.string.plan_tab_templates),
-                            stringResource(R.string.plan_tab_schedule),
-                            stringResource(R.string.plan_tab_groups),
-                        ),
-                        selectedTabIndex = tabIndex,
-                        onTabSelected = { tabIndex = it },
-                        colors = TabRowDefaults.tabRowColors(
-                            backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
-                            contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            selectedBackgroundColor = MiuixTheme.colorScheme.primary,
-                            selectedContentColor = MiuixTheme.colorScheme.onPrimary,
-                        ),
-                        height = 50.dp,
-                        // 连同灰色轨道一起填满整张卡片
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            // 名字行与页签固定，只滚页签内容
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(contentScrollState),
-            ) {
-                when (tabIndex) {
-                    0 -> TemplatesStep(
-                        templates = draftDocument.templates,
-                        // 表头小标题去掉，加号挪到右下角 FAB
-                        onAdd = null,
-                        title = null,
-                        onEdit = { editingTemplate = it; showEditor = true },
-                        onDelete = { deleteTemplate = it },
-                        showEditAction = false,
-                        editHoldDown = { showEditor && editingTemplate?.id == it.id },
-                        deleteHoldDown = { deleteTemplate?.id == it.id },
-                    )
-                    1 -> ShiftSettingsTab(
-                        doc = draftDocument,
-                        scheme = draftScheme,
-                        cycleText = cycleText,
-                        cycleHoldDown = showCycleDialog,
-                        onOpenCycle = {
-                            cycleDraft = cycleText
-                            showCycleDialog = true
-                        },
-                        onPickDay = { pickingDay = it },
-                        pickingDay = pickingDay,
-                    )
-                    else -> GroupSettingsTab(
-                        groups = groups,
-                        groupCountText = groupCountText,
-                        groupCountHoldDown = showGroupCountDialog,
-                        onOpenGroupCount = {
-                            groupCountDraft = groupCountText
-                            showGroupCountDialog = true
-                        },
-                        defaultGroup = defaultGroup,
-                        defaultGroupHoldDown = showDefaultGroupDialog,
-                        onOpenDefaultGroup = { showDefaultGroupDialog = true },
-                        editingGroupIndex = editingGroupIndex,
-                        groupEditorShown = showGroupEditor,
-                        onOpenGroup = ::openGroup,
-                    )
-                }
-
-                // ---- 删除方案（方案级操作，不放在页签里）----
-                if (!isNewScheme) {
-                    Card(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .padding(top = 4.dp)
-                            .padding(bottom = 12.dp),
-                    ) {
-                        BasicComponent(
-                            title = stringResource(R.string.plan_delete),
-                            summary = stringResource(R.string.delete_irreversible),
-                            titleColor = BasicComponentDefaults.titleColor(color = MiuixTheme.colorScheme.error),
-                            holdDownState = showDeleteScheme,
-                            onClick = { showDeleteScheme = true },
+                // ---- 班次模板 / 排班设置 / 班组设置（位于方案名下面）----
+                if (!onboardingMode) {
+                    Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                        TabRowWithContour(
+                            tabs =
+                                listOf(
+                                    stringResource(R.string.plan_tab_templates),
+                                    stringResource(R.string.plan_tab_schedule),
+                                    stringResource(R.string.plan_tab_groups),
+                                ),
+                            selectedTabIndex = tabIndex,
+                            onTabSelected = { tabIndex = it },
+                            colors =
+                                TabRowDefaults.tabRowColors(
+                                    backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
+                                    contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    selectedBackgroundColor = MiuixTheme.colorScheme.primary,
+                                    selectedContentColor = MiuixTheme.colorScheme.onPrimary,
+                                ),
+                            height = 50.dp,
+                            // 连同灰色轨道一起填满整张卡片
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
-                Spacer(Modifier.height(24.dp).navigationBarsPadding())
-            }
+                Spacer(Modifier.height(16.dp))
+                // 名字行与页签固定，只滚页签内容
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScrollState)) {
+                    when (tabIndex) {
+                        0 ->
+                            TemplatesStep(
+                                templates = draftDocument.templates,
+                                // 表头小标题去掉，加号挪到右下角 FAB
+                                onAdd = null,
+                                title = null,
+                                onEdit = {
+                                    editingTemplate = it
+                                    showEditor = true
+                                },
+                                onDelete = { deleteTemplate = it },
+                                showEditAction = false,
+                                editHoldDown = { showEditor && editingTemplate?.id == it.id },
+                                deleteHoldDown = { deleteTemplate?.id == it.id },
+                            )
+                        1 ->
+                            ShiftSettingsTab(
+                                doc = draftDocument,
+                                scheme = draftScheme,
+                                cycleText = cycleText,
+                                cycleHoldDown = showCycleDialog,
+                                onOpenCycle = {
+                                    cycleDraft = cycleText
+                                    showCycleDialog = true
+                                },
+                                onPickDay = { pickingDay = it },
+                                pickingDay = pickingDay,
+                            )
+                        else ->
+                            GroupSettingsTab(
+                                groups = groups,
+                                groupCountText = groupCountText,
+                                groupCountHoldDown = showGroupCountDialog,
+                                onOpenGroupCount = {
+                                    groupCountDraft = groupCountText
+                                    showGroupCountDialog = true
+                                },
+                                defaultGroup = defaultGroup,
+                                defaultGroupHoldDown = showDefaultGroupDialog,
+                                onOpenDefaultGroup = { showDefaultGroupDialog = true },
+                                editingGroupIndex = editingGroupIndex,
+                                groupEditorShown = showGroupEditor,
+                                onOpenGroup = ::openGroup,
+                            )
+                    }
+
+                    // ---- 删除方案（方案级操作，不放在页签里）----
+                    if (!isNewScheme) {
+                        Card(
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .padding(top = 4.dp)
+                                .padding(bottom = 12.dp)
+                        ) {
+                            BasicComponent(
+                                title = stringResource(R.string.plan_delete),
+                                summary = stringResource(R.string.delete_irreversible),
+                                titleColor =
+                                    BasicComponentDefaults.titleColor(
+                                        color = MiuixTheme.colorScheme.error
+                                    ),
+                                holdDownState = showDeleteScheme,
+                                onClick = { showDeleteScheme = true },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp).navigationBarsPadding())
+                }
             }
         }
 
@@ -577,9 +601,10 @@ fun SchemeEditScreen(
                     value = groupNameDraft,
                     onValueChange = { groupNameDraft = it },
                     label = stringResource(R.string.group_name),
-                    colors = TextFieldDefaults.textFieldColors(
-                        backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
-                    ),
+                    colors =
+                        TextFieldDefaults.textFieldColors(
+                            backgroundColor = MiuixTheme.colorScheme.surfaceContainer
+                        ),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
@@ -652,9 +677,7 @@ fun SchemeEditScreen(
             Column(Modifier.fillMaxWidth()) {
                 TextField(
                     value = cycleDraft,
-                    onValueChange = { input ->
-                        cycleDraft = input.filter { it.isDigit() }.take(2)
-                    },
+                    onValueChange = { input -> cycleDraft = input.filter { it.isDigit() }.take(2) },
                     label = stringResource(R.string.cycle_days_label),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
@@ -688,36 +711,43 @@ fun SchemeEditScreen(
             onDismiss = { showEditor = false },
             onSave = { name, start, end, color, isRest ->
                 val editing = editingTemplate
-                draftDocument = if (editing == null) {
-                    draftDocument.copy(
-                        templates = draftDocument.templates.toPersistentList().add(
-                            ShiftTemplate(
-                                id = System.currentTimeMillis(),
-                                name = name,
-                                startMinute = start,
-                                endMinute = end,
-                                colorArgb = color,
-                                isRest = isRest,
-                            ),
-                        ),
-                    )
-                } else {
-                    draftDocument.copy(
-                        templates = draftDocument.templates.map {
-                            if (it.id == editing.id) {
-                                it.copy(
-                                    name = name,
-                                    startMinute = start,
-                                    endMinute = end,
-                                    colorArgb = color,
-                                    isRest = isRest,
-                                )
-                            } else {
-                                it
-                            }
-                        }.toImmutableList(),
-                    )
-                }
+                draftDocument =
+                    if (editing == null) {
+                        draftDocument.copy(
+                            templates =
+                                draftDocument.templates
+                                    .toPersistentList()
+                                    .add(
+                                        ShiftTemplate(
+                                            id = System.currentTimeMillis(),
+                                            name = name,
+                                            startMinute = start,
+                                            endMinute = end,
+                                            colorArgb = color,
+                                            isRest = isRest,
+                                        )
+                                    )
+                        )
+                    } else {
+                        draftDocument.copy(
+                            templates =
+                                draftDocument.templates
+                                    .map {
+                                        if (it.id == editing.id) {
+                                            it.copy(
+                                                name = name,
+                                                startMinute = start,
+                                                endMinute = end,
+                                                colorArgb = color,
+                                                isRest = isRest,
+                                            )
+                                        } else {
+                                            it
+                                        }
+                                    }
+                                    .toImmutableList()
+                        )
+                    }
                 showEditor = false
             },
         )
@@ -731,9 +761,12 @@ fun SchemeEditScreen(
                 onPick = { templateId ->
                     updateScheme { current ->
                         current.copy(
-                            dayTemplateIds = current.dayTemplateIds.mapIndexed { index, id ->
-                                if (index == day) templateId else id
-                            }.toImmutableList(),
+                            dayTemplateIds =
+                                current.dayTemplateIds
+                                    .mapIndexed { index, id ->
+                                        if (index == day) templateId else id
+                                    }
+                                    .toImmutableList()
                         )
                     }
                     pickingDay = -1
@@ -749,11 +782,13 @@ fun SchemeEditScreen(
                 show = deleteTemplate != null,
                 onDismiss = { deleteTemplate = null },
                 onConfirm = {
-                    draftDocument = draftDocument.copy(
-                        templates = draftDocument.templates
-                            .filterNot { it.id == template.id }
-                            .toImmutableList(),
-                    )
+                    draftDocument =
+                        draftDocument.copy(
+                            templates =
+                                draftDocument.templates
+                                    .filterNot { it.id == template.id }
+                                    .toImmutableList()
+                        )
                     deleteTemplate = null
                 },
             )
@@ -777,7 +812,8 @@ fun SchemeEditScreen(
                         showDeleteScheme = false
                         onDelete()
                     },
-                    colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
+                    colors =
+                        ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -798,23 +834,24 @@ private fun MiuixHintTextField(
         onValueChange = onValueChange,
         modifier = modifier,
         singleLine = true,
-        textStyle = MiuixTheme.textStyles.main.copy(
-            color = MiuixTheme.colorScheme.onSurface,
-            textAlign = TextAlign.End,
-        ),
+        textStyle =
+            MiuixTheme.textStyles.main.copy(
+                color = MiuixTheme.colorScheme.onSurface,
+                textAlign = TextAlign.End,
+            ),
         cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
         decorationBox = { innerTextField ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .squircleBackground(
-                        color = MiuixTheme.colorScheme.surfaceContainer,
-                        cornerRadius = TextFieldDefaults.CornerRadius,
-                    )
-                    .padding(
-                        horizontal = TextFieldDefaults.InsideMargin.width,
-                        vertical = TextFieldDefaults.InsideMargin.height,
-                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .squircleBackground(
+                            color = MiuixTheme.colorScheme.surfaceContainer,
+                            cornerRadius = TextFieldDefaults.CornerRadius,
+                        )
+                        .padding(
+                            horizontal = TextFieldDefaults.InsideMargin.width,
+                            vertical = TextFieldDefaults.InsideMargin.height,
+                        ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -823,9 +860,7 @@ private fun MiuixHintTextField(
                     color = MiuixTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Start,
                 )
-                Box(Modifier.weight(1f), propagateMinConstraints = true) {
-                    innerTextField()
-                }
+                Box(Modifier.weight(1f), propagateMinConstraints = true) { innerTextField() }
             }
         },
     )
@@ -849,9 +884,12 @@ private fun ShiftSettingsTab(
                 endActions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
-                                ?.let { pluralStringResource(R.plurals.days_count, it, it) }
-                                ?: stringResource(R.string.status_not_set),
+                            text =
+                                cycleText
+                                    .toIntOrNull()
+                                    ?.takeIf { it in 1..99 }
+                                    ?.let { pluralStringResource(R.plurals.days_count, it, it) }
+                                    ?: stringResource(R.string.status_not_set),
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -906,9 +944,12 @@ private fun GroupSettingsTab(
                 endActions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = groupCountText.toIntOrNull()?.takeIf { it in 1..99 }
-                                ?.let { pluralStringResource(R.plurals.groups_count, it, it) }
-                                ?: stringResource(R.string.status_not_set),
+                            text =
+                                groupCountText
+                                    .toIntOrNull()
+                                    ?.takeIf { it in 1..99 }
+                                    ?.let { pluralStringResource(R.plurals.groups_count, it, it) }
+                                    ?: stringResource(R.string.status_not_set),
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
@@ -950,8 +991,7 @@ private fun GroupSettingsTab(
                 val holdDownState = groupEditorShown && editingGroupIndex == index
                 val interactionSource = rememberHoldDownSource(holdDownState)
                 Row(
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .clickable(
                             interactionSource = interactionSource,
                             indication = LocalIndication.current,
@@ -990,18 +1030,20 @@ private fun DefaultGroupDialog(
     onSelect: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val entry = remember(groups, currentId, onSelect) {
-        DropdownEntry(
-            items = groups.map { group ->
-                DropdownItem(
-                    text = group.name,
-                    summary = formatYmd(Ymd.fromEpochDay(group.anchorEpochDay)),
-                    selected = group.id == currentId,
-                    onClick = { onSelect(group.id) },
-                )
-            },
-        )
-    }
+    val entry =
+        remember(groups, currentId, onSelect) {
+            DropdownEntry(
+                items =
+                    groups.map { group ->
+                        DropdownItem(
+                            text = group.name,
+                            summary = formatYmd(Ymd.fromEpochDay(group.anchorEpochDay)),
+                            selected = group.id == currentId,
+                            onClick = { onSelect(group.id) },
+                        )
+                    }
+            )
+        }
     WindowDropdownDialog(
         entry = entry,
         title = stringResource(R.string.select_default_group),
@@ -1013,10 +1055,7 @@ private fun DefaultGroupDialog(
     )
 }
 
-/**
- * 日期弹窗：只滚「月 / 日」，年沿用当前基准日期的年份。
- * 「月」「日」作为固定表头写在滚轮上方，不跟着数字滚动。
- */
+/** 日期弹窗：只滚「月 / 日」，年沿用当前基准日期的年份。 「月」「日」作为固定表头写在滚轮上方，不跟着数字滚动。 */
 @Composable
 internal fun AnchorDialog(
     anchor: Ymd,
@@ -1099,8 +1138,8 @@ internal fun AnchorDialog(
 /**
  * 滚动时收起 FAB：往下滚藏起来，往回滚（或回到顶部）再露出来。
  *
- * 传一个单调递增的"滚动位置"就行——LazyColumn 用 `index * 大数 + offset` 合成，
- * 普通 Column 直接给 `ScrollState.value`。判定在协程里做，不参与组合期读取。
+ * 传一个单调递增的"滚动位置"就行——LazyColumn 用 `index * 大数 + offset` 合成， 普通 Column 直接给
+ * `ScrollState.value`。判定在协程里做，不参与组合期读取。
  */
 @Composable
 private fun rememberFabVisible(scrollPosition: () -> Int): Boolean {
@@ -1108,23 +1147,23 @@ private fun rememberFabVisible(scrollPosition: () -> Int): Boolean {
 
     LaunchedEffect(Unit) {
         var previous = scrollPosition()
-        snapshotFlow { scrollPosition() }.collect { current ->
-            when {
-                current == 0 -> visible = true
-                current > previous -> visible = false
-                current < previous -> visible = true
+        snapshotFlow { scrollPosition() }
+            .collect { current ->
+                when {
+                    current == 0 -> visible = true
+                    current > previous -> visible = false
+                    current < previous -> visible = true
+                }
+                previous = current
             }
-            previous = current
-        }
     }
     return visible
 }
 
 /**
- * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可；
- * 自绘的 `clickable` 行走这里——把状态作为 [HoldDownInteraction] 注入 interactionSource，
- * 再交给 `Modifier.clickable(interactionSource = …, indication = LocalIndication.current, …)`，
- * 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
+ * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
+ * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
+ * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
  */
 @Composable
 private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
@@ -1172,24 +1211,28 @@ private fun TemplateEditorDialog(
     show: Boolean,
     existing: ShiftTemplate?,
     usedColors: List<Int>,
-    onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
+    onSave:
+        (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val defaultRestName = stringResource(R.string.shift_rest)
     val fieldBackground = MiuixTheme.colorScheme.surfaceContainer
     // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
     var name by remember(existing) { mutableStateOf(existing?.name ?: "") }
-    var startH by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
-    var startM by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }
+    var startH by
+        remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
+    var startM by
+        remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }
     var endH by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute / 60 } ?: 15) }
     var endM by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute % 60 } ?: 0) }
-    var color by remember(existing) {
-        mutableIntStateOf(
-            existing?.colorArgb
-                ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
-                ?: ShiftPalette.presets.first()
-        )
-    }
+    var color by
+        remember(existing) {
+            mutableIntStateOf(
+                existing?.colorArgb
+                    ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+                    ?: ShiftPalette.presets.first()
+            )
+        }
     // 保留最后编辑的时间端点，让时间弹窗关闭时仍能播放退出动画。
     var editingEnd by remember(existing) { mutableStateOf(false) }
     var showTimeDialog by remember(existing) { mutableStateOf(false) }
@@ -1206,9 +1249,10 @@ private fun TemplateEditorDialog(
         startM = existing?.let { it.startMinute % 60 } ?: 0
         endH = existing?.let { it.endMinute / 60 } ?: 15
         endM = existing?.let { it.endMinute % 60 } ?: 0
-        color = existing?.colorArgb
-            ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
-            ?: ShiftPalette.presets.first()
+        color =
+            existing?.colorArgb
+                ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+                ?: ShiftPalette.presets.first()
         editingEnd = false
         showTimeDialog = false
         isRest = existing?.isRest == true
@@ -1217,22 +1261,17 @@ private fun TemplateEditorDialog(
 
     OverlayDialog(
         show = show,
-        title = stringResource(if (existing == null) R.string.shift_add_title else R.string.shift_edit_title),
+        title =
+            stringResource(
+                if (existing == null) R.string.shift_add_title else R.string.shift_edit_title
+            ),
         summary = stringResource(R.string.shift_editor_summary),
         onDismissRequest = onDismiss,
     ) {
         // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
         // 所以给内容一个上限、让滚动区自己滚，按钮作为非加权子项固定在底部。
-        Column(
-            Modifier
-                .heightIn(max = 500.dp)
-                .imePadding(),
-        ) {
-            Column(
-                Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-            ) {
+        Column(Modifier.heightIn(max = 500.dp).imePadding()) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 TextField(
                     value = name,
                     onValueChange = { name = it },
@@ -1242,9 +1281,8 @@ private fun TemplateEditorDialog(
                         // 颜色收进名称框右边这个圆点里，点它进颜色页
                         IconButton(onClick = { showColorDialog = true }) {
                             Box(
-                                Modifier
-                                    .size(24.dp)
-                                    .background(ShiftPalette.color(color), CircleShape),
+                                Modifier.size(24.dp)
+                                    .background(ShiftPalette.color(color), CircleShape)
                             )
                         }
                     },
@@ -1253,10 +1291,11 @@ private fun TemplateEditorDialog(
                 Spacer(Modifier.height(12.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = fieldBackground,
-                        contentColor = MiuixTheme.colorScheme.onSurface,
-                    ),
+                    colors =
+                        CardDefaults.defaultColors(
+                            color = fieldBackground,
+                            contentColor = MiuixTheme.colorScheme.onSurface,
+                        ),
                 ) {
                     BasicComponent(
                         title = stringResource(R.string.shift_rest),
@@ -1312,11 +1351,12 @@ private fun TemplateEditorDialog(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = if (endH * 60 + endM < startH * 60 + startM) {
-                                                stringResource(R.string.shift_next_day, end)
-                                            } else {
-                                                end
-                                            },
+                                            text =
+                                                if (endH * 60 + endM < startH * 60 + startM) {
+                                                    stringResource(R.string.shift_next_day, end)
+                                                } else {
+                                                    end
+                                                },
                                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                         )
                                         Icon(
@@ -1360,7 +1400,8 @@ private fun TemplateEditorDialog(
 
     ShiftTimeDialog(
         show = show && !isRest && showTimeDialog,
-        title = stringResource(if (editingEnd) R.string.shift_end_time else R.string.shift_start_time),
+        title =
+            stringResource(if (editingEnd) R.string.shift_end_time else R.string.shift_start_time),
         currentMinute = if (editingEnd) endH * 60 + endM else startH * 60 + startM,
         onDismiss = { showTimeDialog = false },
         onConfirm = { minute ->
@@ -1447,10 +1488,7 @@ private fun ShiftTimeDialog(
     }
 }
 
-/**
- * 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1——
- * 班次色要画在日历格上，半透明会跟底色混在一起。
- */
+/** 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1—— 班次色要画在日历格上，半透明会跟底色混在一起。 */
 @Composable
 private fun ColorDialog(
     show: Boolean,
@@ -1460,9 +1498,7 @@ private fun ColorDialog(
 ) {
     // 同主弹窗：每次打开都从当前颜色重新开始，别让上次取消的改动留在里面
     var draft by remember(current) { mutableStateOf(Color(current)) }
-    LaunchedEffect(show, current) {
-        if (show) draft = Color(current)
-    }
+    LaunchedEffect(show, current) { if (show) draft = Color(current) }
 
     OverlayDialog(
         show = show,
@@ -1471,11 +1507,7 @@ private fun ColorDialog(
     ) {
         // 调色盘本身挺高，长内容按 Dialog 规范交给滚动区
         Column(Modifier.heightIn(max = 500.dp)) {
-            Column(
-                Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-            ) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 ColorPalette(
                     color = draft,
                     onColorChanged = { draft = it },

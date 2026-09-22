@@ -31,27 +31,25 @@ class WorkManagerUpdateDownloads(context: Context) : UpdateDownloads {
     private val workManager = WorkManager.getInstance(appContext)
 
     override fun start(update: UpdateInfo) {
-        val request = OneTimeWorkRequestBuilder<UpdateDownloadWorker>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build(),
-            )
-            .setInputData(
-                workDataOf(
-                    UpdateDownloadWorker.KEY_VERSION to update.versionName,
-                    UpdateDownloadWorker.KEY_URL to update.downloadUrl,
-                    UpdateDownloadWorker.KEY_SHA256 to update.sha256,
-                ),
-            )
-            .build()
+        val request =
+            OneTimeWorkRequestBuilder<UpdateDownloadWorker>()
+                .setConstraints(
+                    Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+                )
+                .setInputData(
+                    workDataOf(
+                        UpdateDownloadWorker.KEY_VERSION to update.versionName,
+                        UpdateDownloadWorker.KEY_URL to update.downloadUrl,
+                        UpdateDownloadWorker.KEY_SHA256 to update.sha256,
+                    )
+                )
+                .build()
         workManager.enqueueUniqueWork(
             UpdateDownloadWorker.UNIQUE_WORK_NAME,
             ExistingWorkPolicy.REPLACE,
             request,
         )
     }
-
 }
 
 class UpdateDownloadWorker(
@@ -62,17 +60,19 @@ class UpdateDownloadWorker(
         val version = inputData.getString(KEY_VERSION) ?: return Result.failure()
         val url = inputData.getString(KEY_URL) ?: return Result.failure()
         setForeground(downloadForegroundInfo(progress = null))
-        val update = UpdateInfo(
-            versionName = version,
-            releaseNotes = "",
-            downloadUrl = url,
-            sha256 = inputData.getString(KEY_SHA256),
-        )
+        val update =
+            UpdateInfo(
+                versionName = version,
+                releaseNotes = "",
+                downloadUrl = url,
+                sha256 = inputData.getString(KEY_SHA256),
+            )
         return try {
-            val apk = AppUpdater.downloadApk(applicationContext, update) { progress ->
-                setProgress(workDataOf(KEY_PROGRESS to (progress ?: -1)))
-                setForeground(downloadForegroundInfo(progress))
-            }
+            val apk =
+                AppUpdater.downloadApk(applicationContext, update) { progress ->
+                    setProgress(workDataOf(KEY_PROGRESS to (progress ?: -1)))
+                    setForeground(downloadForegroundInfo(progress))
+                }
             showDownloadComplete(version, apk)
             Result.success(workDataOf(KEY_OUTPUT_PATH to apk.absolutePath))
         } catch (error: CancellationException) {
@@ -89,29 +89,39 @@ class UpdateDownloadWorker(
 
     private fun downloadForegroundInfo(progress: Int?): ForegroundInfo {
         ensureNotificationChannels()
-        val progressStyle = NotificationCompat.ProgressStyle()
-            .setProgress(progress ?: 0)
-            .setProgressIndeterminate(progress == null)
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_DOWNLOAD)
-            .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(applicationContext.getString(R.string.update_notification_downloading_title))
-            .setContentText(
-                progress?.let {
-                    applicationContext.getString(R.string.update_notification_downloading_progress, it)
-                } ?: applicationContext.getString(R.string.update_notification_downloading),
-            )
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setStyle(progressStyle)
-            .setRequestPromotedOngoing(true)
-            .setShortCriticalText(
-                progress?.let {
-                    applicationContext.getString(R.string.update_notification_short_progress, it)
-                },
-            )
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .build()
+        val progressStyle =
+            NotificationCompat.ProgressStyle()
+                .setProgress(progress ?: 0)
+                .setProgressIndeterminate(progress == null)
+        val notification =
+            NotificationCompat.Builder(applicationContext, CHANNEL_DOWNLOAD)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(
+                    applicationContext.getString(R.string.update_notification_downloading_title)
+                )
+                .setContentText(
+                    progress?.let {
+                        applicationContext.getString(
+                            R.string.update_notification_downloading_progress,
+                            it,
+                        )
+                    } ?: applicationContext.getString(R.string.update_notification_downloading)
+                )
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setStyle(progressStyle)
+                .setRequestPromotedOngoing(true)
+                .setShortCriticalText(
+                    progress?.let {
+                        applicationContext.getString(
+                            R.string.update_notification_short_progress,
+                            it,
+                        )
+                    }
+                )
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .build()
         return ForegroundInfo(
             NOTIFICATION_ID_PROGRESS,
             notification,
@@ -121,23 +131,32 @@ class UpdateDownloadWorker(
 
     private fun showDownloadComplete(version: String, apk: File) {
         ensureNotificationChannels()
-        val installIntent = Intent(applicationContext, MainActivity::class.java).apply {
-            action = ACTION_CONFIRM_UPDATE_INSTALL
-            putExtra(EXTRA_APK_PATH, apk.absolutePath)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            applicationContext,
-            REQUEST_INSTALL,
-            installIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        val installIntent =
+            Intent(applicationContext, MainActivity::class.java).apply {
+                action = ACTION_CONFIRM_UPDATE_INSTALL
+                putExtra(EXTRA_APK_PATH, apk.absolutePath)
+                flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                applicationContext,
+                REQUEST_INSTALL,
+                installIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         notificationManager.notify(
             NOTIFICATION_ID_COMPLETE,
             NotificationCompat.Builder(applicationContext, CHANNEL_RESULT)
                 .setSmallIcon(R.drawable.ic_launcher_monochrome)
-                .setContentTitle(applicationContext.getString(R.string.update_notification_complete_title))
-                .setContentText(applicationContext.getString(R.string.update_notification_complete, version))
+                .setContentTitle(
+                    applicationContext.getString(R.string.update_notification_complete_title)
+                )
+                .setContentText(
+                    applicationContext.getString(R.string.update_notification_complete, version)
+                )
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
@@ -151,7 +170,9 @@ class UpdateDownloadWorker(
             NOTIFICATION_ID_RESULT,
             NotificationCompat.Builder(applicationContext, CHANNEL_RESULT)
                 .setSmallIcon(R.drawable.ic_launcher_monochrome)
-                .setContentTitle(applicationContext.getString(R.string.update_notification_failed_title))
+                .setContentTitle(
+                    applicationContext.getString(R.string.update_notification_failed_title)
+                )
                 .setContentText(applicationContext.getString(R.string.update_download_failed))
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_ERROR)
@@ -176,7 +197,7 @@ class UpdateDownloadWorker(
                     applicationContext.getString(R.string.update_notification_channel_result),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ),
-            ),
+            )
         )
     }
 

@@ -1,28 +1,13 @@
 package win.zuoye.dao.ui.onboarding
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.runtime.DisposableEffect
-import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import top.yukonga.miuix.kmp.basic.ColorPalette
-import top.yukonga.miuix.kmp.basic.NumberPicker
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.basic.TabRowDefaults
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,16 +18,20 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,17 +50,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.ColorPalette
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -77,9 +72,13 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.TabRowDefaults
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -90,6 +89,7 @@ import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.squircle.squircleBackground
@@ -97,8 +97,8 @@ import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
+import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
@@ -107,11 +107,11 @@ import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.primaryAnchorEpochDay
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.scan.ScanCaptureActivity
 import win.zuoye.dao.ui.scheme.AnchorDialog
 import win.zuoye.dao.ui.scheme.SchemeEditScreen
 import win.zuoye.dao.ui.scheme.UNASSIGNED
 import win.zuoye.dao.ui.scheme.formatYmd
-import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
 private enum class Step(val labelRes: Int) {
     METHOD(R.string.onboarding_method_title),
@@ -126,23 +126,20 @@ private enum class CreateMethod(val titleRes: Int, val summaryRes: Int) {
     QR_CODE(R.string.create_qr, R.string.create_qr_summary),
 }
 
-/**
- * 首次启动先选择创建方式；手动添加时继续三步向导：
- * ①班次模板 → ②周期天数 + 逐日指派 → ③开始日期。
- * editing 非空 = 从现有方案预填（走修改流程）。
- */
+/** 首次启动先选择创建方式；手动添加时继续三步向导： ①班次模板 → ②周期天数 + 逐日指派 → ③开始日期。 editing 非空 = 从现有方案预填（走修改流程）。 */
 @Composable
 fun OnboardingScreen(
     doc: PlanDocument,
     editing: Scheme?,
     onImportPlan: (PlanShare) -> Unit,
     onSaveDocument: (PlanDocument) -> Unit,
-    onSave: (
-        cycleDays: Int,
-        templates: ImmutableList<ShiftTemplate>,
-        dayTemplateIds: ImmutableList<Long>,
-        anchorEpochDay: Long,
-    ) -> Unit,
+    onSave:
+        (
+            cycleDays: Int,
+            templates: ImmutableList<ShiftTemplate>,
+            dayTemplateIds: ImmutableList<Long>,
+            anchorEpochDay: Long,
+        ) -> Unit,
     onSkip: (() -> Unit)?,
     onCancel: (() -> Unit)?,
 ) {
@@ -159,25 +156,27 @@ fun OnboardingScreen(
     var step by remember { mutableStateOf(if (editing == null) Step.METHOD else Step.TEMPLATES) }
     var createMethod by remember { mutableStateOf<CreateMethod?>(null) }
     var manualMode by remember { mutableStateOf(false) }
-    val manualScheme = remember(doc, defaultPlanName, defaultGroupName) {
-        val id = System.currentTimeMillis()
-        val today = Ymd.today().epochDay
-        Scheme(
-            id = id,
-            name = defaultPlanName,
-            cycleDays = 1,
-            dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
-            createdAt = id,
-            groups = persistentListOf(
-                SchemeGroup(
-                    id = id,
-                    name = defaultGroupName,
-                    anchorEpochDay = today,
-                ),
-            ),
-            defaultGroupId = id,
-        )
-    }
+    val manualScheme =
+        remember(doc, defaultPlanName, defaultGroupName) {
+            val id = System.currentTimeMillis()
+            val today = Ymd.today().epochDay
+            Scheme(
+                id = id,
+                name = defaultPlanName,
+                cycleDays = 1,
+                dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
+                createdAt = id,
+                groups =
+                    persistentListOf(
+                        SchemeGroup(
+                            id = id,
+                            name = defaultGroupName,
+                            anchorEpochDay = today,
+                        )
+                    ),
+                defaultGroupId = id,
+            )
+        }
     if (manualMode) {
         SchemeEditScreen(
             doc = doc,
@@ -189,7 +188,7 @@ fun OnboardingScreen(
                     savedDocument.copy(
                         activeSchemeId = manualScheme.id,
                         onboardingDone = true,
-                    ),
+                    )
                 )
             },
             onDelete = {},
@@ -197,16 +196,14 @@ fun OnboardingScreen(
         )
         return
     }
-    var userTemplates by remember {
-        mutableStateOf(doc.templates.toPersistentList())
-    }
+    var userTemplates by remember { mutableStateOf(doc.templates.toPersistentList()) }
     var cycleText by remember { mutableStateOf(editing?.cycleDays?.toString() ?: "") }
     var assignments by remember {
         mutableStateOf(
-            editing?.dayTemplateIds
+            editing
+                ?.dayTemplateIds
                 ?.map { if (doc.templateById(it) != null) it else null }
-                ?.toPersistentList()
-                ?: persistentListOf<Long?>(),
+                ?.toPersistentList() ?: persistentListOf<Long?>()
         )
     }
     var anchor by remember {
@@ -228,9 +225,10 @@ fun OnboardingScreen(
             onImportPlan(payload)
         }
     }
-    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        result.contents?.let(importFrom)
-    }
+    val scanLauncher =
+        rememberLauncherForActivityResult(ScanContract()) { result ->
+            result.contents?.let(importFrom)
+        }
 
     val cycleDays: Int? = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
 
@@ -243,60 +241,73 @@ fun OnboardingScreen(
 
     fun next() {
         when (step) {
-            Step.METHOD -> when (createMethod) {
-                CreateMethod.MANUAL -> manualMode = true
-                CreateMethod.CLIPBOARD -> importFrom(context.clipboardText())
-                CreateMethod.QR_CODE -> scanLauncher.launch(
-                    ScanOptions().apply {
-                        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                        setBeepEnabled(false)
-                        setOrientationLocked(true)
-                        setCaptureActivity(ScanCaptureActivity::class.java)
-                    },
-                )
-                null -> Unit
-            }
+            Step.METHOD ->
+                when (createMethod) {
+                    CreateMethod.MANUAL -> manualMode = true
+                    CreateMethod.CLIPBOARD -> importFrom(context.clipboardText())
+                    CreateMethod.QR_CODE ->
+                        scanLauncher.launch(
+                            ScanOptions().apply {
+                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                setBeepEnabled(false)
+                                setOrientationLocked(true)
+                                setCaptureActivity(ScanCaptureActivity::class.java)
+                            }
+                        )
+                    null -> Unit
+                }
             Step.TEMPLATES -> {
                 cycleDays?.let { syncAssignments(it) }
                 step = Step.CYCLE_ASSIGN
             }
             Step.CYCLE_ASSIGN -> step = Step.ANCHOR
-            Step.ANCHOR -> onSave(
-                cycleDays!!,
-                userTemplates,
-                assignments.map { requireNotNull(it) }.toImmutableList(),
-                anchor.epochDay,
-            )
+            Step.ANCHOR ->
+                onSave(
+                    cycleDays!!,
+                    userTemplates,
+                    assignments.map { requireNotNull(it) }.toImmutableList(),
+                    anchor.epochDay,
+                )
         }
     }
 
     fun back() {
-        step = when (step) {
-            Step.METHOD -> Step.METHOD
-            Step.TEMPLATES -> if (editing == null) Step.METHOD else Step.TEMPLATES
-            Step.CYCLE_ASSIGN -> Step.TEMPLATES
-            Step.ANCHOR -> Step.CYCLE_ASSIGN
-        }
+        step =
+            when (step) {
+                Step.METHOD -> Step.METHOD
+                Step.TEMPLATES -> if (editing == null) Step.METHOD else Step.TEMPLATES
+                Step.CYCLE_ASSIGN -> Step.TEMPLATES
+                Step.ANCHOR -> Step.CYCLE_ASSIGN
+            }
     }
 
-    val canNext = when (step) {
-        Step.METHOD -> createMethod != null
-        Step.TEMPLATES -> userTemplates.isNotEmpty()
-        Step.CYCLE_ASSIGN -> cycleDays != null && assignments.size == cycleDays && assignments.all { it != null }
-        Step.ANCHOR -> true
-    }
+    val canNext =
+        when (step) {
+            Step.METHOD -> createMethod != null
+            Step.TEMPLATES -> userTemplates.isNotEmpty()
+            Step.CYCLE_ASSIGN ->
+                cycleDays != null && assignments.size == cycleDays && assignments.all { it != null }
+            Step.ANCHOR -> true
+        }
     // 唯一的滚动源（第 2 步的列表），顶栏折叠与列表滚动共用同一个 behavior
     val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = stringResource(if (editing == null) R.string.onboarding_title else R.string.onboarding_edit_title),
+                title =
+                    stringResource(
+                        if (editing == null) R.string.onboarding_title
+                        else R.string.onboarding_edit_title
+                    ),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     if (editing != null && step == Step.TEMPLATES) {
                         IconButton(onClick = { onCancel?.invoke() }) {
-                            Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
+                            Icon(
+                                MiuixIcons.Regular.Back,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
                         }
                     }
                 },
@@ -307,7 +318,10 @@ fun OnboardingScreen(
             if (step == Step.TEMPLATES) {
                 Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
                     FloatingActionButton(
-                        onClick = { editingTemplate = null; showEditor = true },
+                        onClick = {
+                            editingTemplate = null
+                            showEditor = true
+                        },
                         shadowElevation = 0.dp,
                         minWidth = 54.dp,
                         minHeight = 54.dp,
@@ -324,26 +338,28 @@ fun OnboardingScreen(
         // 底栏自己吃导航栏内边距，别再让内容重复算
         bottomBar = {
             Row(
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when {
-                    step == Step.METHOD && onSkip != null -> TextButton(
-                        text = stringResource(R.string.action_skip_configuration),
-                        onClick = onSkip,
-                        colors = ButtonDefaults.textButtonColors(
-                            textColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                        ),
-                        modifier = Modifier.weight(1f),
-                    )
-                    step != Step.METHOD -> TextButton(
-                        text = stringResource(R.string.action_previous),
-                        onClick = { back() },
-                        modifier = Modifier.weight(1f),
-                    )
+                    step == Step.METHOD && onSkip != null ->
+                        TextButton(
+                            text = stringResource(R.string.action_skip_configuration),
+                            onClick = onSkip,
+                            colors =
+                                ButtonDefaults.textButtonColors(
+                                    textColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                ),
+                            modifier = Modifier.weight(1f),
+                        )
+                    step != Step.METHOD ->
+                        TextButton(
+                            text = stringResource(R.string.action_previous),
+                            onClick = { back() },
+                            modifier = Modifier.weight(1f),
+                        )
                     else -> Spacer(Modifier.weight(1f))
                 }
                 Button(
@@ -352,59 +368,69 @@ fun OnboardingScreen(
                     colors = ButtonDefaults.buttonColorsPrimary(),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(if (step == Step.ANCHOR) R.string.action_done else R.string.action_next))
+                    Text(
+                        stringResource(
+                            if (step == Step.ANCHOR) R.string.action_done else R.string.action_next
+                        )
+                    )
                 }
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .imePadding(),
-        ) {
+        Column(Modifier.padding(padding).fillMaxSize().imePadding()) {
             if (step != Step.METHOD) StepIndicator(step)
             Box(Modifier.weight(1f)) {
                 when (step) {
-                    Step.METHOD -> CreateMethodStep(
-                        selected = createMethod,
-                        onSelect = { createMethod = it },
-                    )
-                    Step.TEMPLATES -> TemplatesStep(
-                        templates = userTemplates,
-                        // 小标题和行内加号都不要，加号在右下角 FAB
-                        onAdd = null,
-                        title = null,
-                        onEdit = { editingTemplate = it; showEditor = true },
-                        onDelete = { deleted ->
-                            userTemplates = userTemplates.filterNot { it.id == deleted.id }.toPersistentList()
-                            // 指向已删班次的指派一并清空，避免存下悬空 id
-                            assignments = assignments
-                                .map { if (it == deleted.id) null else it }
-                                .toPersistentList()
-                        },
-                        editHoldDown = { showEditor && editingTemplate?.id == it.id },
-                    )
-                    Step.CYCLE_ASSIGN -> CycleAssignStep(
-                        cycleText = cycleText,
-                        onCycleChange = { input ->
-                            val filtered = input.filter(Char::isDigit).take(2)
-                            cycleText = filtered
-                            filtered.toIntOrNull()?.let { syncAssignments(it) }
-                        },
-                        cycleDays = cycleDays,
-                        assignments = assignments,
-                        templates = userTemplates,
-                        pickingDay = pickingDay,
-                        onPick = { pickingDay = it },
-                        scrollBehavior = scrollBehavior,
-                    )
-                    Step.ANCHOR -> AnchorPickerStep(
-                        anchor = anchor,
-                        holdDown = showAnchorDialog,
-                        onOpen = { showAnchorDialog = true },
-                    )
+                    Step.METHOD ->
+                        CreateMethodStep(
+                            selected = createMethod,
+                            onSelect = { createMethod = it },
+                        )
+                    Step.TEMPLATES ->
+                        TemplatesStep(
+                            templates = userTemplates,
+                            // 小标题和行内加号都不要，加号在右下角 FAB
+                            onAdd = null,
+                            title = null,
+                            onEdit = {
+                                editingTemplate = it
+                                showEditor = true
+                            },
+                            onDelete = { deleted ->
+                                userTemplates =
+                                    userTemplates
+                                        .filterNot { it.id == deleted.id }
+                                        .toPersistentList()
+                                // 指向已删班次的指派一并清空，避免存下悬空 id
+                                assignments =
+                                    assignments
+                                        .map { if (it == deleted.id) null else it }
+                                        .toPersistentList()
+                            },
+                            editHoldDown = { showEditor && editingTemplate?.id == it.id },
+                        )
+                    Step.CYCLE_ASSIGN ->
+                        CycleAssignStep(
+                            cycleText = cycleText,
+                            onCycleChange = { input ->
+                                val filtered = input.filter(Char::isDigit).take(2)
+                                cycleText = filtered
+                                filtered.toIntOrNull()?.let { syncAssignments(it) }
+                            },
+                            cycleDays = cycleDays,
+                            assignments = assignments,
+                            templates = userTemplates,
+                            pickingDay = pickingDay,
+                            onPick = { pickingDay = it },
+                            scrollBehavior = scrollBehavior,
+                        )
+                    Step.ANCHOR ->
+                        AnchorPickerStep(
+                            anchor = anchor,
+                            holdDown = showAnchorDialog,
+                            onOpen = { showAnchorDialog = true },
+                        )
                 }
             }
         }
@@ -429,29 +455,31 @@ fun OnboardingScreen(
             onSave = { name, start, end, color, isRest ->
                 val current = editingTemplate
                 if (current == null) {
-                    userTemplates = userTemplates.add(
-                        ShiftTemplate(
-                            id = System.currentTimeMillis(),
-                            name = name,
-                            startMinute = start,
-                            endMinute = end,
-                            colorArgb = color,
-                            isRest = isRest,
-                        )
-                    )
-                } else {
-                    val idx = userTemplates.indexOfFirst { it.id == current.id }
-                    if (idx >= 0) {
-                        userTemplates = userTemplates.set(
-                            idx,
-                            current.copy(
+                    userTemplates =
+                        userTemplates.add(
+                            ShiftTemplate(
+                                id = System.currentTimeMillis(),
                                 name = name,
                                 startMinute = start,
                                 endMinute = end,
                                 colorArgb = color,
                                 isRest = isRest,
-                            ),
+                            )
                         )
+                } else {
+                    val idx = userTemplates.indexOfFirst { it.id == current.id }
+                    if (idx >= 0) {
+                        userTemplates =
+                            userTemplates.set(
+                                idx,
+                                current.copy(
+                                    name = name,
+                                    startMinute = start,
+                                    endMinute = end,
+                                    colorArgb = color,
+                                    isRest = isRest,
+                                ),
+                            )
                     }
                 }
                 showEditor = false
@@ -496,22 +524,27 @@ private fun CreateMethodStep(
             val isSelected = selected == method
             Card(
                 onClick = { onSelect(method) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = if (isSelected) {
-                        MiuixTheme.colorScheme.primary
-                    } else {
-                        MiuixTheme.colorScheme.surfaceContainer
-                    },
-                    contentColor = if (isSelected) {
-                        MiuixTheme.colorScheme.onPrimary
-                    } else {
-                        MiuixTheme.colorScheme.onSurface
-                    },
-                ),
+                modifier =
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                colors =
+                    CardDefaults.defaultColors(
+                        color =
+                            if (isSelected) {
+                                MiuixTheme.colorScheme.primary
+                            } else {
+                                MiuixTheme.colorScheme.surfaceContainer
+                            },
+                        contentColor =
+                            if (isSelected) {
+                                MiuixTheme.colorScheme.onPrimary
+                            } else {
+                                MiuixTheme.colorScheme.onSurface
+                            },
+                    ),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+                    modifier =
+                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -519,21 +552,23 @@ private fun CreateMethodStep(
                             text = stringResource(method.titleRes),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) {
-                                MiuixTheme.colorScheme.onPrimary
-                            } else {
-                                MiuixTheme.colorScheme.onSurface
-                            },
+                            color =
+                                if (isSelected) {
+                                    MiuixTheme.colorScheme.onPrimary
+                                } else {
+                                    MiuixTheme.colorScheme.onSurface
+                                },
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = stringResource(method.summaryRes),
                             fontSize = 13.sp,
-                            color = if (isSelected) {
-                                MiuixTheme.colorScheme.onPrimary
-                            } else {
-                                MiuixTheme.colorScheme.onSurfaceVariantSummary
-                            },
+                            color =
+                                if (isSelected) {
+                                    MiuixTheme.colorScheme.onPrimary
+                                } else {
+                                    MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                },
                         )
                     }
                 }
@@ -553,21 +588,26 @@ private fun StepIndicator(step: Step) {
     ) {
         steps.forEachIndexed { i, _ ->
             Box(
-                Modifier
-                    .size(width = if (i == index) 28.dp else 12.dp, height = 6.dp)
+                Modifier.size(width = if (i == index) 28.dp else 12.dp, height = 6.dp)
                     .squircleBackground(
-                        color = if (i <= index) {
-                            MiuixTheme.colorScheme.primary
-                        } else {
-                            MiuixTheme.colorScheme.dividerLine
-                        },
+                        color =
+                            if (i <= index) {
+                                MiuixTheme.colorScheme.primary
+                            } else {
+                                MiuixTheme.colorScheme.dividerLine
+                            },
                         cornerRadius = 3.dp,
                     )
             )
         }
         Spacer(Modifier.width(8.dp))
         Text(
-            stringResource(R.string.step_progress, index + 1, steps.size, stringResource(step.labelRes)),
+            stringResource(
+                R.string.step_progress,
+                index + 1,
+                steps.size,
+                stringResource(step.labelRes),
+            ),
             fontSize = 13.sp,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
@@ -610,7 +650,10 @@ internal fun TemplatesStep(
                 SmallTitle(text = title, modifier = Modifier.weight(1f))
                 if (onAdd != null) {
                     IconButton(onClick = onAdd, holdDownState = addHoldDown) {
-                        Icon(MiuixIcons.Regular.Add, contentDescription = stringResource(R.string.action_add_shift))
+                        Icon(
+                            MiuixIcons.Regular.Add,
+                            contentDescription = stringResource(R.string.action_add_shift),
+                        )
                     }
                 }
             }
@@ -627,8 +670,7 @@ internal fun TemplatesStep(
             templates.forEach { template ->
                 val editInteractionSource = rememberHoldDownSource(editHoldDown(template))
                 Row(
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .let { modifier ->
                             if (showEditAction) {
                                 modifier
@@ -643,7 +685,10 @@ internal fun TemplatesStep(
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(Modifier.size(14.dp).background(ShiftPalette.color(template.colorArgb), CircleShape))
+                    Box(
+                        Modifier.size(14.dp)
+                            .background(ShiftPalette.color(template.colorArgb), CircleShape)
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(template.name, fontSize = 16.sp)
@@ -654,12 +699,24 @@ internal fun TemplatesStep(
                         )
                     }
                     if (showEditAction) {
-                        IconButton(onClick = { onEdit(template) }, holdDownState = editHoldDown(template)) {
-                            Icon(MiuixIcons.Regular.Edit, contentDescription = stringResource(R.string.action_edit))
+                        IconButton(
+                            onClick = { onEdit(template) },
+                            holdDownState = editHoldDown(template),
+                        ) {
+                            Icon(
+                                MiuixIcons.Regular.Edit,
+                                contentDescription = stringResource(R.string.action_edit),
+                            )
                         }
                     }
-                    IconButton(onClick = { onDelete(template) }, holdDownState = deleteHoldDown(template)) {
-                        Icon(MiuixIcons.Regular.Delete, contentDescription = stringResource(R.string.action_delete))
+                    IconButton(
+                        onClick = { onDelete(template) },
+                        holdDownState = deleteHoldDown(template),
+                    ) {
+                        Icon(
+                            MiuixIcons.Regular.Delete,
+                            contentDescription = stringResource(R.string.action_delete),
+                        )
                     }
                 }
             }
@@ -683,10 +740,12 @@ internal fun AssignmentRow(
             .fillMaxWidth()
             // 独立行用 squircle 底色；方案页的多行指派放在同一张 Card 内，沿用卡片底色
             .let {
-                if (grouped) it else it.squircleSurface(
-                    color = MiuixTheme.colorScheme.surfaceVariant,
-                    cornerRadius = 12.dp,
-                )
+                if (grouped) it
+                else
+                    it.squircleSurface(
+                        color = MiuixTheme.colorScheme.surfaceVariant,
+                        cornerRadius = 12.dp,
+                    )
             }
             .clickable(
                 interactionSource = interactionSource,
@@ -696,12 +755,22 @@ internal fun AssignmentRow(
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(stringResource(R.string.cycle_day, day + 1), fontSize = 15.sp, color = MiuixTheme.colorScheme.onSurface)
+        Text(
+            stringResource(R.string.cycle_day, day + 1),
+            fontSize = 15.sp,
+            color = MiuixTheme.colorScheme.onSurface,
+        )
         Spacer(Modifier.weight(1f))
         if (template == null) {
-            Text(stringResource(R.string.tap_to_select), fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Text(
+                stringResource(R.string.tap_to_select),
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
         } else {
-            Box(Modifier.size(12.dp).background(ShiftPalette.color(template.colorArgb), CircleShape))
+            Box(
+                Modifier.size(12.dp).background(ShiftPalette.color(template.colorArgb), CircleShape)
+            )
             Spacer(Modifier.width(8.dp))
             Text(template.name, fontSize = 14.sp)
             Spacer(Modifier.width(6.dp))
@@ -727,8 +796,7 @@ private fun CycleAssignStep(
     scrollBehavior: ScrollBehavior,
 ) {
     LazyColumn(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .fillMaxHeight()
             .scrollEndHaptic()
             .overScrollVertical()
@@ -746,9 +814,7 @@ private fun CycleAssignStep(
             )
         }
         if (cycleDays != null) {
-            item {
-                SmallTitle(text = stringResource(R.string.assign_each_day))
-            }
+            item { SmallTitle(text = stringResource(R.string.assign_each_day)) }
             items(cycleDays) { day ->
                 AssignmentRow(
                     day = day,
@@ -766,10 +832,7 @@ private fun CycleAssignStep(
     }
 }
 
-/**
- * 第 3 步：开始日期。和方案页的「排班设置」一样是**点击行 + 月/日 弹窗**，
- * 不再内联年/月/日 三列滚轮。
- */
+/** 第 3 步：开始日期。和方案页的「排班设置」一样是**点击行 + 月/日 弹窗**， 不再内联年/月/日 三列滚轮。 */
 @Composable
 private fun AnchorPickerStep(
     anchor: Ymd,
@@ -812,7 +875,11 @@ internal fun TemplatePickDialog(
     onDismiss: () -> Unit,
 ) {
     if (templates.isEmpty()) {
-        OverlayDialog(show = show, title = stringResource(R.string.select_shift), onDismissRequest = onDismiss) {
+        OverlayDialog(
+            show = show,
+            title = stringResource(R.string.select_shift),
+            onDismissRequest = onDismiss,
+        ) {
             Text(
                 stringResource(R.string.select_shift_empty),
                 fontSize = 14.sp,
@@ -822,29 +889,33 @@ internal fun TemplatePickDialog(
         return
     }
     val localizedRanges = templates.map { it.localizedTimeRangeText() }
-    val entry = remember(templates, localizedRanges, currentId, onPick) {
-        DropdownEntry(
-            items = templates.mapIndexed { index, template ->
-                DropdownItem(
-                    text = template.name,
-                    summary = localizedRanges[index],
-                    selected = template.id == currentId,
-                    onClick = { onPick(template.id) },
-                    icon = { iconModifier ->
-                        // 组件给的 icon 槽是 sizeIn(min 26dp) + 右边距，直接 size 会被它撑成矩形、
-                        // CircleShape 就画成椭圆了——所以外面套一层把圆点居中画
-                        Box(iconModifier, contentAlignment = Alignment.Center) {
-                            Box(
-                                Modifier
-                                    .size(14.dp)
-                                    .background(ShiftPalette.color(template.colorArgb), CircleShape),
-                            )
-                        }
-                    },
-                )
-            },
-        )
-    }
+    val entry =
+        remember(templates, localizedRanges, currentId, onPick) {
+            DropdownEntry(
+                items =
+                    templates.mapIndexed { index, template ->
+                        DropdownItem(
+                            text = template.name,
+                            summary = localizedRanges[index],
+                            selected = template.id == currentId,
+                            onClick = { onPick(template.id) },
+                            icon = { iconModifier ->
+                                // 组件给的 icon 槽是 sizeIn(min 26dp) + 右边距，直接 size 会被它撑成矩形、
+                                // CircleShape 就画成椭圆了——所以外面套一层把圆点居中画
+                                Box(iconModifier, contentAlignment = Alignment.Center) {
+                                    Box(
+                                        Modifier.size(14.dp)
+                                            .background(
+                                                ShiftPalette.color(template.colorArgb),
+                                                CircleShape,
+                                            )
+                                    )
+                                }
+                            },
+                        )
+                    }
+            )
+        }
     WindowDropdownDialog(
         entry = entry,
         title = stringResource(R.string.select_shift),
@@ -868,11 +939,18 @@ internal fun DeleteTemplateDialog(
     OverlayDialog(
         show = show,
         title = stringResource(R.string.delete_shift_title, template.name),
-        summary = stringResource(if (inUse) R.string.delete_shift_in_use else R.string.delete_shift_confirm),
+        summary =
+            stringResource(
+                if (inUse) R.string.delete_shift_in_use else R.string.delete_shift_confirm
+            ),
         onDismissRequest = onDismiss,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(text = stringResource(R.string.action_cancel), onClick = onDismiss, modifier = Modifier.weight(1f))
+            TextButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+            )
             TextButton(
                 text = stringResource(R.string.action_delete),
                 onClick = onConfirm,
@@ -884,10 +962,9 @@ internal fun DeleteTemplateDialog(
 }
 
 /**
- * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可；
- * 自绘的 `clickable` 行走这里——把状态作为 [HoldDownInteraction] 注入 interactionSource，
- * 再交给 `Modifier.clickable(interactionSource = …, indication = LocalIndication.current, …)`，
- * 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
+ * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
+ * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
+ * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
  */
 @Composable
 private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
@@ -927,11 +1004,12 @@ private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSo
 private fun ShiftTemplate.localizedTimeRangeText(): String {
     if (isRest) return stringResource(R.string.shift_rest_time)
     val end = ShiftTemplate.format(endMinute)
-    val localizedEnd = if (crossesMidnight()) {
-        stringResource(R.string.shift_next_day, end)
-    } else {
-        end
-    }
+    val localizedEnd =
+        if (crossesMidnight()) {
+            stringResource(R.string.shift_next_day, end)
+        } else {
+            end
+        }
     return "${ShiftTemplate.format(startMinute)}–$localizedEnd"
 }
 
@@ -947,23 +1025,27 @@ private fun TemplateEditorDialog(
     show: Boolean,
     existing: ShiftTemplate?,
     usedColors: List<Int>,
-    onSave: (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
+    onSave:
+        (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val defaultRestName = stringResource(R.string.shift_rest)
     // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
     var name by remember(existing) { mutableStateOf(existing?.name ?: "") }
-    var startH by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
-    var startM by remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }
+    var startH by
+        remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
+    var startM by
+        remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }
     var endH by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute / 60 } ?: 15) }
     var endM by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute % 60 } ?: 0) }
-    var color by remember(existing) {
-        mutableIntStateOf(
-            existing?.colorArgb
-                ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
-                ?: ShiftPalette.presets.first()
-        )
-    }
+    var color by
+        remember(existing) {
+            mutableIntStateOf(
+                existing?.colorArgb
+                    ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+                    ?: ShiftPalette.presets.first()
+            )
+        }
     // 开始 / 结束共用一个切换框，下面那组滚轮编辑当前选中的那一头
     var editingEnd by remember(existing) { mutableStateOf(false) }
     var isRest by remember(existing) { mutableStateOf(existing?.isRest == true) }
@@ -979,9 +1061,10 @@ private fun TemplateEditorDialog(
         startM = existing?.let { it.startMinute % 60 } ?: 0
         endH = existing?.let { it.endMinute / 60 } ?: 15
         endM = existing?.let { it.endMinute % 60 } ?: 0
-        color = existing?.colorArgb
-            ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
-            ?: ShiftPalette.presets.first()
+        color =
+            existing?.colorArgb
+                ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
+                ?: ShiftPalette.presets.first()
         editingEnd = false
         isRest = existing?.isRest == true
         showColorDialog = false
@@ -989,22 +1072,17 @@ private fun TemplateEditorDialog(
 
     OverlayDialog(
         show = show,
-        title = stringResource(if (existing == null) R.string.shift_add_title else R.string.shift_edit_title),
+        title =
+            stringResource(
+                if (existing == null) R.string.shift_add_title else R.string.shift_edit_title
+            ),
         summary = stringResource(R.string.shift_editor_summary),
         onDismissRequest = onDismiss,
     ) {
         // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
         // 所以给内容一个上限、让滚动区自己滚，按钮作为非加权子项固定在底部。
-        Column(
-            Modifier
-                .heightIn(max = 500.dp)
-                .imePadding(),
-        ) {
-            Column(
-                Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-            ) {
+        Column(Modifier.heightIn(max = 500.dp).imePadding()) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 TextField(
                     value = name,
                     onValueChange = { name = it },
@@ -1013,9 +1091,8 @@ private fun TemplateEditorDialog(
                         // 颜色收进名称框右边这个圆点里，点它进颜色页
                         IconButton(onClick = { showColorDialog = true }) {
                             Box(
-                                Modifier
-                                    .size(24.dp)
-                                    .background(ShiftPalette.color(color), CircleShape),
+                                Modifier.size(24.dp)
+                                    .background(ShiftPalette.color(color), CircleShape)
                             )
                         }
                     },
@@ -1024,32 +1101,42 @@ private fun TemplateEditorDialog(
                 Spacer(Modifier.height(12.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = MiuixTheme.colorScheme.surface,
-                        contentColor = MiuixTheme.colorScheme.onSurface,
-                    ),
+                    colors =
+                        CardDefaults.defaultColors(
+                            color = MiuixTheme.colorScheme.surface,
+                            contentColor = MiuixTheme.colorScheme.onSurface,
+                        ),
                 ) {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.shift_rest), fontSize = 16.sp, modifier = Modifier.weight(1f))
+                        Text(
+                            stringResource(R.string.shift_rest),
+                            fontSize = 16.sp,
+                            modifier = Modifier.weight(1f),
+                        )
                         Switch(checked = isRest, onCheckedChange = { isRest = it })
                     }
                 }
                 if (!isRest) {
                     Spacer(Modifier.height(12.dp))
                     TabRowWithContour(
-                        tabs = listOf(stringResource(R.string.shift_start), stringResource(R.string.shift_end)),
+                        tabs =
+                            listOf(
+                                stringResource(R.string.shift_start),
+                                stringResource(R.string.shift_end),
+                            ),
                         selectedTabIndex = if (editingEnd) 1 else 0,
                         onTabSelected = { editingEnd = it == 1 },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = TabRowDefaults.tabRowColors(
-                            backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
-                            contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            selectedBackgroundColor = MiuixTheme.colorScheme.primary,
-                            selectedContentColor = MiuixTheme.colorScheme.onPrimary,
-                        ),
+                        colors =
+                            TabRowDefaults.tabRowColors(
+                                backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
+                                contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                selectedBackgroundColor = MiuixTheme.colorScheme.primary,
+                                selectedContentColor = MiuixTheme.colorScheme.onPrimary,
+                            ),
                         height = 50.dp,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -1114,10 +1201,7 @@ private fun TemplateEditorDialog(
     )
 }
 
-/**
- * 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1——
- * 班次色要画在日历格上，半透明会跟底色混在一起。
- */
+/** 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1—— 班次色要画在日历格上，半透明会跟底色混在一起。 */
 @Composable
 private fun ColorDialog(
     show: Boolean,
@@ -1127,9 +1211,7 @@ private fun ColorDialog(
 ) {
     // 同主弹窗：每次打开都从当前颜色重新开始，别让上次取消的改动留在里面
     var draft by remember(current) { mutableStateOf(Color(current)) }
-    LaunchedEffect(show, current) {
-        if (show) draft = Color(current)
-    }
+    LaunchedEffect(show, current) { if (show) draft = Color(current) }
 
     OverlayDialog(
         show = show,
@@ -1138,11 +1220,7 @@ private fun ColorDialog(
     ) {
         // 调色盘本身挺高，长内容按 Dialog 规范交给滚动区
         Column(Modifier.heightIn(max = 500.dp)) {
-            Column(
-                Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-            ) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 ColorPalette(
                     color = draft,
                     onColorChanged = { draft = it },

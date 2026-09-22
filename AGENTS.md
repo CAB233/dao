@@ -188,7 +188,12 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 
 ## 构建与测试命令
 
+Kotlin 源码和 Gradle Kotlin 脚本统一使用 ktfmt 的 KotlinLang 风格（4 空格缩进），版本由 `gradle/libs.versions.toml` 管理。
+
 ```bash
+./gradlew ktfmtFormat  # 自动格式化
+./gradlew ktfmtCheck   # 只检查格式，不修改文件
+
 ./gradlew :app:assembleDebug
 
 # 发布（签名配置见下）

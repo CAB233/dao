@@ -16,6 +16,7 @@ kotlinxSerialization = "1.9.0"
 kotlinxCollectionsImmutable = "0.4.0"
 aboutLibraries = "15.2.0"
 tyme = "1.5.0"
+ktfmt = "0.27.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,6 +45,7 @@ aboutlibraries-core = { group = "com.mikepenz", name = "aboutlibraries-core", ve
 tyme = { group = "cn.6tail", name = "tyme4kt", version.ref = "tyme" }
 
 [plugins]
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

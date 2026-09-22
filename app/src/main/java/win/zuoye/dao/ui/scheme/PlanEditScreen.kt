@@ -1,7 +1,5 @@
 package win.zuoye.dao.ui.scheme
 
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.snapshotFlow
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
@@ -11,9 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,26 +25,29 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.collections.immutable.persistentListOf
@@ -76,8 +75,8 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.R
+import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
@@ -92,10 +91,7 @@ internal const val UNASSIGNED = 0L
 internal fun formatYmd(ymd: Ymd): String =
     "${ymd.year}-${"%02d".format(ymd.month)}-${"%02d".format(ymd.day)}"
 
-/**
- * 倒班方案：整页是方案列表，点某张卡片时编辑页从底部以卡片形式滑入。
- * 编辑卡片由外层主界面覆盖显示，使底栏与列表始终保留在卡片下方。
- */
+/** 倒班方案：整页是方案列表，点某张卡片时编辑页从底部以卡片形式滑入。 编辑卡片由外层主界面覆盖显示，使底栏与列表始终保留在卡片下方。 */
 @Composable
 fun PlanEditScreen(
     doc: PlanDocument,
@@ -120,10 +116,7 @@ fun PlanEditScreen(
     )
 }
 
-/**
- * 方案列表（像闹钟列表）：一张卡片一个方案，右侧是「使用中」开关，点卡片进入编辑页，
- * 右下角加号可手动新建或导入方案；长按可多选，顶栏提供复制与删除操作。
- */
+/** 方案列表（像闹钟列表）：一张卡片一个方案，右侧是「使用中」开关，点卡片进入编辑页， 右下角加号可手动新建或导入方案；长按可多选，顶栏提供复制与删除操作。 */
 @Composable
 private fun SchemeListScreen(
     doc: PlanDocument,
@@ -166,21 +159,23 @@ private fun SchemeListScreen(
     fun createScheme() {
         val id = System.currentTimeMillis()
         val today = Ymd.today()
-        val scheme = Scheme(
-            id = id,
-            name = defaultPlanName,
-            cycleDays = 1,
-            dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
-            createdAt = id,
-            groups = persistentListOf(
-                SchemeGroup(
-                    id = id,
-                    name = defaultGroupName,
-                    anchorEpochDay = today.epochDay,
-                ),
-            ),
-            defaultGroupId = id,
-        )
+        val scheme =
+            Scheme(
+                id = id,
+                name = defaultPlanName,
+                cycleDays = 1,
+                dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
+                createdAt = id,
+                groups =
+                    persistentListOf(
+                        SchemeGroup(
+                            id = id,
+                            name = defaultGroupName,
+                            anchorEpochDay = today.epochDay,
+                        )
+                    ),
+                defaultGroupId = id,
+            )
         onCreate(scheme)
     }
 
@@ -194,9 +189,10 @@ private fun SchemeListScreen(
         }
     }
 
-    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        result.contents?.let { importFrom(it) }
-    }
+    val scanLauncher =
+        rememberLauncherForActivityResult(ScanContract()) { result ->
+            result.contents?.let { importFrom(it) }
+        }
 
     NavigationBackHandler(
         state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
@@ -207,20 +203,32 @@ private fun SchemeListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (selecting) {
-                    pluralStringResource(R.plurals.plans_selected, selectedIds.size, selectedIds.size)
-                } else {
-                    stringResource(R.string.settings_plans)
-                },
+                title =
+                    if (selecting) {
+                        pluralStringResource(
+                            R.plurals.plans_selected,
+                            selectedIds.size,
+                            selectedIds.size,
+                        )
+                    } else {
+                        stringResource(R.string.settings_plans)
+                    },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     if (selecting) {
                         IconButton(onClick = { exitSelection() }) {
-                            Icon(MiuixIcons.Basic.Close, contentDescription = stringResource(R.string.action_close_selection))
+                            Icon(
+                                MiuixIcons.Basic.Close,
+                                contentDescription =
+                                    stringResource(R.string.action_close_selection),
+                            )
                         }
                     } else if (showBackButton) {
                         IconButton(onClick = onBack) {
-                            Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
+                            Icon(
+                                MiuixIcons.Regular.Back,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
                         }
                     }
                 },
@@ -235,11 +243,13 @@ private fun SchemeListScreen(
                                             add(scheme.id)
                                             scheme.groups.forEach { add(it.id) }
                                         }
-                                    }.toMutableSet()
-                                    var nextId = maxOf(
-                                        System.currentTimeMillis(),
-                                        (usedIds.maxOrNull() ?: 0L) + 1L,
-                                    )
+                                    }
+                                        .toMutableSet()
+                                    var nextId =
+                                        maxOf(
+                                            System.currentTimeMillis(),
+                                            (usedIds.maxOrNull() ?: 0L) + 1L,
+                                        )
                                     fun newId(): Long {
                                         while (nextId in usedIds) nextId++
                                         return nextId.also {
@@ -248,20 +258,28 @@ private fun SchemeListScreen(
                                         }
                                     }
 
-                                    val copies = plan.schemes
-                                        .filter { it.id in ids }
-                                        .map { source ->
-                                            val groupIds = source.groups.associate { it.id to newId() }
-                                            source.copy(
-                                                id = newId(),
-                                                name = source.name + copySuffix,
-                                                createdAt = newId(),
-                                                groups = source.groups.map { group ->
-                                                    group.copy(id = groupIds.getValue(group.id))
-                                                }.toImmutableList(),
-                                                defaultGroupId = groupIds.getValue(source.defaultGroupId),
-                                            )
-                                        }
+                                    val copies =
+                                        plan.schemes
+                                            .filter { it.id in ids }
+                                            .map { source ->
+                                                val groupIds =
+                                                    source.groups.associate { it.id to newId() }
+                                                source.copy(
+                                                    id = newId(),
+                                                    name = source.name + copySuffix,
+                                                    createdAt = newId(),
+                                                    groups =
+                                                        source.groups
+                                                            .map { group ->
+                                                                group.copy(
+                                                                    id = groupIds.getValue(group.id)
+                                                                )
+                                                            }
+                                                            .toImmutableList(),
+                                                    defaultGroupId =
+                                                        groupIds.getValue(source.defaultGroupId),
+                                                )
+                                            }
                                     plan.copy(schemes = (plan.schemes + copies).toImmutableList())
                                 }
                                 exitSelection()
@@ -312,11 +330,11 @@ private fun SchemeListScreen(
                 }
             }
         },
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        contentWindowInsets =
+            WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         LazyColumn(
-            Modifier
-                .fillMaxSize()
+            Modifier.fillMaxSize()
                 .consumeWindowInsets(padding)
                 .scrollEndHaptic()
                 .overScrollVertical()
@@ -328,9 +346,7 @@ private fun SchemeListScreen(
             if (doc.schemes.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillParentMaxHeight(0.8f)
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillParentMaxHeight(0.8f).fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -398,7 +414,7 @@ private fun SchemeListScreen(
                                 setBeepEnabled(false)
                                 setOrientationLocked(true)
                                 setCaptureActivity(ScanCaptureActivity::class.java)
-                            },
+                            }
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -416,11 +432,12 @@ private fun SchemeListScreen(
         // 弹层必须在 Scaffold 的 content 里（宿主由 Scaffold 提供，放外面点不动）
         OverlayDialog(
             show = showDeleteSelected,
-            title = pluralStringResource(
-                R.plurals.delete_selected_plans_title,
-                selectedIds.size,
-                selectedIds.size,
-            ),
+            title =
+                pluralStringResource(
+                    R.plurals.delete_selected_plans_title,
+                    selectedIds.size,
+                    selectedIds.size,
+                ),
             summary = stringResource(R.string.delete_irreversible_period),
             onDismissRequest = { showDeleteSelected = false },
         ) {
@@ -437,20 +454,21 @@ private fun SchemeListScreen(
                         val ids = selectedIds
                         showDeleteSelected = false
                         onMutate { plan ->
-                            val remaining = plan.schemes
-                                .filterNot { it.id in ids }
-                                .toImmutableList()
+                            val remaining =
+                                plan.schemes.filterNot { it.id in ids }.toImmutableList()
                             plan.copy(
                                 schemes = remaining,
                                 // 使用中的那个被删掉时，顺位到剩下的第一个
-                                activeSchemeId = plan.activeSchemeId
-                                    ?.takeIf { id -> remaining.any { it.id == id } }
-                                    ?: remaining.firstOrNull()?.id,
+                                activeSchemeId =
+                                    plan.activeSchemeId?.takeIf { id ->
+                                        remaining.any { it.id == id }
+                                    } ?: remaining.firstOrNull()?.id,
                             )
                         }
                         exitSelection()
                     },
-                    colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
+                    colors =
+                        ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -468,10 +486,7 @@ private fun Context.clipboardText(): String =
         ?.toString()
         .orEmpty()
 
-/**
- * 一个方案卡片（尺寸对齐系统闹钟列表）：标题（+「使用中」小字），
- * 右侧是使用中开关；关闭的方案整体变灰；多选模式下右侧用复选框替换开关。
- */
+/** 一个方案卡片（尺寸对齐系统闹钟列表）：标题（+「使用中」小字）， 右侧是使用中开关；关闭的方案整体变灰；多选模式下右侧用复选框替换开关。 */
 @Composable
 private fun SchemeCard(
     scheme: Scheme,
@@ -484,12 +499,14 @@ private fun SchemeCard(
     onToggleActive: (Boolean) -> Unit,
 ) {
     // 关闭的方案整体灰掉
-    val nameColor = if (active) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSurface
-    val summaryColor = if (active) {
-        MiuixTheme.colorScheme.onSurfaceVariantSummary
-    } else {
-        MiuixTheme.colorScheme.disabledOnSurface
-    }
+    val nameColor =
+        if (active) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSurface
+    val summaryColor =
+        if (active) {
+            MiuixTheme.colorScheme.onSurfaceVariantSummary
+        } else {
+            MiuixTheme.colorScheme.disabledOnSurface
+        }
     val defaultGroupName = scheme.defaultGroup()?.name ?: stringResource(R.string.status_not_set)
 
     Card(
@@ -498,8 +515,7 @@ private fun SchemeCard(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .padding(start = 16.dp, end = 12.dp, top = 18.dp, bottom = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -543,8 +559,8 @@ private fun SchemeCard(
 /**
  * 滚动时收起 FAB：往下滚藏起来，往回滚（或回到顶部）再露出来。
  *
- * 传一个单调递增的"滚动位置"就行——LazyColumn 用 `index * 大数 + offset` 合成，
- * 普通 Column 直接给 `ScrollState.value`。判定在协程里做，不参与组合期读取。
+ * 传一个单调递增的"滚动位置"就行——LazyColumn 用 `index * 大数 + offset` 合成， 普通 Column 直接给
+ * `ScrollState.value`。判定在协程里做，不参与组合期读取。
  */
 @Composable
 private fun rememberFabVisible(scrollPosition: () -> Int): Boolean {
@@ -552,14 +568,15 @@ private fun rememberFabVisible(scrollPosition: () -> Int): Boolean {
 
     LaunchedEffect(Unit) {
         var previous = scrollPosition()
-        snapshotFlow { scrollPosition() }.collect { current ->
-            when {
-                current == 0 -> visible = true
-                current > previous -> visible = false
-                current < previous -> visible = true
+        snapshotFlow { scrollPosition() }
+            .collect { current ->
+                when {
+                    current == 0 -> visible = true
+                    current > previous -> visible = false
+                    current < previous -> visible = true
+                }
+                previous = current
             }
-            previous = current
-        }
     }
     return visible
 }

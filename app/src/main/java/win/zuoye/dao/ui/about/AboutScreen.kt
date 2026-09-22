@@ -59,10 +59,7 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
 
-/**
- * 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。
- * 开源许可由 AboutLibraries 在构建时根据实际依赖自动生成。
- */
+/** 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。 开源许可由 AboutLibraries 在构建时根据实际依赖自动生成。 */
 @Composable
 fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
     val context = LocalContext.current
@@ -87,41 +84,40 @@ private fun AboutHomeContent(
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
+                        Icon(
+                            MiuixIcons.Regular.Back,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
             )
         },
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        contentWindowInsets =
+            WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         Box(Modifier.fillMaxSize()) {
             LazyColumn(
-                modifier = Modifier
-                    .widthIn(max = 720.dp)
-                    .fillMaxSize()
-                    .align(Alignment.TopCenter)
-                    .consumeWindowInsets(padding)
-                    .scrollEndHaptic()
-                    .overScrollVertical()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                modifier =
+                    Modifier.widthIn(max = 720.dp)
+                        .fillMaxSize()
+                        .align(Alignment.TopCenter)
+                        .consumeWindowInsets(padding)
+                        .scrollEndHaptic()
+                        .overScrollVertical()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
                 state = listState,
                 contentPadding = padding,
             ) {
                 item {
                     AboutHero(
                         app = app,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     )
                 }
 
                 item {
                     Card(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .padding(bottom = 12.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
                     ) {
                         AboutEntry(
                             title = stringResource(R.string.about_source),
@@ -199,13 +195,13 @@ private fun AboutEntry(
 private const val repositoryUrl = "https://github.com/CAB233/dao"
 
 private fun Context.openUrl(url: String, failureName: String) {
-    val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
-        if (this@openUrl !is Activity) {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    val intent =
+        Intent(Intent.ACTION_VIEW, url.toUri()).apply {
+            if (this@openUrl !is Activity) {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         }
-    }
-    runCatching { startActivity(intent) }
-        .onFailure { notImplemented(failureName) }
+    runCatching { startActivity(intent) }.onFailure { notImplemented(failureName) }
 }
 
 private fun Context.openRepository() = openUrl(repositoryUrl, getString(R.string.open_repository))
@@ -218,10 +214,11 @@ private fun Context.notImplemented(name: String) {
 @Composable
 internal fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val libraries = remember(context) {
-        runCatching { Libs.Builder().withJson(context, R.raw.aboutlibraries).build().libraries }
-            .getOrDefault(emptyList())
-    }
+    val libraries =
+        remember(context) {
+            runCatching { Libs.Builder().withJson(context, R.raw.aboutlibraries).build().libraries }
+                .getOrDefault(emptyList())
+        }
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
 
@@ -232,31 +229,30 @@ internal fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Regular.Back, contentDescription = stringResource(R.string.action_back))
+                        Icon(
+                            MiuixIcons.Regular.Back,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
             )
         },
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        contentWindowInsets =
+            WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .consumeWindowInsets(padding)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier =
+                Modifier.fillMaxSize()
+                    .consumeWindowInsets(padding)
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
             contentPadding = padding,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
             items(libraries, key = { it.uniqueId }) { library ->
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp),
-                ) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                     LicenseCardContent(library)
                 }
             }
@@ -269,9 +265,7 @@ internal fun OpenSourceLicensesScreen(onBack: () -> Unit) {
 private fun LicenseCardContent(library: Library) {
     val summaryColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
@@ -286,15 +280,17 @@ private fun LicenseCardContent(library: Library) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            library.artifactVersion?.takeIf { it.isNotBlank() }?.let { version ->
-                Text(
-                    text = version,
-                    modifier = Modifier.padding(start = 12.dp),
-                    fontSize = 14.sp,
-                    color = summaryColor,
-                    maxLines = 1,
-                )
-            }
+            library.artifactVersion
+                ?.takeIf { it.isNotBlank() }
+                ?.let { version ->
+                    Text(
+                        text = version,
+                        modifier = Modifier.padding(start = 12.dp),
+                        fontSize = 14.sp,
+                        color = summaryColor,
+                        maxLines = 1,
+                    )
+                }
         }
         Text(
             text = library.authorSummary(),
@@ -313,19 +309,21 @@ private fun LicenseCardContent(library: Library) {
     }
 }
 
-private fun Library.authorSummary(): String = developers
-    .mapNotNull { developer -> developer.name }
-    .filter { it.isNotBlank() }
-    .distinct()
-    .joinToString(", ")
-    .ifBlank { organization?.name?.takeIf { it.isNotBlank() } ?: uniqueId.substringBefore(':') }
+private fun Library.authorSummary(): String =
+    developers
+        .mapNotNull { developer -> developer.name }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .joinToString(", ")
+        .ifBlank { organization?.name?.takeIf { it.isNotBlank() } ?: uniqueId.substringBefore(':') }
 
-private fun Library.licenseNames(): String = licenses
-    .map { license -> license.name.ifBlank { license.spdxId.orEmpty() } }
-    .filter { it.isNotBlank() }
-    .distinct()
-    .joinToString(", ")
-    .ifBlank { "Unknown license" }
+private fun Library.licenseNames(): String =
+    licenses
+        .map { license -> license.name.ifBlank { license.spdxId.orEmpty() } }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .joinToString(", ")
+        .ifBlank { "Unknown license" }
 
 private class AppInfo(
     val versionName: String,
@@ -335,23 +333,24 @@ private class AppInfo(
 private fun Context.loadAppInfo(): AppInfo {
     val pm = packageManager
     val packageInfo = runCatching {
-        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(packageName, 0)
-        }
+        val info =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION") pm.getPackageInfo(packageName, 0)
+            }
         info
-    }.getOrNull()
+    }
+        .getOrNull()
     val versionName = packageInfo?.versionName.orEmpty()
-    val versionCode = packageInfo?.let {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            it.longVersionCode
-        } else {
-            @Suppress("DEPRECATION")
-            it.versionCode.toLong()
-        }
-    } ?: 0L
+    val versionCode =
+        packageInfo?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                it.longVersionCode
+            } else {
+                @Suppress("DEPRECATION") it.versionCode.toLong()
+            }
+        } ?: 0L
     return AppInfo(versionName, versionCode)
 }
 

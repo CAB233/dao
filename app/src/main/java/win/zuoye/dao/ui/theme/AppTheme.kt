@@ -12,14 +12,16 @@ fun AppTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {
-    val controller = remember(themeMode) {
-        ThemeController(
-            colorSchemeMode = when (themeMode) {
-                ThemeMode.LIGHT -> ColorSchemeMode.Light
-                ThemeMode.DARK -> ColorSchemeMode.Dark
-                ThemeMode.SYSTEM -> ColorSchemeMode.System
-            },
-        )
-    }
+    val controller =
+        remember(themeMode) {
+            ThemeController(
+                colorSchemeMode =
+                    when (themeMode) {
+                        ThemeMode.LIGHT -> ColorSchemeMode.Light
+                        ThemeMode.DARK -> ColorSchemeMode.Dark
+                        ThemeMode.SYSTEM -> ColorSchemeMode.System
+                    }
+            )
+        }
     MiuixTheme(controller = controller, content = content)
 }

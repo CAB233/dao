@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「有班次的日子」的格子描边（indigo）：透明心 + 班次色描边。
+
+  色号是色板原色**压暗 30%** 的版本（不是 widget_day_today_* 里的原色）——
+  原色直接画描边时，黄、草绿这类本身就很亮的色号在浅色卡片上几乎看不见（用户反馈过）。
+  文字用同一个压暗后的颜色，框和字仍然是一套色。改色板时要一起改。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="2dp"
+        android:color="#FF283378" />
+    <corners android:radius="8dp" />
+</shape>

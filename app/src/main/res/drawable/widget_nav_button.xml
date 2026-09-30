@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「今」小胶囊（回到今天所在月），配色跟随系统深浅色 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_day_empty" />
+    <corners android:radius="9dp" />
+</shape>

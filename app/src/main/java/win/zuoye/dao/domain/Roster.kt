@@ -13,13 +13,22 @@ import win.zuoye.dao.data.primaryAnchorEpochDay
 
 /** 任意日期 → 班次：换班覆盖优先，其次当前方案按 (日期 − 锚点) mod 周期 推导。 */
 fun resolveShift(doc: PlanDocument, epochDay: Long): ResolvedShift? {
+    val anchorEpochDay = doc.activeScheme()?.primaryAnchorEpochDay() ?: return null
+    return resolveShift(doc, epochDay, anchorEpochDay)
+}
+
+/**
+ * 用指定班组的基准日期推导班次；换班覆盖同样优先。
+ *
+ * 首页「今日排班」与桌面小组件要按各自班组的锚点算同一天，不能用 [Scheme.primaryAnchorEpochDay] 一把梭。
+ */
+fun resolveShift(doc: PlanDocument, epochDay: Long, anchorEpochDay: Long): ResolvedShift? {
     doc.overrides[epochDay.toString()]?.let { overrideId ->
         val template = doc.templateById(overrideId)
         if (template != null) return ResolvedShift(template, isOverride = true)
     }
     val scheme = doc.activeScheme() ?: return null
     if (scheme.cycleDays <= 0) return null
-    val anchorEpochDay = scheme.primaryAnchorEpochDay() ?: return null
     val index = Math.floorMod(epochDay - anchorEpochDay, scheme.cycleDays.toLong()).toInt()
     val templateId = scheme.dayTemplateIds.getOrNull(index) ?: return null
     val template = doc.templateById(templateId) ?: return null

@@ -170,6 +170,8 @@
   <string name="shift_end_time">End time</string>
   <string name="shift_end">End</string>
   <string name="shift_next_day">Next day %1$s</string>
+  <!-- 前缀标记；与时间之间的空格由 nextDayMarker 在代码里补（aapt2 会裁掉资源里的尾随空白） -->
+  <string name="shift_next_day_marker">Next day</string>
   <string name="color_select">Select color</string>
   <string name="onboarding_title">Setup</string>
   <string name="onboarding_edit_title">Edit plan</string>
@@ -322,4 +324,21 @@
   <string name="project_immutable_collections">kotlinx.collections.immutable</string>
   <string name="license_apache_2">Apache License 2.0</string>
   <string name="scan_back">Back</string>
+  <string name="widget_label">Shift calendar</string>
+  <string name="widget_week_label">This week</string>
+  <string name="widget_refresh">Refresh</string>
+  <string name="widget_page_up">Previous</string>
+  <string name="widget_page_down">Next</string>
+  <string name="widget_month_title">%2$s/%1$d</string>
+  <string name="widget_today_button">Today</string>
+  <string name="widget_prev_month">Previous month</string>
+  <string name="widget_next_month">Next month</string>
+  <string name="widget_phase_on_shift">On shift · until %1$s</string>
+  <string name="widget_phase_before_shift">Not started · begins %1$s</string>
+  <string name="widget_phase_after_shift">Off work · ended %1$s</string>
+  <string name="widget_phase_resting">Rest day today</string>
+  <string name="widget_phase_no_plan">No shift plan yet</string>
+  <string name="override_change">Change shift</string>
+  <string name="override_clear">Back to the cycle</string>
+  <string name="override_no_templates">No shift templates yet. Add one in your plan first.</string>
 </resources>

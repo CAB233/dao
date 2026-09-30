@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +44,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.File
@@ -90,6 +94,7 @@ import win.zuoye.dao.ui.update.UpdateInstallDialog
 import win.zuoye.dao.update.AppUpdater
 import win.zuoye.dao.update.UpdateDownloadWorker
 import win.zuoye.dao.update.UpdateInfo
+import win.zuoye.dao.widget.DaoWidgetProvider
 
 @Serializable
 private sealed interface AppRoute : NavKey {
@@ -129,6 +134,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel =
                 viewModel(factory = MainViewModel.factory(applicationContext))
+            // 回到前台时校正桌面小组件：设备休眠期间排的闹钟可能没按点触发
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        DaoWidgetProvider.refreshNow(applicationContext)
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
             val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
             val themeMode = uiState.document?.themeMode ?: ThemeMode.SYSTEM
             val darkTheme =
@@ -507,6 +523,7 @@ private fun MainTabs(
                                     HomeScreen(
                                         doc = doc,
                                         onExportPlan = onExportPlan,
+                                        onMutate = onMutate,
                                         onOpenPlan = {
                                             val activeScheme = doc.activeScheme()
                                             if (activeScheme == null) {

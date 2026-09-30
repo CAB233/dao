@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  深色下的格子描边（cyan）：色板原色**提亮 30%**。深色卡片上压暗版会糊成一片，
+  所以这里反着来 —— 与 drawable/ 里那套是同一组色号的浅/深两个方向。改色板时一起改。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="2dp"
+        android:color="#FF4CC5D4" />
+    <corners android:radius="8dp" />
+</shape>

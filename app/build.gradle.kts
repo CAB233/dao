@@ -26,8 +26,8 @@ android {
         applicationId = "win.zuoye.dao"
         minSdk = 24
         targetSdk = 37
-        versionCode = 13
-        versionName = "0.4.0"
+        versionCode = 14
+        versionName = "0.5.0"
     }
 
     splits {
@@ -70,6 +70,12 @@ android {
     }
     buildFeatures { compose = true }
     androidResources { generateLocaleConfig = true }
+    testOptions {
+        unitTests {
+            // Robolectric 要读 AGP 产出的合并资源/清单（小组件的 RemoteViews 测试靠它 inflate 真实布局）
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 androidComponents {
@@ -114,4 +120,8 @@ dependencies {
     implementation(libs.zxing.core)
     implementation(libs.zxing.android.embedded)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    testImplementation(libs.junit)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }

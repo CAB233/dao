@@ -15,6 +15,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,6 +33,7 @@ import win.zuoye.dao.update.UpdateChecker
 import win.zuoye.dao.update.UpdateDownloads
 import win.zuoye.dao.update.UpdateInfo
 import win.zuoye.dao.update.WorkManagerUpdateDownloads
+import win.zuoye.dao.widget.DaoWidgetProvider
 
 @Immutable
 data class MainUiState(
@@ -48,12 +50,18 @@ sealed interface MainEvent {
     data class ImportFinished(val result: ImportResult) : MainEvent
 }
 
-/** 持有应用数据与更新流程。构造函数只依赖小接口，单测可直接注入内存 fake； 单模块当前没有足够复杂的对象图，因此不用 Hilt，避免为两个依赖增加生成代码和启动成本。 */
+/**
+ * 持有应用数据与更新流程。构造函数只依赖小接口，单测可直接注入内存 fake； 单模块当前没有足够复杂的对象图，因此不用 Hilt，避免为两个依赖增加生成代码和启动成本。
+ *
+ * [onDocumentChanged] 在每次数据落盘后回调，用来让桌面小组件跟上（真实实现见 [companion].factory）； 默认空实现，这样单测不需要 Android
+ * Context。
+ */
 class MainViewModel(
     private val planStore: PlanStore,
     private val updateChecker: UpdateChecker,
     private val updateDownloads: UpdateDownloads,
     private val currentVersionName: String,
+    private val onDocumentChanged: () -> Unit = {},
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -73,6 +81,8 @@ class MainViewModel(
                 }
             }
         }
+        // drop(1)：冷启动时那次初值不算「变化」，否则每次打开 App 都会白刷一次小组件
+        viewModelScope.launch { planStore.document.drop(1).collect { onDocumentChanged() } }
         viewModelScope.launch {
             planStore.corruptionRecovery.collect { backup ->
                 _uiState.update { it.copy(corruptionBackup = backup) }
@@ -183,6 +193,7 @@ class MainViewModel(
                         updateChecker = AppUpdater,
                         updateDownloads = WorkManagerUpdateDownloads(application),
                         currentVersionName = versionName,
+                        onDocumentChanged = { DaoWidgetProvider.refreshNow(application) },
                     )
                 }
             }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  上一页（上箭头）。**必须自带 tint**：path 的白色是给 tint 当遮罩用的，
+  漏了 tint 就是白箭头画在白卡片上一片空白（踩过——按钮能点、能翻页，但用户看不见它）。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/widget_text_secondary">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M7.41,15.41L12,10.83l4.59,4.58L18,14l-6,-6 -6,6z" />
+</vector>

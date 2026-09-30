@@ -167,6 +167,9 @@
   <string name="shift_end_time">结束时间</string>
   <string name="shift_end">结束</string>
   <string name="shift_next_day">次日%1$s</string>
+  <!-- 跨零点班次结束时刻的前缀标记，由 formatShiftEnd 直接拼在时间前面。
+       英文必须自带尾随空格（"Next day 07:30"），所以不要用占位符拼、也不要 trim。 -->
+  <string name="shift_next_day_marker">次日</string>
   <string name="color_select">选择颜色</string>
   <string name="onboarding_title">引导页面</string>
   <string name="onboarding_edit_title">修改方案</string>
@@ -314,4 +317,21 @@
   <string name="project_immutable_collections">kotlinx.collections.immutable</string>
   <string name="license_apache_2">Apache License 2.0</string>
   <string name="scan_back">返回</string>
+  <string name="widget_label">倒班月历</string>
+  <string name="widget_week_label">本周班次</string>
+  <string name="widget_refresh">刷新</string>
+  <string name="widget_page_up">上一页</string>
+  <string name="widget_page_down">下一页</string>
+  <string name="widget_month_title">%1$d年%2$d月</string>
+  <string name="widget_today_button">今</string>
+  <string name="widget_prev_month">上一月</string>
+  <string name="widget_next_month">下一月</string>
+  <string name="widget_phase_on_shift">上班中 · 到 %1$s</string>
+  <string name="widget_phase_before_shift">还没上班 · %1$s 开始</string>
+  <string name="widget_phase_after_shift">下班了 · %1$s 结束</string>
+  <string name="widget_phase_resting">今天休班</string>
+  <string name="widget_phase_no_plan">还没有倒班方案</string>
+  <string name="override_change">换班</string>
+  <string name="override_clear">恢复按周期排班</string>
+  <string name="override_no_templates">还没有班次模板，先去方案里添加</string>
 </resources>

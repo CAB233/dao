@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  上月/下月补位日：几乎与卡片同色（比 day_empty 的 #FFEDEDED 更浅），
+  这样补位格与「本月但没排班」的浅灰格能一眼区分开，日历又保持连续、列对齐表头。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFF8F8F8" />
+    <corners android:radius="8dp" />
+</shape>

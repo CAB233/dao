@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 「已过去的日子」的消色版（原色混 78% 白）。改 ShiftPalette.presets 时要一起重算。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFEE6C7" />
+    <corners android:radius="8dp" />
+</shape>

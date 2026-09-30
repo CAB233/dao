@@ -60,6 +60,50 @@
                 android:resource="@xml/update_file_paths" />
         </provider>
 
+        <!--
+          「今日班次」桌面小组件。
+          updatePeriodMillis = 0（见 widget_today_info.xml），刷新由 Provider 自己排的闹钟驱动。
+          这里必须 exported：DATE_CHANGED / TIME_SET / TIMEZONE_CHANGED / BOOT_COMPLETED 只由系统发出，
+          non-exported 的清单接收器收不到；Provider 对这些 action 只做一次重算，不接收任何参数。
+        -->
+        <receiver
+            android:name=".widget.DaoWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_month_info" />
+        </receiver>
+
+        <!--
+          「本周班次」小组件：头部固定，一行（一周 7 天）靠 ↑↓ 翻页换周。
+          与上面那个是两个独立的 receiver —— 同一个类写两个同级 <receiver> 会在合并时报错。
+        -->
+        <receiver
+            android:name=".widget.DaoWeekWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_info" />
+        </receiver>
+
     </application>
 
 </manifest>

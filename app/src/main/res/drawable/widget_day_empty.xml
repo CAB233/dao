@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 本月但当天没排班：中性浅灰底，只显示日期，让日历保持连续 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFEDEDED" />
+    <corners android:radius="8dp" />
+</shape>

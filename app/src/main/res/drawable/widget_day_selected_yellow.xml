@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 「今天」日期块的选中底色。颜色与 ShiftPalette.presets 的 yellow 一一对应，改色板时这里要同步。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFDD835" />
+    <corners android:radius="10dp" />
+</shape>

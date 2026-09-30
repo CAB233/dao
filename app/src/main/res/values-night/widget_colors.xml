@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 桌面小程序件深色版：与 miuix 深色 surface 观感一致 -->
+    <color name="widget_background">#FF1C1C1E</color>
+    <color name="widget_text_primary">#FFF2F2F2</color>
+    <color name="widget_text_secondary">#FFA8A8A8</color>
+    <color name="widget_text_tertiary">#FF8A8A8A</color>
+    <!-- 深色下"没排班/补位"用略亮于卡片底色的灰，不能沿用浅色的浅灰（会变成亮块） -->
+    <color name="widget_day_empty">#FF2A2A2C</color>
+    <color name="widget_day_outside">#FF232325</color>
+</resources>

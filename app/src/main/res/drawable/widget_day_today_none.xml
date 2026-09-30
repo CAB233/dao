@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 今天是没排班的日子：中性描边着重（有班次时用 widget_day_today_<color> 的班次色描边） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="2dp"
+        android:color="#FF9A9A9A" />
+    <corners android:radius="8dp" />
+</shape>

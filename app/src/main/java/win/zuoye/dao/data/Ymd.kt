@@ -67,5 +67,21 @@ data class Ymd(val year: Int, val month: Int, val day: Int) {
                 cal.get(java.util.Calendar.DAY_OF_MONTH),
             )
         }
+
+        /** 指定瞬间所在的那一天；判今天统一走这里，避免各处自己拆 Calendar 字段。 */
+        fun of(timeMillis: Long): Ymd {
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = timeMillis }
+            return Ymd(
+                cal.get(java.util.Calendar.YEAR),
+                cal.get(java.util.Calendar.MONTH) + 1,
+                cal.get(java.util.Calendar.DAY_OF_MONTH),
+            )
+        }
     }
 }
+
+/** 某个瞬间是当天 0:00 起的第几分钟。 */
+fun minuteOfDay(timeMillis: Long): Int =
+    java.util.Calendar.getInstance()
+        .apply { timeInMillis = timeMillis }
+        .run { get(java.util.Calendar.HOUR_OF_DAY) * 60 + get(java.util.Calendar.MINUTE) }

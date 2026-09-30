@@ -13,11 +13,23 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 ### 核心概念（两层数据模型）
 - **班次模板（"基本天"）**：名称 + 起止时间 + 颜色，只定义一次、全程复用。例：「早班 08:00–15:00」。结束时间早于开始 = 跨零点夜班（标注"次日"）。**不内置休息模板**；用户可自行建名为"休息"的班次。
 - **倒班方案**：周期天数 N（用户文本输入 1–99，不提供预设）+ 周期第 1..N 天各挂哪个模板（点选复用）+ **锚点日期**（周期第 1 天对应真实日期）。任意日期班次 = `模板[(日期 − 锚点) mod N]`，纯本地推导。
-- **换班覆盖**：个别日期手动指定班次、优先于周期推导——本期 UI 不做，数据模型预留（`overrides`）。
+- **换班覆盖**：个别日期手动指定班次、优先于周期推导。**已实现**，逻辑在 `domain/ShiftOverride.kt`：
+  - 入口：首页点某天 → 日期详情弹窗里的「换班」（`OverlayDropdownPreference`）→ 选一个班次模板。
+  - **选中的正好等于周期值时不写覆盖记录**（否则"这天被改过"的标记会一直亮着却看不出区别）；
+    已覆盖时选项里多一条「恢复按周期排班」。
+  - 只影响那一天，且**不进分享载荷**（`PlanShare` 只带模板和方案）。
+  - `ImmutableMap` 没有 `put`/`remove`，要经 `toMutableMap()` 绕一下。
+  - 没有启用方案时 `resolveShift` 拿不到锚点、直接返回 null，覆盖不会生效（既有语义）。
 
 ### 首页（日历）
 - 自绘月历网格，月份左右滑动切换；顶栏标题 = `app_name`（「倒班表」）。
-- 单元格按当日班次颜色着色，格内显示日期 + 班次名；今天主色描边；点击弹详情（日期、星期、班次、时间段、覆盖标记）。
+- 单元格状态与配色**与桌面小组件共用一套规则**（`DayVisualState`：有班次=实心班次色+对比色文字、
+  已过去=消色版+灰字、今天=描边、没排班=中性底、上下月补位=淡化），详见「设计决策」一节。
+  格内还叠农历与节假日角标；点击弹详情（日期、星期、班次、时间段、覆盖标记 + **换班**入口）。
+- **换班（覆盖）**：日期详情弹窗里的「换班」是一个 `OverlayDropdownPreference`，选完即写覆盖。
+  不要再叠一层自定义 Dialog——那会让"弹窗里再开弹窗"，容易踩到弹层宿主的坑；
+  这个组件的弹出层由组件内部管理，也是设置页一直在用的那套。
+  逻辑见 `domain/ShiftOverride.kt`。
 - 顶栏副标题显示"今天·班次名+时间段"；右上角按钮进入**「分享配置」二级页面**（见下）。
 - 滑到非当月时右下角出现蓝色圆形「今」按钮，点击回到今天所在月份。
 - 底部导航栏：主页 / 设置，两个标签页由**一个 `HorizontalPager`**承载（切换是整页横向滑动）。
@@ -84,12 +96,118 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 
 ### 关于页（`ui/about/AboutScreen.kt`）
 - 头部：应用图标 + `app_name` + 版本号（版本从 PackageManager 读，不手写）。
-- 卡片两项：查看源代码 / 获取更新——**目前是占位**，点了只弹「暂未实现」。
+- 卡片三项：查看源代码（打开仓库）/ 开放源代码许可（`OpenSourceLicensesScreen`，AboutLibraries 构建期生成）/ 获取更新。
+- `R.string.not_implemented` 还留着，但当前没有入口用到它——新加占位项时复用。
+
+### 桌面小组件（`widget/`，两个独立组件）
+
+两个组件都走**同一套交互：头部固定 + `ViewFlipper` 上下翻页**。用户在选择器里自己挑：
+「倒班月历」（4×4，一页一个整月）和「本周班次」（4×1，一页一周）。
+
+- **翻页，不滚动**：RemoteViews 收不到自定义手势，唯一能滑的是 `ListView` 这类集合控件 ——
+  而 ListView **没有吸附**，松手会停在两行之间（实测 + 用户反馈"滚到两行中间"）。
+  `ViewFlipper` 一页就是一整屏，不存在半页；它的子视图是**一次性 addView 进去的**（不经过 adapter），
+  所以 `setDisplayedChild` 立刻生效，**每次重画都会按 widget 当前尺寸重算格子大小** ——
+  ListView 方案里"缩放后表头变了、格子还停在旧列宽"那个 bug（adapter 不会因为 options 变化而重建）
+  也从根上没有了。
+- **翻页入口是标题右侧的 ↑ ↓**（`RemoteViews` 只支持点击）：上 = 往前，下 = 往后。
+  组件侧必须自己记住"现在停在第几页"才能算下一页 —— 存在 `widget/WidgetPageStore.kt`
+  （SharedPreferences，**存相对今天那一页的偏移**，所以跨日/跨月后没翻过就还是今天那页）。
+  页偏移已知，**标题因此能跟着翻页走**（`9/2026 → 10/2026`），这是滚动方案做不到的。
+- **一页 = 一个整月 / 一周**：`buildViews` 里把 `±WidgetPageStore.MAX_OFFSET`（4，共 9 页）全部
+  `addView` 进 `ViewFlipper`，再 `setDisplayedChild(offset + MAX_OFFSET)`。
+  页数是**一次全下发的**，直接决定 RemoteViews 大小（一个月 42 格 × 每格几个 action），别开太大。
+- **尺寸全部按 widget 实际大小算**（`widget/WidgetMetrics.kt`）：列宽 = (宽度 − 两侧 padding) / 7，
+  行高 = (高度 − chrome) / 6，一个月 = 6 × 行高，都用 `RemoteViews.setViewLayoutWidth/Height`（**API 31+**）。
+  - **宽度取 `MIN_WIDTH`、高度取 `MAX_HEIGHT`**（竖屏那一套），**不能取最大值** ——
+    横屏那套（`MAX_WIDTH`/`MIN_HEIGHT`）数值更大，混进来会把格子撑出屏幕（踩过：一行只显示得下 4 天）。
+  - 但一个 key 也不能死认：线上真机见过 `MAX_HEIGHT` 报 **0** 而宽度 key 有值的 Launcher，
+    所以 `widgetSizeDp` 是**按顺序取第一个 > 0 的 key**（竖屏的在前、横屏的在后）。
+  - **布局里必须有兜底高度**（`widget_month_item.xml` 156dp / `widget_week_item.xml` 26dp /
+    `widget_week_strip.xml` 56dp）：尺寸全拿不到时仍是一个完整的月块/一行，不会塌成一条。
+  - `WIDGET_CHROME_HEIGHT_DP` / `WIDGET_WEEK_HEADER_DP` 是**照着实机实测校准**的，改布局要重新校准。
+- **列宽/行高不能交给 `layout_weight`**：格子和行都是嵌套的 RemoteViews（`addView` 进来的），
+  测量时父容器给的是 wrap_content，等分算不出来——实测每格退化成一个字的宽度（21px），整行挤在左边。
+- **`HorizontalScrollView` 不在 RemoteViews 白名单里**（inflate 直接抛
+  `Class not allowed to be inflated`），所以**左右滑动对第三方小组件是不可能的**。
+  别拿系统自带的天气/日历小组件当反例：那些是 Launcher 进程里的原生 View，不是 RemoteViews（与 Android 版本无关）。
+- **格子五种状态**（`dayCellViews`，判定来自共用的 `DayVisualState`）：
+  1. **今天**：班次色**实心** + 对比色文字（`ShiftPalette.onColorArgb`）—— 整月里唯一填底的一格，一眼找到今天
+  2. **有班次的其他日子**：**班次色描边 + 班次色文字**（不填底，整月扫下来不刺眼）。
+     **色号不是色板原色**：描边用 `drawable/widget_day_outline_*.xml`（原色压暗 30%）、
+     深色下用 `drawable-night/` 那套（原色提亮 30%），文字在代码里用 `outlineTextArgb()` 算同一个色。
+     直接用原色不行 —— 黄、草绿这类很亮的色号画成 2dp 描边和小字后在浅色卡片上几乎看不见（用户反馈过）。
+  3. **已过去**：与"有班次"完全一样（描边 + 同色文字），**不做淡化** ——
+     消色版是给"实心底"设计的（浅底 + 灰字），描边风格下淡描边在卡片上几乎看不见（踩过）
+  4. **没排班**：深灰描边 + 次级灰字（`widget_day_cell` 的默认底）
+  5. **上/下月补位**：更浅的灰 + 三级文字色
+  网格固定 **6 行 × 7 列**（`MonthGrid.ROWS/COLUMNS`）：每行都从同一星期开始，格子正对表头；
+  上下月补位日期一起画，日历才连续。
+- **卡片底走系统的动态中性色**（`values-v31/widget_colors.xml` → `@android:color/system_neutral1_50`，
+  深色 `values-night-v31` → `_800`）：这样和系统自带小组件是同一套"跟着壁纸派生"的色，
+  而不是一块写死的白/黑。API 31 以下退回 `values/widget_colors.xml` 里的固定值。
+  改配色要**四个文件一起看**：`values`、`values-night`、`values-v31`、`values-night-v31`。
+- **用 RemoteViews 而不是 Glance**：项目本来就没有 material3 依赖，Glance 会为一个小部件带进整套 Compose for
+  RemoteViews 与 Material 3 主题；这里只是几十个纯色文字格子，系统自带的 RemoteViews 足够。
+- **状态判定只有一份**：`domain/TodayRoster.kt` 的 `todayRoster()` / `shiftPhaseOf()` 同时驱动首页状态卡和小组件
+  底部那行。不要在 UI 里重写一遍区间判断——跨零点夜班最容易两边算不一致。
+  `TodayRoster.defaultShift` 必须取**默认班组**那一项（`phase` 就是按默认班组的锚点算的），
+  图省事取 `groups.first()` 会让底部拿休息班的 `endMinute = 0` 显示成「上班中 · 到 00:00」（线上报过的形态）。
+- **刷新时机**（`updatePeriodMillis = 0`，全部自己排）：
+  - 数据变化：`MainViewModel` 的 `onDocumentChanged` 回调（工厂里接 `DaoWidgetProvider.refreshNow`；
+    默认空实现，这样单测不需要 Context）——用 `document.drop(1)`，冷启动那次初值不算变化。
+  - 回到前台：`MainActivity` 里 `ON_RESUME` 兜一次（休眠期间排的闹钟可能没按点触发）。
+  - 班次起止的那一刻：`nextShiftBoundaryMinute()` 算出下一个边界，用**非精确闹钟**（不需要 SCHEDULE_EXACT_ALARM）
+    对齐；底部状态写的是「此刻在不在上班」，只靠午夜更新不够。
+  - 日期/时间/时区变化、开机、换包：Provider 自己的 `onReceive` → `refreshNow`。
+- 小组件的接收器在 Manifest 里是**单独一个 `<receiver>`**（同一个类写两个同级 `<receiver>` 会在合并时报错），
+  且必须 `exported="true"`——`DATE_CHANGED` / `TIME_SET` / `BOOT_COMPLETED` 只能由系统发出，non-exported 收不到。
+  这些 action 进来只做一次重算，不读任何参数，外部触发无害。
+- **RemoteViews 的 action 是运行时才校验的，写错不会编译报错**：
+  - `setColorFilter` 只在 `ImageView` 上有 `@RemotableViewMethod`，打在 `TextView` 上会让 `apply()` 抛
+    `ActionException`，宿主一直停在加载占位图（**踩过这个线上 bug**：色点原本是 TextView + shape 背景）。
+    要染色的圆点一律 `ImageView` + `android:src` + `scaleType="fitXY"`。
+  - `setBackgroundResource` 是 **API 31+** 的方法，低版本调用直接抛异常，必须按 `SDK_INT` 分支
+    （这里低版本退回 `setBackgroundColor`，圆角没了但不崩）。
+  - 星期表头**每列 inflate 一个 `layout/widget_weekday_header.xml`**（不能用单个 TextView 拼），
+    列宽由 `widgetColumnWidthPx()` 显式给 —— 与日期格必须是同一个值，否则列错开。
+  - **改完必须跑 `DaoWidgetProviderTest`**（Robolectric）：它真的 inflate 并 `apply()` 一遍，编译通过不代表能显示。
+    真机上「什么都没有、只有转圈」时第一件事是 `adb logcat -s DaoWidgetProvider:E`——Provider 里
+    **不要用 `runCatching` 把 `updateAppWidget` 的异常吞掉**。
+- 班次色 → 格底色的映射（全在 `DaoWidgetProvider` 的 `solidBackground` / `fadedBackground` / `outlinedBackground` /
+  `cellBackground` / `cellFallbackArgb`）：色板内用 `drawable/widget_day_selected_*.xml`（实心）、
+  `widget_day_faded_*.xml`（消色，原色混 78% 白）、`widget_day_today_*.xml`（描边）；另有三个固定状态
+  `widget_day_empty`（本月没排班）、`widget_day_outside`（上下月补位）、`widget_day_today_none`（今天没排班）。
+  **改 `ShiftPalette.presets` 时必须一起改这三组 12 个 xml 和 `_today_none` 的颜色**；色板外的自定义颜色退回透明底。
+  之所以按"状态 + 班次色"查表而不是 `setBackgroundColor`：**两者会互相覆盖**，`setBackgroundResource` 一定重置
+  `setBackgroundColor` 设过的颜色，圆角与颜色只能由同一张 drawable 提供。
+- 小组件配色走 `values/widget_colors.xml` + `values-night/`，**跟随系统深浅色**，不跟应用内的主题设置走
+  （RemoteViews 读不到 Compose / miuix 主题）。
+- 预览图 `drawable-*/widget_preview.png`：**布局或配色改了就要重新生成**，否则选择器里的预览跟实际不一致。
+  脚本是 `tools/make_widget_preview.py`（需要 Pillow）：喂它一张设备截图和 widget 的裁切矩形，
+  它会切出圆角卡片并按 mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi 五档输出。
+  截图的获取方式：`adb shell screencap -p /sdcard/w.png && adb pull /sdcard/w.png`，
+  矩形可以从 `uiautomator dump` 里 `widget_root` 的 bounds 抄（格式 `[x1,y1][x2,y2]`）。
 
 ### 设计决策（默认拍板，可推翻）
-- 夜班跨零点：归属**开始**日期，日历格不跨格。
-- 班次颜色是数据色（预设 12 色板），色块文字按亮度自动黑白。
-- UI 中文；一周从周一开始。
+- **日历配色的规则只有一份**：`domain/DayVisualState.kt` 的 `DayVisualState`（OutsideMonth / Today / Empty /
+  Past / Upcoming）+ `ui/ShiftPalette.kt` 的 `onColor` / `pastFadeRatio`。
+  **App 内月历（`ui/home/HomeScreen.kt` 的 `CalendarCell`）与桌面小组件都从这两个出发**，
+  不要再在任一侧单独写一套"什么情况用什么颜色"。两边的差异只允许在测量/绘制手法上
+  （App 用 `drawWithCache` 直接画文字，小组件用 RemoteViews 的 TextView）。
+- **实心底色 + 对比色文字**：有班次的日子铺满班次色，文字取 `ShiftPalette.onColor(argb)`
+  （白字/深字里对比度更高的那个）。**不能一律用白字**：黄的对比度只有 1.4:1、草绿 2.5:1、蓝 3.68:1（深字 4.63:1）。
+  也**不要用"亮度 > 阈值"的单阈值判断**——会漏掉草绿和蓝，`onColor` 里直接比对比度。
+- **已过去的日子**用班次色的消色版（混 `pastFadeRatio` = 78% 白）+ 灰字，**不再额外压整体透明度**；
+  整体淡化（`OUTSIDE_MONTH_FADE` = 0.35）只留给上/下月补位日，两者才能一眼区分。
+- 夜班跨零点：归属**开始**日期，日历格不跨格；**跨零点班次的结束时刻显示要带「次日」**——
+  `domain/TodayRoster.kt` 的 `formatShiftEnd` 负责拼，UI 层用 `widget/WidgetStrings.kt` 的 `nextDayMarker`
+  取标记。别在别处直接 `ShiftTemplate.format(endMinute)`：22:30–07:30 的夜班会显示成「到 00:00」（踩过，用户报的）。
+  `nextDayMarker` 用独立资源 `shift_next_day_marker`，**分隔空格在代码里补**：aapt2 会裁掉字符串资源的尾随空白，
+  而 `Char.isLetter()` 对汉字也为真（中文会多一个空格），所以判据是"末尾是 ASCII 字母"。
+- 班次颜色是数据色（预设 12 色板）。
+- UI 中文。
+- **一周从周日开始**（`PlanDocument.weekStartDay` 默认 6 = 周日，与系统日历一致），设置里仍可改。
 - 无方案时首页可用，显示提示文案。
 
 ## 数据与持久化规范
@@ -195,12 +313,15 @@ Kotlin 源码和 Gradle Kotlin 脚本统一使用 ktfmt 的 KotlinLang 风格（
 ./gradlew ktfmtCheck   # 只检查格式，不修改文件
 
 ./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest   # 纯逻辑单测 + 小组件的 Robolectric 测试
 
 # 发布（签名配置见下）
 ./gradlew :app:assembleRelease  # → app/build/outputs/apk/release/app-release.apk
 ```
 
 - 只需要由人进行安装和测试。
+- 单测里 **Robolectric 必须显式写 `@Config(sdk = [...])`**：它自带的 android-all 最高 36，而应用 targetSdk 是 37，
+  不指定会直接以 `targetSdkVersion=37 > maxSdkVersion=36` 配置失败（`DaoWidgetProviderTest` 取 35）。
 
 ## 工作规程（每次改动必须遵守）
 

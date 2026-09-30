@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「倒班月历」里的一行（一周 7 格），由 DaoMonthStripService 逐行下发到一个月份块里。
+
+  高度：API 31+ 上由代码用 setViewLayoutHeight 显式给出（跟着 widget 尺寸变），
+  这里的 26dp 是**兜底**——拿不到尺寸时（options 缺 key）仍能撑出一行，不会把两行字叠在一起。
+  列宽同理：由代码按 widget 宽度算出来显式设置。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/week_item_row"
+    android:layout_width="match_parent"
+    android:layout_height="26dp"
+    android:baselineAligned="false"
+    android:orientation="horizontal" />

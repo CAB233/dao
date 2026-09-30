@@ -91,8 +91,8 @@ data class PlanDocument(
     val overrides: ImmutableMap<String, Long> = persistentMapOf(),
     /** 用户跳过首次引导后置位，避免每次启动都进引导 */
     val onboardingDone: Boolean = false,
-    /** 一周第一天：0 = 周一，依次到 6 = 周日 */
-    val weekStartDay: Int = 0,
+    /** 一周第一天：0 = 周一，依次到 6 = 周日。默认周日打头（与系统日历一致） */
+    val weekStartDay: Int = 6,
     val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
     val checkUpdatesOnLaunch: Boolean = true,
     val updateChannel: UpdateChannel = UpdateChannel.GITHUB,

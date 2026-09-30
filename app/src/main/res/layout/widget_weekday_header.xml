@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  月历表头的星期缩写，每列 inflate 一个。
+
+  宽度**不能用 layout_weight**：列宽必须由代码按 widget 实际宽度算出来（见 widgetColumnWidthPx），
+  与日期格用同一个值，列才对得上。这里的 33dp 是 API 31 以下（没法设显式宽度）的兜底，
+  取值按标准 4×4 的内容宽度（250dp 减两侧各 8dp，再除以 7）算，取小不取大。
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/weekday_header"
+    android:layout_width="33dp"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:textColor="@color/widget_text_tertiary"
+    android:textSize="11sp" />

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「倒班月历」小组件里的一项：一个整月（6 行 × 7 列）。
+  行由 DaoMonthStripService 逐行 addView 进来；每行的高度与整块的宽高都由代码按 widget 实际尺寸显式设置
+  （嵌套 RemoteViews 里 layout_weight 算不出等分，实测每格会退化成一个字的宽）。
+
+  这里的高度是**兜底值**：万一 `getAppWidgetOptions` 拿不到尺寸（线上踩过 MAX_HEIGHT 报 0 的 Launcher），
+  代码就不会下发尺寸，此时这个固定高度保证"一个月仍是一整块"而不是 6 行塌成一小条、25 个月堆在一屏里。
+  取的是标准 4×4 的内容高度（233dp − chrome），够放下 6 行、每行约 26dp。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/month_item"
+    android:layout_width="match_parent"
+    android:layout_height="156dp"
+    android:baselineAligned="false"
+    android:orientation="vertical" />

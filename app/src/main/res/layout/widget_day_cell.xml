@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  周列表里的一格。背景与文字颜色全部由 DaoWidgetProvider 逐格设置（RemoteViews 认不了主题色 token）。
+
+  宽度**不能用 layout_weight**：格子是被 addView 进行里的，嵌套 RemoteViews 测量时父容器给的是
+  wrap_content，等分算不出来，每格会退化成一个字的宽。列宽由 `widgetColumnWidthPx()` 显式设置
+  （API 31+ 按 widget 宽度算像素值），这里的 33dp 只是低版本的兜底 —— 取值按标准 4×4 的内容宽度
+  250dp 减两侧各 8dp、再除以 7（33.4dp）算，取小不取大，免得右边溢出被裁。
+
+  四周的 `layout_margin` 是**格子和格子之间的缝**：光把格子宽度调小没用（行是 LinearLayout，
+  会把它紧挨着排），必须留出外边距才会真的分开。宽度/高度由代码按"列宽 − 6dp"下发，正好抵掉
+  左右（上下）各 3dp 的 margin，一行仍然铺满整宽。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/day_cell"
+    android:layout_width="33dp"
+    android:layout_height="match_parent"
+    android:layout_margin="3dp"
+    android:background="@drawable/widget_day_cell"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/day_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/day_shift"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center_horizontal"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textSize="9sp" />
+</LinearLayout>

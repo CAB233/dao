@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 桌面小组件：跟随系统深浅色，不跟应用内的主题设置走（RemoteViews 读不到 Compose 主题） -->
+    <color name="widget_background">#FFFFFFFF</color>
+    <color name="widget_text_primary">#FF1A1A1A</color>
+    <color name="widget_text_secondary">#FF6B6B6B</color>
+    <color name="widget_text_tertiary">#FF9A9A9A</color>
+    <!-- 「本月但没排班」的浅灰底 -->
+    <color name="widget_day_empty">#FFEDEDED</color>
+    <!-- 「上/下月补位日」的底：比 day_empty 更浅，两者要能一眼区分 -->
+    <color name="widget_day_outside">#FFF8F8F8</color>
+</resources>

@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -60,7 +61,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tyme.solar.SolarDay
-import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -77,6 +77,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
@@ -89,11 +90,16 @@ import win.zuoye.dao.data.LegalHolidays
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
-import win.zuoye.dao.data.defaultGroup
+import win.zuoye.dao.data.minuteOfDay
+import win.zuoye.dao.domain.DayVisualState
 import win.zuoye.dao.domain.Roster
-import win.zuoye.dao.domain.resolveShift
+import win.zuoye.dao.domain.ShiftOverride
+import win.zuoye.dao.domain.ShiftPhase
+import win.zuoye.dao.domain.formatShiftEnd
+import win.zuoye.dao.domain.todayRoster
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.widget.nextDayMarker
 
 /** 可浏览的月份范围：2000-01 .. 2100-12 */
 private const val BASE_YEAR = 2000
@@ -105,6 +111,7 @@ fun HomeScreen(
     doc: PlanDocument,
     onExportPlan: () -> Unit,
     onOpenPlan: () -> Unit,
+    onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
 ) {
     var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -114,11 +121,8 @@ fun HomeScreen(
             delay(60_000L - now % 60_000L + 50L)
         }
     }
-    val today = remember(currentTimeMillis) { Ymd.today() }
-    val currentMinute =
-        remember(currentTimeMillis) {
-            Calendar.getInstance().run { get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE) }
-        }
+    val today = remember(currentTimeMillis) { Ymd.of(currentTimeMillis) }
+    val currentMinute = remember(currentTimeMillis) { minuteOfDay(currentTimeMillis) }
     val initialPage = (today.year - BASE_YEAR) * 12 + today.month - 1
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { MONTH_COUNT })
     val coroutineScope = rememberCoroutineScope()
@@ -260,6 +264,7 @@ fun HomeScreen(
         // 常驻组合、用 show 驱动进出动画；退出动画期间还要继续渲染，所以记住最后点开的那一天。
         var detailDate by remember { mutableStateOf<Ymd?>(null) }
         LaunchedEffect(selectedDate) { selectedDate?.let { detailDate = it } }
+
         detailDate?.let { date ->
             DayDetailDialog(
                 date = date,
@@ -268,6 +273,14 @@ fun HomeScreen(
                 showHolidays = showHolidays,
                 show = selectedDate != null,
                 onDismiss = { selectedDate = null },
+                onPickOverride = { templateId ->
+                    // onMutate 的 transform 稍后执行，这里先把要用的值抓出来（规范）
+                    val epochDay = date.epochDay
+                    onMutate { plan ->
+                        if (templateId == null) ShiftOverride.clear(plan, epochDay)
+                        else ShiftOverride.set(plan, epochDay, templateId)
+                    }
+                },
             )
         }
     }
@@ -438,7 +451,7 @@ private fun GroupScheduleRows(
     }
 }
 
-/** 主页上的当前倒班状态卡片；点击后进入方案列表或直接编辑使用中的方案。 */
+/** 主页上的当前倒班状态卡片；点击后进入方案列表或直接编辑使用中的方案。 状态判定与桌面小组件共用 [todayRoster]，两处不会出现不一致。 */
 @Composable
 private fun RosterStatusCard(
     doc: PlanDocument,
@@ -446,28 +459,8 @@ private fun RosterStatusCard(
     currentMinute: Int,
     onClick: () -> Unit,
 ) {
-    val activeScheme = doc.activeScheme()
-    val todayShift = resolveShift(doc, today.epochDay)
-    val previousShift = resolveShift(doc, today.epochDay - 1)
-    val isWorking =
-        todayShift?.template?.let { template ->
-            !template.isRest &&
-                if (template.crossesMidnight()) {
-                    currentMinute >= template.startMinute
-                } else {
-                    currentMinute in template.startMinute until template.endMinute
-                }
-        } == true ||
-            previousShift?.template?.let { template ->
-                !template.isRest && template.crossesMidnight() && currentMinute < template.endMinute
-            } == true
-    val status =
-        when {
-            isWorking -> RosterStatus.ON_SHIFT
-            todayShift?.template?.isRest == true -> RosterStatus.RESTING
-            else -> RosterStatus.OFF_WORK
-        }
-    val currentGroupName = activeScheme?.defaultGroup()?.name
+    val roster = todayRoster(doc, today, currentMinute)
+    val status = roster.phase
     // 使用 miuix 当前实际生效的配色；这样强制深/浅色与“跟随系统”都会同步更新。
     val cardColor =
         if (MiuixTheme.colorScheme.background.luminance() < 0.5f) {
@@ -490,7 +483,7 @@ private fun RosterStatusCard(
                 modifier = Modifier.fillMaxSize().offset(x = 27.dp, y = 29.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Text(if (status == RosterStatus.ON_SHIFT) "🏝" else "🐖", fontSize = 92.sp)
+                Text(if (status == ShiftPhase.ON_SHIFT) "🏝" else "🐖", fontSize = 92.sp)
             }
 
             Column(modifier = Modifier.padding(start = 16.dp, top = 14.dp)) {
@@ -498,9 +491,9 @@ private fun RosterStatusCard(
                     text =
                         stringResource(
                             when (status) {
-                                RosterStatus.ON_SHIFT -> R.string.on_shift
-                                RosterStatus.RESTING -> R.string.on_rest
-                                RosterStatus.OFF_WORK -> R.string.off_work
+                                ShiftPhase.ON_SHIFT -> R.string.on_shift
+                                ShiftPhase.RESTING -> R.string.on_rest
+                                ShiftPhase.OFF_WORK -> R.string.off_work
                             }
                         ),
                     fontSize = 22.sp,
@@ -511,14 +504,14 @@ private fun RosterStatusCard(
                     text =
                         stringResource(
                             R.string.plan_label,
-                            activeScheme?.name ?: stringResource(R.string.status_not_selected),
+                            roster.schemeName ?: stringResource(R.string.status_not_selected),
                         ),
                     fontSize = 15.sp,
                 )
             }
 
             Text(
-                text = currentGroupName ?: stringResource(R.string.no_group),
+                text = roster.defaultGroupName ?: stringResource(R.string.no_group),
                 modifier =
                     Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 10.dp),
                 fontSize = 16.sp,
@@ -526,12 +519,6 @@ private fun RosterStatusCard(
             )
         }
     }
-}
-
-private enum class RosterStatus {
-    ON_SHIFT,
-    RESTING,
-    OFF_WORK,
 }
 
 @Composable
@@ -621,19 +608,25 @@ private fun MonthGrid(
     }
 }
 
-/** 一格的全部渲染输入，页面构造时算好，重组时直接取用 */
+/**
+ * 一格的全部渲染输入，页面构造时算好，重组时直接取用。
+ *
+ * [state] 是**与桌面小组件共用的**一天状态判定（`domain/DayVisualState.kt`）， 这里只负责把状态翻译成具体的主题色与文字样式。
+ */
 private class DaySlot(
     val year: Int,
     val month: Int,
     val day: Int,
     val template: ShiftTemplate?,
     val isToday: Boolean,
-    /** 非当月补位日整体弱化，但今天保持着重 */
-    val fade: Float,
+    val state: DayVisualState,
     val holiday: LegalHolidays.HolidayDay?,
     val lunarLabel: String,
     val holidayName: String?,
-)
+) {
+    /** 补位日整体淡化；过去的日子靠消色底表达，不再额外压透明度 */
+    val fade: Float = DayVisualState.fadeFor(state)
+}
 
 /** 日历配色，一屏读一次主题，避免 42 个格子各读一次 CompositionLocal */
 private class GridColors(
@@ -656,16 +649,35 @@ private class CellTextStyles(colors: GridColors, base: TextStyle) {
             fontWeight = FontWeight.Medium,
             color = colors.onSurface.faded(0.35f),
         )
-    val dayTodayFaded =
+
+    /** 铺在实心班次色上的日期：颜色由 `ShiftPalette.onColor` 按底色亮度给，这里只管字号字重 */
+    val dayOnFill = base.merge(fontSize = 17.sp, fontWeight = FontWeight.Medium)
+
+    /** 铺在消色底（已过去的日子）上的文字：灰字，表示"已经上过了" */
+    val pastOnFill =
         base.merge(
             fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.onSurface.faded(0.35f),
+            fontWeight = FontWeight.Medium,
+            color = colors.onSurface.faded(0.55f),
         )
     val lunar = base.merge(fontSize = 9.sp, color = colors.onSurfaceVariantSummary)
     val holiday = base.merge(fontSize = 9.sp, color = colors.onSurfaceVariantSummary)
     val name = base.merge(fontSize = 9.sp)
 }
+
+/**
+ * 把颜色往白色方向混 [ratio]。
+ *
+ * 与桌面小组件 `widget_day_faded_*.xml` 用的是同一条规则（同一个 `ShiftPalette.pastFadeRatio`），
+ * 这样"已过去的日子"在两个界面上是同一个观感。
+ */
+private fun blendTowardWhite(color: Color, ratio: Float): Color =
+    Color(
+        red = color.red * (1f - ratio) + ratio,
+        green = color.green * (1f - ratio) + ratio,
+        blue = color.blue * (1f - ratio) + ratio,
+        alpha = color.alpha,
+    )
 
 private val CELL_RADIUS = 14.dp
 
@@ -721,14 +733,22 @@ private fun buildMonthSlots(
                 null
             }
         val isToday = y == today.year && m == today.month && day == today.day
+        val template = roster.templateFor(date.epochDay)
         slots +=
             DaySlot(
                 year = y,
                 month = m,
                 day = day,
-                template = roster.templateFor(date.epochDay),
+                template = template,
                 isToday = isToday,
-                fade = if (!inMonth && !isToday) 0.35f else 1f,
+                // 与桌面小组件共用同一份状态判定，两处不会各写一套规则
+                state =
+                    DayVisualState.of(
+                        inCurrentMonth = inMonth,
+                        isToday = isToday,
+                        isPast = date.epochDay < today.epochDay,
+                        template = template,
+                    ),
                 holiday = LegalHolidays.of(date.epochDay).takeIf { showHolidays },
                 lunarLabel = lunar?.takeIf { showLunar }?.let { lunarLabel(it, strings) }.orEmpty(),
                 holidayName =
@@ -885,17 +905,51 @@ private fun CalendarCell(
     val template = slot.template
     val shiftColor = template?.let { ShiftPalette.color(it.colorArgb) }
     val fade = slot.fade
-    val container = shiftColor?.copy(alpha = 0.13f)?.faded(fade) ?: text.surfaceVariant.faded(fade)
+    val state = slot.state
+
+    // --- 底色与文字色：规则与桌面小组件完全一致（都从 DayVisualState 出发） ---
+    // 实心班次色底 + 对比色文字；过去的日子换成消色底 + 灰字；没排班/补位用中性底。
+    val container: Color
+    // 实心/消色底上的文字色；null 表示"中性底"，文字沿用主题的常规/淡化样式
+    val onShiftText: Color?
+    when (state) {
+        DayVisualState.OutsideMonth -> {
+            // 补位日：底色与文字一起退到背景里。必须和"本月没排班"拉开差距 ——
+            // 此前两处都用满不透明的 surfaceVariant，格子上完全看不出哪格属于本月（踩过）。
+            container = text.surfaceVariant.faded(DayVisualState.OUTSIDE_MONTH_FADE)
+            onShiftText = null
+        }
+        DayVisualState.Empty -> {
+            container = text.surfaceVariant
+            onShiftText = null
+        }
+        DayVisualState.Today -> {
+            // 今天只留描边（下面 todayBorder），中间透出卡片底色
+            container = Color.Transparent
+            onShiftText = null
+        }
+        is DayVisualState.Past -> {
+            container = blendTowardWhite(shiftColor!!, ShiftPalette.pastFadeRatio)
+            onShiftText = text.pastOnFill.color
+        }
+        is DayVisualState.Upcoming -> {
+            container = shiftColor!!
+            onShiftText = ShiftPalette.onColor(state.template.colorArgb)
+        }
+    }
     val dayStyle =
         when {
-            slot.isToday && fade < 1f -> text.dayTodayFaded
-            slot.isToday -> text.dayToday
+            onShiftText != null -> text.dayOnFill.copy(color = onShiftText)
+            state is DayVisualState.Today -> text.dayToday
             fade < 1f -> text.dayFaded
             else -> text.day
         }
     val dayText = slot.day.toString()
     val dayLayout = remember(measurer, dayText, dayStyle) { measurer.measure(dayText, dayStyle) }
-    val lunarStyle = text.lunar.copy(color = text.lunar.color.faded(fade))
+    // 副行（农历/节日/班次名）在实心底上必须跟着换成对比色，否则细小文字会糊在底色里
+    val secondaryOnFill =
+        onShiftText?.copy(alpha = 0.9f)?.faded(fade) ?: text.lunar.color.faded(fade)
+    val lunarStyle = text.lunar.copy(color = secondaryOnFill)
     val lunarLayout =
         if (slot.holidayName == null && slot.lunarLabel.isNotEmpty()) {
             remember(measurer, slot.lunarLabel, lunarStyle) {
@@ -904,7 +958,7 @@ private fun CalendarCell(
         } else {
             null
         }
-    val holidayStyle = text.holiday.copy(color = text.holiday.color.faded(fade))
+    val holidayStyle = text.holiday.copy(color = secondaryOnFill)
     val holidayLayout =
         if (slot.holidayName != null) {
             val holidayText = slot.holidayName
@@ -916,7 +970,7 @@ private fun CalendarCell(
         }
     val nameLayout =
         if (template != null) {
-            val nameColor = darken(shiftColor!!).faded(fade)
+            val nameColor = (onShiftText ?: darken(shiftColor!!)).faded(fade)
             val nameStyle = text.name.copy(color = nameColor)
             remember(measurer, template.name, nameStyle) {
                 measurer.measure(template.name, nameStyle, maxLines = 1)
@@ -924,10 +978,12 @@ private fun CalendarCell(
         } else {
             null
         }
-    // 今天用主题色描边着重；squircleBorder 自带"描边内缩半个线宽"，与 Modifier.border 一致
+    // 今天描边着重；与小组件一致：有班次用班次色，没班次用主题主色
+    // squircleBorder 自带"描边内缩半个线宽"，与 Modifier.border 一致
     val todayBorder =
-        if (slot.isToday) {
-            Modifier.squircleBorder(width = 2.dp, color = text.primary, cornerRadius = CELL_RADIUS)
+        if (state is DayVisualState.Today) {
+            val borderColor = shiftColor ?: text.primary
+            Modifier.squircleBorder(width = 2.dp, color = borderColor, cornerRadius = CELL_RADIUS)
         } else {
             Modifier
         }
@@ -1030,6 +1086,7 @@ private fun DayDetailDialog(
     showHolidays: Boolean,
     show: Boolean,
     onDismiss: () -> Unit,
+    onPickOverride: (Long?) -> Unit,
 ) {
     val holiday =
         remember(date, showHolidays) { LegalHolidays.of(date.epochDay).takeIf { showHolidays } }
@@ -1072,10 +1129,59 @@ private fun DayDetailDialog(
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
+            Spacer(Modifier.height(12.dp))
+            // 换班入口：选了班次就直接写覆盖（优先于周期推导）
+            ShiftOverridePicker(date = date, doc = doc, onPick = onPickOverride)
             Spacer(Modifier.height(8.dp))
         }
     }
 }
+
+/**
+ * 换班：给某一天单独指定班次，优先于周期推导。
+ *
+ * 用 [OverlayDropdownPreference]（设置页那套）而不是自己再叠一层 Dialog：它的弹出层由组件内部管理， 而我们现在已经在一个 [OverlayDialog] 里了
+ * —— 再嵌一层弹窗很容易踩到弹层宿主的坑。 选项里多一条"恢复按周期排班"，只有这天被覆盖过时才出现。
+ */
+@Composable
+private fun ShiftOverridePicker(
+    date: Ymd,
+    doc: PlanDocument,
+    onPick: (Long?) -> Unit,
+) {
+    val templates = doc.templates
+    if (templates.isEmpty()) {
+        Text(
+            stringResource(R.string.override_no_templates),
+            fontSize = 13.sp,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+        return
+    }
+
+    val currentId = doc.overrides[date.epochDay.toString()]
+    val isOverridden = currentId != null && doc.templateById(currentId) != null
+
+    // 已覆盖时多出一条"恢复按周期"，用 RESTORE_CYCLE 占位
+    val labels =
+        templates.map { it.name } +
+            if (isOverridden) listOf(stringResource(R.string.override_clear)) else emptyList()
+    val ids = templates.map { it.id } + if (isOverridden) listOf(RESTORE_CYCLE) else emptyList()
+
+    OverlayDropdownPreference(
+        title = stringResource(R.string.override_change),
+        items = labels,
+        // 没覆盖过时不高亮任何一项（周期推导出来的班次不算"选中"）
+        selectedIndex = ids.indexOf(currentId).takeIf { it >= 0 } ?: -1,
+        onSelectedIndexChange = { index ->
+            ids.getOrNull(index)?.let { id -> onPick(id.takeIf { it != RESTORE_CYCLE }) }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** 「恢复按周期排班」在选项列表里的哨兵 id；真实模板 id 都是正数，不会撞上 */
+private const val RESTORE_CYCLE = -1L
 
 /**
  * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
@@ -1119,12 +1225,7 @@ private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSo
 @Composable
 private fun ShiftTemplate.localizedTimeRangeText(): String {
     if (isRest) return stringResource(R.string.shift_rest_time)
-    val end = ShiftTemplate.format(endMinute)
-    val localizedEnd =
-        if (crossesMidnight()) {
-            stringResource(R.string.shift_next_day, end)
-        } else {
-            end
-        }
+    // 结束时刻的「次日」标注与桌面小组件共用 formatShiftEnd，两处不会一个标一个不标
+    val localizedEnd = formatShiftEnd(this, nextDayMarker(LocalContext.current))
     return "${ShiftTemplate.format(startMinute)}–$localizedEnd"
 }

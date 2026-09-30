@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「倒班月历」小组件：月份标题 + 星期表头（都固定）+ **可上下翻页的月份** + 底部今日状态。
+  updatePeriodMillis = 0，刷新由 DaoWidgetProvider 自己排的闹钟驱动。
+
+  翻页为什么不用滚动：RemoteViews 收不到自定义手势，唯一能滑的是 ListView 这类集合控件，
+  而 ListView **没有吸附**——滑完会停在两行之间（实测、用户也反馈过"滚到两行中间"，体验不行）。
+  换成 ViewFlipper 就干净了：一页就是一个整月，翻页由标题右侧的 ↑ ↓ 按钮驱动，
+  而且它的子视图是**一次性 addView 进去的**（不经过 adapter），所以 setDisplayedChild 立刻生效，
+  每次重画也都会按 widget 当前尺寸重算格子大小 —— 缩放后表头和格子的尺寸不会再对不上。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/widget_page_up"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="6dp"
+            android:contentDescription="@string/widget_page_up"
+            android:padding="3dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_arrow_up" />
+
+        <ImageView
+            android:id="@+id/widget_page_down"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="2dp"
+            android:contentDescription="@string/widget_page_down"
+            android:padding="3dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_arrow_down" />
+
+        <ImageView
+            android:id="@+id/widget_refresh"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="2dp"
+            android:contentDescription="@string/widget_refresh"
+            android:padding="3dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_refresh" />
+    </LinearLayout>
+
+    <!-- 星期表头：固定不翻页，列宽由 Provider 显式设置（与日期格同一个值） -->
+    <LinearLayout
+        android:id="@+id/widget_weekdays"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:baselineAligned="false"
+        android:orientation="horizontal" />
+
+    <!-- 一个月一页，↑↓ 翻页 -->
+    <ViewFlipper
+        android:id="@+id/widget_month_pager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="1dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/widget_phase"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+</LinearLayout>

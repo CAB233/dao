@@ -1,7 +1,10 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- 本月但当天没排班：中性浅灰底，只显示日期，让日历保持连续 -->
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  本月但当天没排班：中性底，只显示日期，让日历保持连续。
+  色值走 @color/widget_day_empty（values-night 有深色版）—— 写死颜色会让深色模式下这一格发亮。
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#FFEDEDED" />
+    <solid android:color="@color/widget_day_empty" />
     <corners android:radius="8dp" />
 </shape>

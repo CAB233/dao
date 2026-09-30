@@ -40,33 +40,23 @@
 
         <ImageView
             android:id="@+id/widget_page_up"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_marginStart="6dp"
+            android:layout_width="40dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="12dp"
             android:contentDescription="@string/widget_page_up"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_arrow_up" />
 
         <ImageView
             android:id="@+id/widget_page_down"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_marginStart="2dp"
+            android:layout_width="40dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="10dp"
             android:contentDescription="@string/widget_page_down"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_arrow_down" />
-
-        <ImageView
-            android:id="@+id/widget_refresh"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_marginStart="2dp"
-            android:contentDescription="@string/widget_refresh"
-            android:padding="3dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/widget_refresh" />
     </LinearLayout>
 
     <!-- 星期表头：固定不翻页，列宽由 Provider 显式设置（与日期格同一个值） -->

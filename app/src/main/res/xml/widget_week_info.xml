@@ -2,17 +2,17 @@
 <!--
   「本周班次」小组件的元数据：一行高（targetCellHeight=1），宽度按 4 列。
 
-  高度只给一行的位置，所以 minHeight 取 40dp —— 再矮日期和班次名就叠在一起了；
-  横向可拉伸（列宽按 widget 宽度算），纵向不给 resize：这是个"一行"的组件。
+  高度默认一格（targetCellHeight=1），但**允许纵向拉伸到两格** —— 拉高之后 DaoWeekWidgetProvider 会
+  从 OPTION_APPWIDGET_SIZES 读到更大的高度并把日期字号调大（字号是分档的，见那边的注释）。
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_week_label"
     android:initialLayout="@layout/widget_week_view"
     android:minHeight="40dp"
-    android:minWidth="250dp"
+    android:minWidth="180dp"
     android:previewImage="@drawable/widget_week_preview"
-    android:resizeMode="horizontal"
+    android:resizeMode="horizontal|vertical"
     android:targetCellHeight="1"
-    android:targetCellWidth="4"
+    android:targetCellWidth="3"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

@@ -83,7 +83,23 @@
                 android:resource="@xml/widget_month_info" />
         </receiver>
 
-        <!--
+                <receiver
+            android:name=".widget.DaoWidgetLargeProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_month_large_info" />
+        </receiver>
+<!--
           「本周班次」小组件：头部固定，一行（一周 7 天）靠 ↑↓ 翻页换周。
           与上面那个是两个独立的 receiver —— 同一个类写两个同级 <receiver> 会在合并时报错。
         -->
@@ -104,6 +120,22 @@
                 android:resource="@xml/widget_week_info" />
         </receiver>
 
-    </application>
+            <receiver
+            android:name=".widget.DaoWeekWidgetLargeProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_large_info" />
+        </receiver>
+</application>
 
 </manifest>

@@ -326,6 +326,8 @@
   <string name="scan_back">Back</string>
   <string name="widget_label">Shift calendar</string>
   <string name="widget_week_label">This week</string>
+  <string name="widget_label_large">Shift calendar · L</string>
+  <string name="widget_week_label_large">This week · L</string>
   <string name="widget_refresh">Refresh</string>
   <string name="widget_page_up">Previous</string>
   <string name="widget_page_down">Next</string>

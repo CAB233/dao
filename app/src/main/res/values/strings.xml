@@ -319,6 +319,8 @@
   <string name="scan_back">返回</string>
   <string name="widget_label">倒班月历</string>
   <string name="widget_week_label">本周班次</string>
+  <string name="widget_label_large">倒班月历 · 大</string>
+  <string name="widget_week_label_large">本周班次 · 大</string>
   <string name="widget_refresh">刷新</string>
   <string name="widget_page_up">上一页</string>
   <string name="widget_page_down">下一页</string>

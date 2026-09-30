@@ -12,6 +12,8 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 import androidx.compose.runtime.Immutable
 import java.util.Calendar
@@ -55,7 +57,17 @@ import win.zuoye.dao.ui.ShiftPalette
  * `apply()` 时抛 `ActionException`，界面就一直停在加载占位图。 改完请跑 `DaoWidgetProviderTest`——Robolectric 会真的
  * inflate 并 apply 一遍，编译通过不代表能显示。
  */
-class DaoWidgetProvider : AppWidgetProvider() {
+open class DaoWidgetProvider : AppWidgetProvider() {
+
+    /**
+     * 内容缩放：标题、星期表头、格子里的两行字、底部状态行都按这个比例放大。
+     *
+     * **为什么由子类写死、而不是按组件尺寸算**：线上实测 vivo 的 Launcher 把 `MIN/MAX_WIDTH/HEIGHT` 全填
+     * 0，`OPTION_APPWIDGET_SIZES` 报的值也**不随拉伸变化**， 「按尺寸自适应字号」会永远停在最小档、把组件放大字号也不变（用户反馈过）。
+     * 因此这里字号固定，不随组件尺寸变化。
+     */
+    internal open val contentScale: Float
+        get() = 1f
 
     override fun onUpdate(
         context: Context,
@@ -72,7 +84,13 @@ class DaoWidgetProvider : AppWidgetProvider() {
                     // （踩过：setColorFilter 打在 TextView 上），吞掉只会看到宿主一直停在加载占位图。
                     appWidgetManager.updateAppWidget(
                         id,
-                        buildViews(context, document, refreshPendingIntent(context), id),
+                        buildViews(
+                            context,
+                            document,
+                            refreshPendingIntent(context),
+                            id,
+                            contentScale,
+                        ),
                     )
                 }
                 // 日历是直接 addView 出来的（没有 RemoteViewsService），一次 updateAppWidget 就够
@@ -146,6 +164,10 @@ class DaoWidgetProvider : AppWidgetProvider() {
         /** 描边与文字相对色板原色的压暗/提亮比例 */
         private const val OUTLINE_SHIFT = 0.30f
 
+        /** 这个组件有两个档位（普通 / 大字），刷新要一起覆盖，否则大字版永远不更新 */
+        private val WIDGET_PROVIDERS =
+            listOf(DaoWidgetProvider::class.java, DaoWidgetLargeProvider::class.java)
+
         private const val TAG = "DaoWidgetProvider"
 
         const val ACTION_REFRESH = "win.zuoye.dao.action.WIDGET_REFRESH"
@@ -155,14 +177,19 @@ class DaoWidgetProvider : AppWidgetProvider() {
         /** 请求重新读取数据并重画所有已放置的小组件。 */
         fun refreshNow(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(ComponentName(context, DaoWidgetProvider::class.java))
-            if (ids.isEmpty()) return
-            context.sendBroadcast(
-                Intent(context, DaoWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-                }
-            )
+            // **必须按 provider 分别广播**：两个档位的 onUpdate 是同一份代码，但 contentScale 不同。
+            // 如果像以前那样把所有实例的 id 打包发给"普通版"那个 receiver，普通版就会用 1.0 的
+            // 比例把大字版重新渲染一遍 —— 每次刷新都把大字版打回小字（真机上就是这样，用户抓到）。
+            WIDGET_PROVIDERS.forEach { providerClass ->
+                val ids = manager.getAppWidgetIds(ComponentName(context, providerClass))
+                if (ids.isEmpty()) return@forEach
+                context.sendBroadcast(
+                    Intent(context, providerClass).apply {
+                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                    }
+                )
+            }
         }
 
         private fun broadcastIntent(context: Context, action: String): Intent =
@@ -242,6 +269,7 @@ class DaoWidgetProvider : AppWidgetProvider() {
             document: PlanDocument,
             refreshIntent: PendingIntent?,
             appWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
+            scale: Float = 1f,
         ): RemoteViews {
             val now = System.currentTimeMillis()
             val today = Ymd.of(now)
@@ -251,6 +279,8 @@ class DaoWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_month)
             // 翻页状态存的是**相对今月的偏移**（SharedPreferences），所以跨月后没翻过就还是今月；
             // 页索引由我们自己记着，标题因此能跟着翻页走（滚动那条路做不到这点）。
+            // 组件被放大时整块内容一起放大：标题、星期表头、每个格子的两行字、底部状态行
+            val scale = scale
             val pageOffset = WidgetPageStore(context, WidgetPageStore.KEY_MONTH).read()
             val shownMonth = monthWithDelta(today, pageOffset)
             views.setTextViewText(
@@ -261,10 +291,11 @@ class DaoWidgetProvider : AppWidgetProvider() {
                     shownMonth.month,
                 ),
             )
+            views.setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_SP, 15f * scale)
+            views.setTextViewTextSize(R.id.widget_phase, TypedValue.COMPLEX_UNIT_SP, 12f * scale)
             views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context))
-            if (refreshIntent != null) {
-                views.setOnClickPendingIntent(R.id.widget_refresh, refreshIntent)
-            }
+            // 刷新按钮已去掉：点它看不出任何变化（数据本来就是实时读的，刷新时机也都自己排了），
+            // 用户反馈"按了没效果"。`refreshIntent` 参数留着是因为排闹钟那边还在用它。
             views.setOnClickPendingIntent(
                 R.id.widget_page_up,
                 pagePendingIntent(context, ACTION_PAGE_UP, REQUEST_CODE_PAGE_UP),
@@ -276,16 +307,15 @@ class DaoWidgetProvider : AppWidgetProvider() {
 
             // 星期表头：按「一周开始日」旋转；列宽与日期格用同一个显式值
             // （`layout_weight` 在被 addView 进来的嵌套 RemoteViews 里不可靠，实测会退化成一个字的宽）
-            val columnWidthPx = widgetColumnWidthPx(context, appWidgetId)
             views.removeAllViews(R.id.widget_weekdays)
             val labels = context.resources.getStringArray(R.array.weekday_short)
             repeat(7) { column ->
                 val weekdayIndex = (document.weekStartDay + column) % 7
                 views.addView(
                     R.id.widget_weekdays,
-                    RemoteViews(context.packageName, R.layout.widget_weekday_header)
-                        .apply { setTextViewText(R.id.weekday_header, labels[weekdayIndex]) }
-                        .applyColumnWidth(R.id.weekday_header, columnWidthPx),
+                    RemoteViews(context.packageName, R.layout.widget_weekday_header).apply {
+                        setTextViewText(R.id.weekday_header, labels[weekdayIndex])
+                    },
                 )
             }
 
@@ -302,8 +332,7 @@ class DaoWidgetProvider : AppWidgetProvider() {
                         today = today,
                         roster = roster,
                         anchorEpochDay = anchorEpochDay,
-                        columnWidthPx = columnWidthPx,
-                        rowHeightPx = widgetRowHeightPx(context, appWidgetId),
+                        scale = scale,
                     ),
                 )
             }
@@ -320,11 +349,11 @@ class DaoWidgetProvider : AppWidgetProvider() {
         }
 
         /**
-         * 一格。状态判定与 App 内月历共用 [DayVisualState]（见 `domain/DayVisualState.kt`）：
-         * - **今天**：班次色**实心**（最醒目，一眼找到今天）+ 对比色文字
-         * - **有班次的其他日子**：**班次色描边 + 班次色文字**（不给实心底，整月看下来不刺眼）
-         * - **已过去**：同上，但描边与文字都走消色版
-         * - **没排班**：浅灰底；**上/下月补位**：更浅的灰 + 三级文字色
+         * 一格。
+         *
+         * 两个**互相独立**的开关，四个组件各挑一种组合（别再让它们共用一个参数，否则改一处会动两处）：
+         * - `compact`：排版风格。`true` = 「本周班次」那种一行（**今天镂空、其他实心**）； `false` = 月历（**今天实心、其他镂空**）。
+         * - `showShiftLabel`：格子里要不要那行班次说明（早/中/夜/休）。
          */
         internal fun dayCellViews(
             context: Context,
@@ -332,6 +361,9 @@ class DaoWidgetProvider : AppWidgetProvider() {
             today: Ymd,
             roster: Roster,
             anchorEpochDay: Long?,
+            compact: Boolean = false,
+            showShiftLabel: Boolean = true,
+            scale: Float = 1f,
         ): RemoteViews {
             val epochDay = cell.epochDay
             val ymd = Ymd.fromEpochDay(epochDay)
@@ -341,11 +373,58 @@ class DaoWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_day_cell)
             views.setTextViewText(R.id.day_number, ymd.day.toString())
-            views.setTextViewText(R.id.day_shift, template?.name.orEmpty())
+            views.setTextViewText(R.id.day_shift, shortShiftName(template?.name))
+            // 不显示班次说明时整个拿掉，日期因此独占高度、字号也能开大
+            if (!showShiftLabel) {
+                views.setViewVisibility(R.id.day_shift, View.GONE)
+            }
+            // 字号基准分三档，分别对应三种格子高度：
+            // - 只有日期（小版周历 3×1）：每格只有约 26dp 宽，字号给大了两位数就放不下
+            // - 周历两行（大版周历 4×2）：一行约 67dp，16×1.9=30sp + 11×1.9=21sp ≈ 59dp，放得下
+            // - 月历两行（3×3 / 4×4）：格子只有 20~31dp，必须封顶，否则中文顶到格子下边框（真机踩过）
+            val numberSp =
+                when {
+                    !showShiftLabel -> 14f * scale
+                    compact -> 16f * scale
+                    else -> minOf(12f * scale, 16f)
+                }
+            val shiftSp = if (compact) 11f * scale else minOf(8f * scale, 11f)
+            views.setTextViewTextSize(R.id.day_number, TypedValue.COMPLEX_UNIT_SP, numberSp)
+            views.setTextViewTextSize(R.id.day_shift, TypedValue.COMPLEX_UNIT_SP, shiftSp)
 
             val primary = context.getColor(R.color.widget_text_primary)
             val secondary = context.getColor(R.color.widget_text_secondary)
             val tertiary = context.getColor(R.color.widget_text_tertiary)
+
+            if (compact) {
+                // 「本周班次」也显示班次说明（早/中/夜/休/学），只是**用单个字**。
+                // 早先因为 4×1 只有一行高把它藏了；现在这个组件默认 4×2（一行约 67dp），两行放得下。
+                // 与月历**正好相反**：这里**今天镂空、其他日子实心** ——
+                // 今天 3dp 班次原色描边 + 原色文字，其他日子铺实心班次色 + 对比色文字。
+                val isToday = state == DayVisualState.Today
+                val textArgb =
+                    when {
+                        state == DayVisualState.OutsideMonth -> tertiary
+                        shiftArgb == null -> if (isToday) primary else secondary
+                        isToday -> shiftArgb
+                        else -> ShiftPalette.onColorArgb(shiftArgb)
+                    }
+                val background =
+                    when {
+                        shiftArgb != null && state != DayVisualState.OutsideMonth ->
+                            if (isToday) todayBackground(shiftArgb) else solidBackground(shiftArgb)
+                        isToday -> R.drawable.widget_day_today_none
+                        else -> R.drawable.widget_day_empty
+                    }
+                applyCellBackground(views, background, shiftArgb, context)
+                views.setTextColor(R.id.day_number, textArgb)
+                views.setTextColor(R.id.day_shift, textArgb)
+                // 今天：说明比日期淡一点，避免两行同色显得糊
+                if (isToday) {
+                    views.setTextColor(R.id.day_shift, secondary)
+                }
+                return views
+            }
 
             // 文字与框同色：今天用实心底所以取对比色，其余用班次色本身。
             // 已过去的日子**不再淡化**：消色版是给"实心底"设计的（浅底 + 灰字），
@@ -362,23 +441,41 @@ class DaoWidgetProvider : AppWidgetProvider() {
                         shiftArgb?.let { outlineTextArgb(context, it) } ?: secondary
                 }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                views.setInt(
-                    R.id.day_cell,
-                    "setBackgroundResource",
-                    cellBackground(state, shiftArgb, context),
-                )
-            } else {
-                views.setInt(
-                    R.id.day_cell,
-                    "setBackgroundColor",
-                    cellFallbackArgb(state, shiftArgb, context),
-                )
-            }
+            applyCellBackground(
+                views,
+                cellBackground(state, shiftArgb, context),
+                shiftArgb,
+                context,
+            )
             views.setTextColor(R.id.day_number, textArgb)
             views.setTextColor(R.id.day_shift, textArgb)
             return views
         }
+
+        /**
+         * 给一格上底色。
+         *
+         * `setBackgroundResource` 是 **API 31+** 的方法，低版本调用直接抛异常 —— 那里退回纯色 （圆角会丢，但颜色仍然对）。
+         */
+        private fun applyCellBackground(
+            views: RemoteViews,
+            backgroundRes: Int,
+            shiftArgb: Int?,
+            context: Context,
+            solid: Boolean = false,
+        ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                views.setInt(R.id.day_cell, "setBackgroundResource", backgroundRes)
+            } else {
+                val fallback =
+                    if (solid && shiftArgb != null) shiftArgb
+                    else solidBackgroundArgbOr(shiftArgb, context)
+                views.setInt(R.id.day_cell, "setBackgroundColor", fallback)
+            }
+        }
+
+        private fun solidBackgroundArgbOr(argb: Int?, context: Context): Int =
+            argb ?: context.getColor(R.color.widget_day_empty)
 
         /**
          * 圆角底色资源。
@@ -459,6 +556,27 @@ class DaoWidgetProvider : AppWidgetProvider() {
             }
 
         /** 班次色 → 格子描边底（drawable/ 是压暗版、drawable-night/ 是提亮版）；色板外的自定义颜色走中性描边 */
+        /**
+         * 「今天」的镂空描边：带班次时用**班次原色**（不像 [outlinedBackground] 那样压暗）， 而且 `widget_day_today_*.xml` 的描边是
+         * 3dp（其他日子 2dp）—— 今天必须是镂空又能一眼分辨出来的那一格。
+         */
+        private fun todayBackground(argb: Int): Int =
+            when (argb) {
+                ShiftPalette.presets[0] -> R.drawable.widget_day_today_red
+                ShiftPalette.presets[1] -> R.drawable.widget_day_today_orange
+                ShiftPalette.presets[2] -> R.drawable.widget_day_today_yellow
+                ShiftPalette.presets[3] -> R.drawable.widget_day_today_green
+                ShiftPalette.presets[4] -> R.drawable.widget_day_today_cyan
+                ShiftPalette.presets[5] -> R.drawable.widget_day_today_blue
+                ShiftPalette.presets[6] -> R.drawable.widget_day_today_indigo
+                ShiftPalette.presets[7] -> R.drawable.widget_day_today_purple
+                ShiftPalette.presets[8] -> R.drawable.widget_day_today_pink
+                ShiftPalette.presets[9] -> R.drawable.widget_day_today_brown
+                ShiftPalette.presets[10] -> R.drawable.widget_day_today_bluegrey
+                ShiftPalette.presets[11] -> R.drawable.widget_day_today_grass
+                else -> R.drawable.widget_day_today_none
+            }
+
         private fun outlinedBackground(argb: Int): Int =
             when (argb) {
                 ShiftPalette.presets[0] -> R.drawable.widget_day_outline_red
@@ -562,7 +680,7 @@ class DaoWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun phaseText(
+        internal fun phaseText(
             context: Context,
             document: PlanDocument,
             today: Ymd,
@@ -585,6 +703,13 @@ class DaoWidgetProvider : AppWidgetProvider() {
 }
 
 /**
+ * 格子里那条班次说明的**简称**：只留**第一个字**（早班→早、休息→休、学习班→学）。
+ *
+ * 只影响小组件里的显示，**不动 `ShiftTemplate.name` 本身** —— 用户建模板时叫「早班」， 格子里那点宽度塞不下两个字，取首字最省地方。
+ */
+private fun shortShiftName(name: String?): String = name.orEmpty().take(1)
+
+/**
  * 底部状态行的文案：`string` 资源 + 格式化参数。
  *
  * 返回资源而不是最终字符串，是为了单测能断言"用了哪条文案、参数是什么"， 不受运行设备语言（中文/英文）影响。
@@ -594,8 +719,10 @@ class DaoWidgetProvider : AppWidgetProvider() {
 /**
  * 一页 = 一个整月（6 行 × 7 格），交给调用方 addView 到 ViewFlipper 里。
  *
- * 行宽 = 7 × 列宽、整块高度 = 6 × 行高，都必须显式给：这几层都是嵌套的 RemoteViews， 测量时父容器给的是 wrap_content，`layout_weight`
- * 算不出等分（踩过：每格退化成一个字的宽度）。
+ * **尺寸全交给布局，代码一个像素都不算**：格子/表头是 `0dp + weight=1`、行也是 `0dp + weight=1`、 整块是
+ * `match_parent`，`ViewFlipper` 会给子视图一个确定的宽高，于是 weight 能正常等分。 之前那套"按 `getAppWidgetOptions` 算像素"的方案在
+ * vivo 上是坏的 —— 它的 Launcher 把 `MIN/MAX_WIDTH/HEIGHT` 全填 0、`OPTION_APPWIDGET_SIZES` 又给了一个偏小一半的值，
+ * 结果格子只占组件一半宽、行高对不上（真机踩过）。改成 weight 之后这些都不再需要。
  */
 internal fun monthPageViews(
     context: Context,
@@ -604,34 +731,25 @@ internal fun monthPageViews(
     today: Ymd,
     roster: Roster,
     anchorEpochDay: Long?,
-    columnWidthPx: Int?,
-    rowHeightPx: Int?,
+    scale: Float,
 ): RemoteViews {
     val page = RemoteViews(context.packageName, R.layout.widget_month_item)
-    val rowWidthPx = columnWidthPx?.times(MonthGrid.COLUMNS)
     MonthGrid.of(month.year, month.month, weekStartDay).weeks.forEach { week ->
         val row = RemoteViews(context.packageName, R.layout.widget_week_item)
         week.forEach { cell ->
             row.addView(
                 R.id.week_item_row,
                 DaoWidgetProvider.dayCellViews(
-                        context = context,
-                        cell = cell,
-                        today = today,
-                        roster = roster,
-                        anchorEpochDay = anchorEpochDay,
-                    )
-                    .applyCellBox(
-                        R.id.day_cell,
-                        columnWidthPx,
-                        rowHeightPx,
-                        context.resources.displayMetrics.density,
-                    ),
+                    context = context,
+                    cell = cell,
+                    today = today,
+                    roster = roster,
+                    anchorEpochDay = anchorEpochDay,
+                    scale = scale,
+                ),
             )
         }
-        row.applyCellSize(R.id.week_item_row, rowWidthPx, rowHeightPx)
         page.addView(R.id.month_item, row)
     }
-    page.applyCellSize(R.id.month_item, rowWidthPx, rowHeightPx?.times(MonthGrid.ROWS))
     return page
 }

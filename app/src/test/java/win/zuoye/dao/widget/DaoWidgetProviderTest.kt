@@ -2,14 +2,18 @@ package win.zuoye.dao.widget
 
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.RemoteViews
+import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import win.zuoye.dao.R
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
@@ -93,10 +97,11 @@ class DaoWidgetProviderTest {
         )
 
     /** inflate + 逐条 apply；任何非法 action 都会在这里抛 ActionException */
-    private fun applyRemoteViews(views: android.widget.RemoteViews) {
+    private fun applyRemoteViews(views: android.widget.RemoteViews): android.view.View {
         val parent = FrameLayout(context) as ViewGroup
         val applied = views.apply(context, parent)
         assertNotNull(applied, "RemoteViews.apply returned null")
+        return applied
     }
 
     @Test
@@ -170,5 +175,31 @@ class DaoWidgetProviderTest {
             win.zuoye.dao.data.Ymd.ymdToEpochDay(2026, 9, 30).let {
                 win.zuoye.dao.data.Ymd.fromEpochDay(it)
             }
+    }
+
+    /**
+     * 月历的普通版 / 大字版必须渲染出**不同大小**的字。
+     *
+     * 同 `DaoWeekWidgetProviderTest` 里那条：字号是 RemoteViews 的 action，只有 apply 之后才落到 TextView 上，所以必须真的
+     * inflate 一遍再读。标题在根布局里，直接 findViewById 即可。
+     */
+    @Test
+    fun `large month variant renders a bigger title`() {
+        val normal =
+            applyRemoteViews(
+                DaoWidgetProvider.buildViews(context, PlanDocument(), null, scale = 1f)
+            )
+        val large =
+            applyRemoteViews(
+                DaoWidgetProvider.buildViews(context, PlanDocument(), null, scale = 1.6f)
+            )
+
+        val normalSize = normal.findViewById<TextView>(R.id.widget_title).textSize
+        val largeSize = large.findViewById<TextView>(R.id.widget_title).textSize
+
+        assertTrue(
+            largeSize > normalSize * 1.4f,
+            "large variant title ($largeSize) should be bigger than normal ($normalSize)",
+        )
     }
 }

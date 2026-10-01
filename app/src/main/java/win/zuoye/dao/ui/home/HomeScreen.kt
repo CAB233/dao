@@ -164,11 +164,11 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            // 非当前月且页面在顶部时显示「今」，滚动后收起以留出内容空间
+            // 查看其它月份或选中非今日日期时，页面在顶部才显示「今」
             // 外边距放在 AnimatedVisibility 之外，保证缩放动画以圆心为中心
             Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
                 AnimatedVisibility(
-                    visible = !isCurrentMonth && isAtTop,
+                    visible = (!isCurrentMonth || scheduleDate != today) && isAtTop,
                     enter = fadeIn() + scaleIn(initialScale = 0.8f),
                     exit = fadeOut() + scaleOut(targetScale = 0.8f),
                 ) {

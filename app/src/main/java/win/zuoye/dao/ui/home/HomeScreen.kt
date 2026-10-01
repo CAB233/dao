@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -77,7 +76,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
@@ -124,6 +122,8 @@ fun HomeScreen(
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { MONTH_COUNT })
     val coroutineScope = rememberCoroutineScope()
     var selectedDate by remember { mutableStateOf<Ymd?>(null) }
+    val scheduleDate = selectedDate ?: today
+    val onDayClick = { date: Ymd -> selectedDate = date.takeUnless { it == today } }
 
     val settledIndex = pagerState.settledPage
     val viewYear = BASE_YEAR + settledIndex / 12
@@ -174,6 +174,7 @@ fun HomeScreen(
                 ) {
                     FloatingActionButton(
                         onClick = {
+                            selectedDate = null
                             coroutineScope.launch { pagerState.animateScrollToPage(initialPage) }
                         },
                         // 关闭阴影：默认的 shadowElevation 会建离屏图层，动画时明显卡顿
@@ -212,7 +213,7 @@ fun HomeScreen(
                         showHolidays = showHolidays,
                         showLunar = showLunar,
                         selectedDate = selectedDate,
-                        onDayClick = { selectedDate = it },
+                        onDayClick = onDayClick,
                         modifier =
                             Modifier.weight(1.45f)
                                 .verticalScroll(scrollState)
@@ -223,6 +224,8 @@ fun HomeScreen(
                         doc = doc,
                         roster = roster,
                         today = today,
+                        date = scheduleDate,
+                        showHolidays = showHolidays,
                         modifier =
                             Modifier.weight(1f)
                                 .widthIn(max = 420.dp)
@@ -253,26 +256,17 @@ fun HomeScreen(
                         showHolidays = showHolidays,
                         showLunar = showLunar,
                         selectedDate = selectedDate,
-                        onDayClick = { selectedDate = it },
+                        onDayClick = onDayClick,
                     )
-                    HomeSummaryPane(doc = doc, roster = roster, today = today)
+                    HomeSummaryPane(
+                        doc = doc,
+                        roster = roster,
+                        today = today,
+                        date = scheduleDate,
+                        showHolidays = showHolidays,
+                    )
                 }
             }
-        }
-
-        // 对话框必须挂在 Scaffold 内部（依赖 Scaffold 提供的弹层宿主）。
-        // 常驻组合、用 show 驱动进出动画；退出动画期间还要继续渲染，所以记住最后点开的那一天。
-        var detailDate by remember { mutableStateOf<Ymd?>(null) }
-        LaunchedEffect(selectedDate) { selectedDate?.let { detailDate = it } }
-        detailDate?.let { date ->
-            DayDetailDialog(
-                date = date,
-                doc = doc,
-                roster = roster,
-                showHolidays = showHolidays,
-                show = selectedDate != null,
-                onDismiss = { selectedDate = null },
-            )
         }
     }
 }
@@ -346,38 +340,85 @@ private fun HomeSummaryPane(
     doc: PlanDocument,
     roster: Roster,
     today: Ymd,
+    date: Ymd,
+    showHolidays: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        TodayGroupsCard(doc = doc, roster = roster, today = today)
+        GroupsScheduleCard(
+            doc = doc,
+            roster = roster,
+            today = today,
+            date = date,
+            showHolidays = showHolidays,
+        )
         Spacer(Modifier.height(24.dp))
     }
 }
 
-/** 日历下方显示当前方案中各班组今天的排班。 */
+/** 显示当前方案中各班组在所选日期的排班，默认显示今日。 */
 @Composable
-private fun TodayGroupsCard(
+private fun GroupsScheduleCard(
     doc: PlanDocument,
     roster: Roster,
     today: Ymd,
+    date: Ymd,
+    showHolidays: Boolean,
 ) {
+    val holiday =
+        remember(date, showHolidays) { LegalHolidays.of(date.epochDay).takeIf { showHolidays } }
+    val isOverride =
+        remember(date, doc.overrides, doc.templates) {
+            doc.overrides[date.epochDay.toString()]?.let(doc::templateById) != null
+        }
+    val weekdays = stringArrayResource(R.array.weekday_short)
     Card(
         modifier =
             Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(top = 12.dp, bottom = 12.dp)
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
-                stringResource(R.string.today_schedule),
+                text =
+                    if (date == today) {
+                        stringResource(R.string.today_schedule)
+                    } else {
+                        stringResource(
+                            R.string.date_schedule,
+                            date.year,
+                            date.month,
+                            date.day,
+                            weekdays[date.weekdayIndex],
+                        )
+                    },
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(12.dp))
-            GroupScheduleRows(doc = doc, roster = roster, epochDay = today.epochDay)
+            holiday?.let {
+                Text(
+                    stringResource(
+                        if (it.isMakeupWorkday) R.string.makeup_workday else R.string.legal_holiday,
+                        stringResource(it.name.stringRes()),
+                    ),
+                    fontSize = 13.sp,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+            GroupScheduleRows(doc = doc, roster = roster, epochDay = date.epochDay)
+            if (isOverride) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.shift_override),
+                    fontSize = 12.sp,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
         }
     }
 }
 
-/** 当前方案下所有班组在指定日期的排班；首页卡片和日期详情共用同一套布局。 */
+/** 当前方案下所有班组在指定日期的排班。 */
 @Composable
 private fun GroupScheduleRows(
     doc: PlanDocument,
@@ -609,7 +650,7 @@ private fun MonthGrid(
                         slot = slot,
                         text = cellText,
                         measurer = measurer,
-                        // 详情弹窗打开期间，那一格保持按住高亮
+                        // 当前选中的日期保持高亮，与排班卡片对应
                         heldDown =
                             selected != null &&
                                 selected.year == slot.year &&
@@ -1026,65 +1067,10 @@ private fun CalendarCell(
     }
 }
 
-@Composable
-private fun DayDetailDialog(
-    date: Ymd,
-    doc: PlanDocument,
-    roster: Roster,
-    showHolidays: Boolean,
-    show: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val holiday =
-        remember(date, showHolidays) { LegalHolidays.of(date.epochDay).takeIf { showHolidays } }
-    val isOverride =
-        remember(date, doc.overrides, doc.templates) {
-            doc.overrides[date.epochDay.toString()]?.let(doc::templateById) != null
-        }
-    val weekdays = stringArrayResource(R.array.weekday_short)
-    OverlayDialog(
-        show = show,
-        title =
-            stringResource(
-                R.string.date_dialog_title,
-                date.year,
-                date.month,
-                date.day,
-                weekdays[date.weekdayIndex],
-            ),
-        onDismissRequest = onDismiss,
-    ) {
-        Column(
-            Modifier.fillMaxWidth().heightIn(max = 500.dp).verticalScroll(rememberScrollState())
-        ) {
-            holiday?.let {
-                Text(
-                    stringResource(
-                        if (it.isMakeupWorkday) R.string.makeup_workday else R.string.legal_holiday,
-                        stringResource(it.name.stringRes()),
-                    ),
-                    fontSize = 13.sp,
-                )
-                Spacer(Modifier.height(12.dp))
-            }
-            GroupScheduleRows(doc = doc, roster = roster, epochDay = date.epochDay)
-            if (isOverride) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(R.string.shift_override),
-                    fontSize = 12.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-}
-
 /**
  * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
  * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
- * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
+ * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在状态解除后释放）。
  */
 @Composable
 private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
@@ -1108,7 +1094,7 @@ private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSo
         }
     }
 
-    // 行被移出组合（例如弹层关掉后整行消失）时也要释放，别把高亮留在 source 里
+    // 日期格移出组合时也要释放交互，避免残留高亮
     DisposableEffect(interactionSource) {
         onDispose {
             active.value?.let { current ->

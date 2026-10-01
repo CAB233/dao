@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "miuix": {
+      "source": "limczhh/miuix-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "c481f30d5f6b83dfd3e5657f52d9cdb2e3cf05d375f89fc52ae4df9db1ecc9bb"
+    },
+    "r8-analyzer": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "performance/r8-analyzer/SKILL.md",
+      "computedHash": "69fdd394fe2b5658833a10a711511ac0ae422dfbbf1d981ce08a7fa9bbcf54df"
+    }
+  }
+}

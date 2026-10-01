@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 静态桌面预览对应 miuix 0.9.4 darkColorScheme。 -->
+    <color name="widget_surface">#FF242424</color>
+    <color name="widget_on_surface">#FFF2F2F2</color>
+    <color name="widget_surface_variant">#FF2B3B54</color>
+    <color name="widget_summary">#80FFFFFF</color>
+</resources>

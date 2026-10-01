@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 静态桌面预览对应 miuix 0.9.4 lightColorScheme；实际内容由主题 API 绘制。 -->
+    <color name="widget_surface">#FFFFFFFF</color>
+    <color name="widget_on_surface">#FF000000</color>
+    <color name="widget_surface_variant">#FFEAF2FF</color>
+    <color name="widget_summary">#99000000</color>
+</resources>

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import win.zuoye.dao.widget.RosterWidgets
 
 object PlanDocumentSerializer : Serializer<PlanDocument> {
     private val json = Json {
@@ -48,6 +49,7 @@ interface PlanStore {
 
 /** 单例仓库：全量文档读写，DataStore 保证原子落盘。 */
 class PlanRepository private constructor(context: Context) : PlanStore {
+    private val appContext = context.applicationContext
     private val planFile = File(context.filesDir, PLAN_FILE_NAME)
     private val _corruptionRecovery = MutableStateFlow<String?>(null)
 
@@ -69,6 +71,7 @@ class PlanRepository private constructor(context: Context) : PlanStore {
 
     override suspend fun update(transform: (PlanDocument) -> PlanDocument) {
         store.updateData(transform)
+        RosterWidgets.requestRefresh(appContext)
     }
 
     override fun acknowledgeCorruptionRecovery() {

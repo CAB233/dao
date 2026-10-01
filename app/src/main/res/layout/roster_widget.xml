@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/widget_calendar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/app_name"
+        android:scaleType="fitXY" />
+
+    <TextView
+        android:id="@+id/widget_loading"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/widget_preview_background"
+        android:gravity="center"
+        android:text="@string/app_name"
+        android:textColor="@color/widget_on_surface"
+        android:textSize="18sp" />
+
+    <LinearLayout
+        android:id="@+id/widget_month_controls"
+        android:layout_width="80dp"
+        android:layout_height="44dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="12dp"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <Button
+            style="?android:attr/buttonBarButtonStyle"
+            android:id="@+id/widget_previous"
+            android:layout_width="40dp"
+            android:layout_height="44dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/widget_previous_month"
+            android:gravity="center"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:text="@string/widget_previous_symbol"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="28sp" />
+
+        <Button
+            style="?android:attr/buttonBarButtonStyle"
+            android:id="@+id/widget_next"
+            android:layout_width="40dp"
+            android:layout_height="44dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/widget_next_month"
+            android:gravity="center"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:text="@string/widget_next_symbol"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="28sp" />
+    </LinearLayout>
+</FrameLayout>

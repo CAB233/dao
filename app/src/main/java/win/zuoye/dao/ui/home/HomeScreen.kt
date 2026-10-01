@@ -35,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -141,6 +142,9 @@ fun HomeScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val scrollState = rememberScrollState()
     val summaryScrollState = rememberScrollState()
+    val isAtTop by remember {
+        derivedStateOf { scrollState.value == 0 && summaryScrollState.value == 0 }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -160,11 +164,11 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            // 滑到别的月份时，右下角出现蓝色圆形「今」，一键回到今天
+            // 非当前月且页面在顶部时显示「今」，滚动后收起以留出内容空间
             // 外边距放在 AnimatedVisibility 之外，保证缩放动画以圆心为中心
             Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
                 AnimatedVisibility(
-                    visible = !isCurrentMonth,
+                    visible = !isCurrentMonth && isAtTop,
                     enter = fadeIn() + scaleIn(initialScale = 0.8f),
                     exit = fadeOut() + scaleOut(targetScale = 0.8f),
                 ) {

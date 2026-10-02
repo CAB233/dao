@@ -16,7 +16,6 @@ val androidMinSdkVersion = 24
 val androidTargetSdkVersion = 37
 val javaLanguageVersion = 21
 val androidJavaVersion = JavaVersion.toVersion(javaLanguageVersion)
-val targetAbis = arrayOf("arm64-v8a")
 val releaseLocales = listOf("zh", "en")
 val isPrBuild = providers.gradleProperty("IS_PR_BUILD").map(String::toBoolean).orElse(false).get()
 val defaultAppPackageName = if (isPrBuild) "$appNamespace.pr" else appNamespace
@@ -73,9 +72,9 @@ android {
     splits {
         abi {
             isEnable = true
-            isUniversalApk = false
             reset()
-            include(*targetAbis)
+            include("arm64-v8a")
+            isUniversalApk = false
         }
     }
 
@@ -117,9 +116,7 @@ androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
             output.outputFileName.set(
-                output.versionName.map { versionName ->
-                    "$apkBaseName-$versionName-${variant.buildType}.apk"
-                }
+                output.versionName.map { versionName -> "$apkBaseName-$versionName.apk" }
             )
         }
     }

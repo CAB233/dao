@@ -244,6 +244,7 @@ private class WidgetPainter(
     private val fontScale: Float,
 ) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val dayCornerRadius = 8f
     private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private val typography = defaultTextStyles()
     private val groupLabelSize = typography.footnote2.fontSize.value
@@ -416,7 +417,14 @@ private class WidgetPainter(
         val background =
             shift?.copy(alpha = 0.13f)?.compositeOver(colors.surfaceContainer)
                 ?: colors.surfaceVariant
-        surface(x, y, width, height, 14f, background.copy(alpha = background.alpha * fade))
+        surface(
+            x,
+            y,
+            width,
+            height,
+            dayCornerRadius,
+            background.copy(alpha = background.alpha * fade),
+        )
     }
 
     fun dayContent(
@@ -439,7 +447,7 @@ private class WidgetPainter(
                 y + 1f,
                 (width - 2f).coerceAtLeast(1f),
                 (height - 2f).coerceAtLeast(1f),
-                13f,
+                dayCornerRadius - 1f,
                 colors.primary,
                 2f,
             )

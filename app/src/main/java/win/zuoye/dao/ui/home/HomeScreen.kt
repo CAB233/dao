@@ -712,7 +712,7 @@ private class CellTextStyles(colors: GridColors, base: TextStyle) {
     val name = base.merge(fontSize = 9.sp)
 }
 
-private val CELL_RADIUS = 14.dp
+private val CELL_RADIUS = 8.dp
 
 private fun monthRowCount(year: Int, month: Int, weekStartDay: Int): Int {
     val firstOffset = Math.floorMod(Ymd(year, month, 1).weekdayIndex - weekStartDay, 7)

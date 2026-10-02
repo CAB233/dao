@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
@@ -535,7 +537,18 @@ private fun RosterStatusCard(
                 modifier = Modifier.fillMaxSize().offset(x = 27.dp, y = 29.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Text(if (status == RosterStatus.ON_SHIFT) "🏝" else "🐖", fontSize = 92.sp)
+                Image(
+                    painter =
+                        painterResource(
+                            if (status == RosterStatus.ON_SHIFT) {
+                                R.drawable.noto_emoji_desert_island
+                            } else {
+                                R.drawable.noto_emoji_pig
+                            }
+                        ),
+                    contentDescription = null,
+                    modifier = Modifier.size(112.dp),
+                )
             }
 
             Column(modifier = Modifier.padding(start = 16.dp, top = 14.dp)) {

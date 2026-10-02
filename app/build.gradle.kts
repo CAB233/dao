@@ -9,8 +9,8 @@ plugins {
 }
 
 val appNamespace = "win.zuoye.dao"
-val appVersionCode = 13
-val appVersionName = "0.4.0"
+val appVersionCode = 14
+val appVersionName = "0.5.0"
 val androidCompileSdkVersion = 37
 val androidMinSdkVersion = 24
 val androidTargetSdkVersion = 37

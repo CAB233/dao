@@ -234,8 +234,8 @@ fun OnboardingScreen(
 
     fun syncAssignments(n: Int) {
         var next = assignments
-        while (next.size < n) next = next.add(null)
-        while (next.size > n) next = next.removeAt(next.size - 1)
+        while (next.size < n) next = next.adding(null)
+        while (next.size > n) next = next.removingAt(next.size - 1)
         assignments = next
     }
 
@@ -456,7 +456,7 @@ fun OnboardingScreen(
                 val current = editingTemplate
                 if (current == null) {
                     userTemplates =
-                        userTemplates.add(
+                        userTemplates.adding(
                             ShiftTemplate(
                                 id = System.currentTimeMillis(),
                                 name = name,
@@ -470,7 +470,7 @@ fun OnboardingScreen(
                     val idx = userTemplates.indexOfFirst { it.id == current.id }
                     if (idx >= 0) {
                         userTemplates =
-                            userTemplates.set(
+                            userTemplates.replacingAt(
                                 idx,
                                 current.copy(
                                     name = name,
@@ -493,7 +493,7 @@ fun OnboardingScreen(
                 show = pickingDay >= 0,
                 onPick = { id ->
                     if (shownPickDay < assignments.size) {
-                        assignments = assignments.set(shownPickDay, id)
+                        assignments = assignments.replacingAt(shownPickDay, id)
                     }
                     pickingDay = -1
                 },

@@ -53,7 +53,7 @@ fun PlanDocument.importPlan(
             templatesReused++
         } else {
             val id = newId()
-            mergedTemplates = mergedTemplates.add(incoming.copy(id = id))
+            mergedTemplates = mergedTemplates.adding(incoming.copy(id = id))
             templateIdMap[incoming.id] = id
             templatesAdded++
         }
@@ -84,7 +84,7 @@ fun PlanDocument.importPlan(
         }
         val id = newId()
         mergedSchemes =
-            mergedSchemes.add(
+            mergedSchemes.adding(
                 incoming.copy(
                     id = id,
                     name = uniqueName(incoming.name, usedNames),

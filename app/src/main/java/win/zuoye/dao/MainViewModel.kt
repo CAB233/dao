@@ -132,7 +132,7 @@ class MainViewModel(
                 schemes =
                     current.schemes
                         .toPersistentList()
-                        .add(
+                        .adding(
                             Scheme(
                                 id = id,
                                 name = planName,

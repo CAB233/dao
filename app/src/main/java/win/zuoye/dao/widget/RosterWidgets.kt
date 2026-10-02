@@ -25,6 +25,7 @@ object RosterWidgets {
     internal const val ACTION_REFRESH = "win.zuoye.dao.widget.REFRESH"
     internal const val ACTION_PREVIOUS = "win.zuoye.dao.widget.PREVIOUS"
     internal const val ACTION_NEXT = "win.zuoye.dao.widget.NEXT"
+    internal const val EXTRA_NAVIGATION_KIND = "navigation_kind"
     private val mutex = Mutex()
     private const val PREFERENCES = "roster_widgets"
 
@@ -52,23 +53,42 @@ object RosterWidgets {
             scheduleNextDay(context)
         }
 
-    internal suspend fun navigate(context: Context, id: Int, delta: Int) = mutex.withLock {
+    internal suspend fun navigate(
+        context: Context,
+        kind: RosterWidgetKind,
+        id: Int,
+        delta: Int,
+        navigationKind: RosterWidgetKind = kind,
+    ) = mutex.withLock {
         val today = Ymd.today()
+        val document = PlanRepository.get(context).document.first()
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-        val key = "month_$id"
-        val month = moveWidgetMonth(preferences.getInt(key, today.widgetMonth()), delta)
-        preferences.edit { if (month == today.widgetMonth()) remove(key) else putInt(key, month) }
-        updateViews(
-            context,
-            PlanRepository.get(context).document.first(),
-            RosterWidgetKind.MONTH,
-            intArrayOf(id),
-        )
+        if (navigationKind == RosterWidgetKind.WEEK) {
+            val key = "week_$id"
+            val currentWeek = widgetWeekStart(today, document.weekStartDay)
+            val displayedWeek =
+                widgetWeekStart(
+                    Ymd.fromEpochDay(preferences.getLong(key, currentWeek)),
+                    document.weekStartDay,
+                )
+            val week = moveWidgetWeek(displayedWeek, delta, document.weekStartDay)
+            preferences.edit { if (week == currentWeek) remove(key) else putLong(key, week) }
+        } else {
+            val key = "month_$id"
+            val month = moveWidgetMonth(preferences.getInt(key, today.widgetMonth()), delta)
+            preferences.edit {
+                if (month == today.widgetMonth()) remove(key) else putInt(key, month)
+            }
+        }
+        updateViews(context, document, kind, intArrayOf(id))
     }
 
     internal fun remove(context: Context, ids: IntArray) {
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit {
-            ids.forEach { remove("month_$it") }
+            ids.forEach {
+                remove("month_$it")
+                remove("week_$it")
+            }
         }
     }
 
@@ -77,10 +97,17 @@ object RosterWidgets {
         val values = oldIds.map { id ->
             preferences.takeIf { it.contains("month_$id") }?.getInt("month_$id", 0)
         }
+        val weeks = oldIds.map { id ->
+            preferences.takeIf { it.contains("week_$id") }?.getLong("week_$id", 0)
+        }
         preferences.edit {
-            oldIds.forEach { remove("month_$it") }
+            oldIds.forEach {
+                remove("month_$it")
+                remove("week_$it")
+            }
             newIds.forEachIndexed { index, id ->
                 values.getOrNull(index)?.let { putInt("month_$id", it) }
+                weeks.getOrNull(index)?.let { putLong("week_$id", it) }
             }
         }
     }
@@ -117,6 +144,17 @@ object RosterWidgets {
                 preferences
                     .getInt("month_$id", today.widgetMonth())
                     .coerceIn(FIRST_WIDGET_MONTH, LAST_WIDGET_MONTH)
+            val week =
+                Ymd.fromEpochDay(
+                    moveWidgetWeek(
+                        widgetWeekStart(
+                            Ymd.fromEpochDay(preferences.getLong("week_$id", today.epochDay)),
+                            document.weekStartDay,
+                        ),
+                        0,
+                        document.weekStartDay,
+                    )
+                )
             val options = manager.getAppWidgetOptions(id)
             val fallbackHeight = if (kind == RosterWidgetKind.WEEK) 90f else 320f
             val portrait =
@@ -168,7 +206,7 @@ object RosterWidgets {
                     sqrt(500_000f / sizes.sumOf { (it.width * it.height).toDouble() }.toFloat()),
                 )
             val views = sizes.associateWith { size ->
-                createViews(context, document, kind, id, today, month, size, scale)
+                createViews(context, document, kind, id, today, month, week, size, scale)
             }
             val remoteViews =
                 if (Build.VERSION.SDK_INT >= 31 && exactSizes.isNotEmpty()) RemoteViews(views)
@@ -185,10 +223,12 @@ object RosterWidgets {
         id: Int,
         today: Ymd,
         month: Int,
+        week: Ymd,
         size: SizeF,
         scale: Float,
     ): RemoteViews {
-        val rendering = renderRosterWidget(context, document, kind, today, month, size, scale)
+        val layout = widgetLayout(size.height)
+        val rendering = renderRosterWidget(context, document, today, month, week, size, scale)
         return RemoteViews(context.packageName, R.layout.roster_widget).apply {
             setImageViewBitmap(R.id.widget_calendar, rendering.bitmap)
             setViewVisibility(R.id.widget_loading, View.GONE)
@@ -204,17 +244,43 @@ object RosterWidgets {
             setOnClickPendingIntent(R.id.widget_calendar, openApp)
             setViewVisibility(
                 R.id.widget_month_controls,
-                if (kind == RosterWidgetKind.MONTH) View.VISIBLE else View.GONE,
+                if (layout.hasHeader) View.VISIBLE else View.GONE,
+            )
+            val monthly = layout.navigationKind == RosterWidgetKind.MONTH
+            setContentDescription(
+                R.id.widget_previous,
+                context.getString(
+                    if (monthly) R.string.widget_previous_month else R.string.widget_previous_week
+                ),
+            )
+            setContentDescription(
+                R.id.widget_next,
+                context.getString(
+                    if (monthly) R.string.widget_next_month else R.string.widget_next_week
+                ),
             )
             setTextColor(R.id.widget_previous, rendering.actionColor)
             setTextColor(R.id.widget_next, rendering.actionColor)
-            setBoolean(R.id.widget_previous, "setEnabled", month > FIRST_WIDGET_MONTH)
-            setBoolean(R.id.widget_next, "setEnabled", month < LAST_WIDGET_MONTH)
+            setBoolean(
+                R.id.widget_previous,
+                "setEnabled",
+                if (monthly) month > FIRST_WIDGET_MONTH
+                else moveWidgetWeek(week.epochDay, -1, document.weekStartDay) < week.epochDay,
+            )
+            setBoolean(
+                R.id.widget_next,
+                "setEnabled",
+                if (monthly) month < LAST_WIDGET_MONTH
+                else moveWidgetWeek(week.epochDay, 1, document.weekStartDay) > week.epochDay,
+            )
             setOnClickPendingIntent(
                 R.id.widget_previous,
-                widgetBroadcast(context, id, ACTION_PREVIOUS),
+                widgetBroadcast(context, kind, layout.navigationKind, id, ACTION_PREVIOUS),
             )
-            setOnClickPendingIntent(R.id.widget_next, widgetBroadcast(context, id, ACTION_NEXT))
+            setOnClickPendingIntent(
+                R.id.widget_next,
+                widgetBroadcast(context, kind, layout.navigationKind, id, ACTION_NEXT),
+            )
         }
     }
 }

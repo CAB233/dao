@@ -28,7 +28,6 @@ abstract class RosterWidgetProvider(private val kind: RosterWidgetKind) : AppWid
         when (intent.action) {
             RosterWidgets.ACTION_PREVIOUS,
             RosterWidgets.ACTION_NEXT -> {
-                if (kind != RosterWidgetKind.MONTH) return
                 val id =
                     intent.getIntExtra(
                         AppWidgetManager.EXTRA_APPWIDGET_ID,
@@ -37,11 +36,17 @@ abstract class RosterWidgetProvider(private val kind: RosterWidgetKind) : AppWid
                 val manager = AppWidgetManager.getInstance(context)
                 if (manager.getAppWidgetInfo(id)?.provider != ComponentName(context, javaClass))
                     return
+                val navigationKind =
+                    RosterWidgetKind.entries.firstOrNull {
+                        it.name == intent.getStringExtra(RosterWidgets.EXTRA_NAVIGATION_KIND)
+                    } ?: kind
                 updateAsync {
                     RosterWidgets.navigate(
                         context,
+                        kind,
                         id,
                         if (intent.action == RosterWidgets.ACTION_PREVIOUS) -1 else 1,
+                        navigationKind,
                     )
                 }
             }
@@ -124,13 +129,24 @@ internal fun nextWidgetDayMillis(): Long =
         }
         .timeInMillis
 
-internal fun widgetBroadcast(context: Context, id: Int, action: String): PendingIntent =
+internal fun widgetBroadcast(
+    context: Context,
+    kind: RosterWidgetKind,
+    navigationKind: RosterWidgetKind,
+    id: Int,
+    action: String,
+): PendingIntent =
     PendingIntent.getBroadcast(
         context,
         0,
-        Intent(context, MonthRosterWidgetProvider::class.java)
+        Intent(
+                context,
+                if (kind == RosterWidgetKind.WEEK) WeekRosterWidgetProvider::class.java
+                else MonthRosterWidgetProvider::class.java,
+            )
             .setAction(action)
-            .setData("dao-widget://month/$id/$action".toUri())
+            .setData("dao-widget://${kind.name}/${navigationKind.name}/$id/$action".toUri())
+            .putExtra(RosterWidgets.EXTRA_NAVIGATION_KIND, navigationKind.name)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
             .addFlags(Intent.FLAG_RECEIVER_FOREGROUND),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

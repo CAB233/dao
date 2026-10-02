@@ -79,7 +79,7 @@ Kotlin 源码和 Gradle Kotlin 脚本统一使用 ktfmt 的 KotlinLang 风格（
 ./gradlew :app:assembleDebug
 
 # 发布（签名配置见下）
-./gradlew :app:assembleRelease  # → app/build/outputs/apk/release/Dao-<版本>-release.apk
+./gradlew :app:assembleRelease  # → app/build/outputs/apk/release/Dao-<版本>.apk
 
 # PR 构建（独立包名，可与正式版同时安装）
 ./gradlew :app:assembleDebug :app:assembleRelease -PIS_PR_BUILD=true

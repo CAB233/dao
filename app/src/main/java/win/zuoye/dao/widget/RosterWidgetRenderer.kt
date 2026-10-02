@@ -45,9 +45,9 @@ internal data class WidgetRendering(
 internal fun renderRosterWidget(
     context: Context,
     document: PlanDocument,
-    kind: RosterWidgetKind,
     today: Ymd,
     month: Int,
+    week: Ymd,
     size: SizeF,
     scale: Float,
 ): WidgetRendering {
@@ -80,40 +80,39 @@ internal fun renderRosterWidget(
     val currentTemplate = roster.templateFor(today.epochDay)
     val title = context.getString(R.string.widget_today_date, today.month, today.day)
     val time = currentTemplate.timeText(context)
-    val monthly = kind == RosterWidgetKind.MONTH
-    val compactWeek = !monthly && size.height < 130f
-    if (!compactWeek) {
-        val headerWidth = (size.width - 24f - if (monthly) 80f else 0f).coerceAtLeast(1f)
-        painter.header(title, time, headerWidth, centerY = 29f)
+    val layout = widgetLayout(size.height)
+    val monthly = layout.navigationKind == RosterWidgetKind.MONTH
+    val compactWeek = layout == WidgetLayout.COMPACT_WEEK
+    val groupShifts =
+        if (layout.hasGroups) widgetGroupShifts(document, today, roster) else emptyList()
+    if (layout.hasHeader) {
+        val headerWidth = (size.width - 24f - 80f).coerceAtLeast(1f)
+        painter.header(title, time, headerWidth)
     }
-    val monthDate = widgetMonthDate(month)
+    val monthDate = if (monthly) widgetMonthDate(month) else week
     val monthTitle = context.getString(R.string.widget_month_title, monthDate.year, monthDate.month)
-    if (monthly)
-        painter.text(
-            monthTitle,
-            size.width / 2f,
-            62f,
-            13f,
-            colors.onSurfaceVariantSummary,
-            size.width - 24f,
+    val showMonthBackground = monthly || layout.weeks > 1
+    val weekdayY = if (compactWeek) 14f else 57f
+    val gridTop = if (compactWeek) 24f else 68f
+    val dates =
+        widgetDates(
+            layout.navigationKind,
+            if (compactWeek) today else week,
+            month,
+            document.weekStartDay,
+            layout.weeks,
         )
-    val weekdayY =
-        when {
-            monthly -> 84f
-            compactWeek -> 14f
-            else -> 62f
-        }
-    val gridTop =
-        when {
-            monthly -> 98f
-            compactWeek -> 24f
-            else -> 76f
-        }
-    val dates = widgetDates(kind, today, month, document.weekStartDay)
     val rows = dates.size / 7
     val cellWidth = ((size.width - 24f) / 7f).coerceAtLeast(1f)
-    val bottomPadding = if (compactWeek) 6f else 12f
-    val cellHeight = ((size.height - gridTop - bottomPadding) / rows).coerceAtLeast(1f)
+    val bottomPadding = if (compactWeek || layout.hasGroups) 6f else 12f
+    val gridSpace = (size.height - gridTop - bottomPadding).coerceAtLeast(1f)
+    val footerGap = if (layout.hasGroups) 4f else 0f
+    // 底部按班组行数和字号预留紧凑高度，其余空间交给日期网格伸缩。
+    val footerSpace =
+        if (layout.hasGroups)
+            minOf(painter.groupShiftsHeight(groupShifts.size, size.width - 24f), gridSpace * 0.4f)
+        else 0f
+    val cellHeight = ((gridSpace - footerSpace - footerGap) / rows).coerceAtLeast(1f)
     val weekdays = context.resources.getStringArray(R.array.weekday_short)
     val labels =
         WidgetDateLabels(
@@ -123,7 +122,7 @@ internal fun renderRosterWidget(
             today.year,
         )
     val description = StringBuilder().append(title).append(' ').append(time)
-    if (monthly) description.append(' ').append(monthTitle)
+    if (showMonthBackground) description.append(' ').append(monthTitle)
     repeat(7) { column ->
         painter.text(
             weekdays[Math.floorMod(document.weekStartDay + column, 7)],
@@ -134,12 +133,31 @@ internal fun renderRosterWidget(
             cellWidth - 2f,
         )
     }
+    // 日期格底色 → 月份背景数字 → 日期与班次文字，保持前景信息清晰。
+    dates.forEachIndexed { index, date ->
+        painter.dayBackground(
+            roster.templateFor(date.epochDay),
+            if (monthly && date.widgetMonth() != month && date != today) 0.35f else 1f,
+            12f + index % 7 * cellWidth + 1.5f,
+            gridTop + index / 7 * cellHeight + 1.5f,
+            (cellWidth - 3f).coerceAtLeast(1f),
+            (cellHeight - 3f).coerceAtLeast(1f),
+        )
+    }
+    if (showMonthBackground)
+        painter.monthBackground(
+            monthDate.month,
+            12f,
+            gridTop,
+            size.width - 24f,
+            rows * cellHeight,
+        )
     dates.forEachIndexed { index, date ->
         val template = roster.templateFor(date.epochDay)
         val holiday =
             LegalHolidays.of(date.epochDay).takeIf { document.calendarViewMode.showHolidays }
         val detail = labels.label(date)
-        painter.day(
+        painter.dayContent(
             context,
             date,
             template,
@@ -172,6 +190,44 @@ internal fun renderRosterWidget(
                 )
         }
     }
+    if (layout.hasGroups) {
+        val footerTop = gridTop + rows * cellHeight + footerGap
+        val footerHeight = (size.height - footerTop - bottomPadding).coerceAtLeast(1f)
+        if (groupShifts.isEmpty()) {
+            val emptyMessage =
+                context.getString(
+                    if (document.activeScheme() == null) R.string.no_plan else R.string.no_group
+                )
+            painter.text(
+                emptyMessage,
+                size.width / 2f,
+                footerTop + footerHeight / 2f,
+                13f,
+                colors.onSurfaceVariantSummary,
+                size.width - 24f,
+            )
+            description.append("; ").append(emptyMessage)
+        } else {
+            painter.groupShifts(
+                context,
+                groupShifts,
+                12f,
+                footerTop,
+                size.width - 24f,
+                footerHeight,
+            )
+            description.append("; ").append(context.getString(R.string.widget_groups_today))
+            groupShifts.forEach {
+                description
+                    .append("; ")
+                    .append(it.group.name)
+                    .append(' ')
+                    .append(it.template?.name ?: context.getString(R.string.no_schedule))
+                    .append(' ')
+                    .append(it.template.timeText(context))
+            }
+        }
+    }
     return WidgetRendering(bitmap, description.toString(), colors.onSurfaceVariantActions.toArgb())
 }
 
@@ -190,6 +246,9 @@ private class WidgetPainter(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private val typography = defaultTextStyles()
+    private val groupLabelSize = typography.footnote2.fontSize.value
+    private val groupCaptionSize = 9f
+    private val groupContentHeight = groupLabelSize * 1.2f + groupCaptionSize * 1.2f + 2f
 
     fun surface(
         x: Float,
@@ -215,36 +274,50 @@ private class WidgetPainter(
         canvas.withTranslation(x, y) { drawPath(path.asAndroidPath(), paint) }
     }
 
-    fun header(date: String, time: String, width: Float, centerY: Float) {
+    fun header(date: String, time: String, width: Float) {
         val dateSize = typography.title4.fontSize.value
-        configureText(dateSize, colors.onSurface, true)
-        // 根据可用宽度一起缩放日期和时间，保留跨夜班次的完整时间范围。
-        val dateWidth = textPaint.measureText(date)
-        configureText(typography.footnote2.fontSize.value, colors.onSurfaceVariantSummary, false)
-        val timeWidth = textPaint.measureText(time)
-        val fit =
-            minOf(1f, (width - 8f).coerceAtLeast(1f) / (dateWidth + timeWidth).coerceAtLeast(1f))
+        val timeSize = typography.footnote2.fontSize.value
+        val headerScale = minOf(fontScale, 1.2f)
+        configureText(dateSize, colors.onSurface, true, headerScale)
+        val dateScale =
+            headerScale * minOf(1f, width / textPaint.measureText(date).coerceAtLeast(1f))
+        configureText(timeSize, colors.onSurfaceVariantSummary, false, headerScale)
+        val timeScale =
+            headerScale * minOf(1f, width / textPaint.measureText(time).coerceAtLeast(1f))
         text(
             date,
             12f,
-            centerY,
+            18f,
             dateSize,
             colors.onSurface,
-            dateWidth * fit,
+            width,
             true,
             centered = false,
-            localScale = fontScale * fit,
+            localScale = dateScale,
         )
         text(
             time,
-            12f + dateWidth * fit + 8f,
-            centerY,
-            typography.footnote2.fontSize.value,
+            12f,
+            37f,
+            timeSize,
             colors.onSurfaceVariantSummary,
-            (width - dateWidth * fit - 8f).coerceAtLeast(1f),
+            width,
             centered = false,
-            localScale = fontScale * fit,
+            localScale = timeScale,
         )
+    }
+
+    fun monthBackground(month: Int, x: Float, y: Float, width: Float, height: Float) {
+        val number = month.toString()
+        val color = colors.onSurface.copy(alpha = colors.onSurface.alpha * 0.065f)
+        configureText(1f, color, true, localScale = 1f)
+        val metrics = textPaint.fontMetrics
+        val size =
+            minOf(
+                width * 0.85f / textPaint.measureText(number).coerceAtLeast(1f),
+                height * 0.95f / (metrics.descent - metrics.ascent).coerceAtLeast(1f),
+            )
+        text(number, x + width / 2f, y + height / 2f, size, color, width, true, localScale = 1f)
     }
 
     fun text(
@@ -272,7 +345,81 @@ private class WidgetPainter(
         canvas.drawText(fitted, x, baseline, textPaint)
     }
 
-    fun day(
+    private fun groupRows(count: Int, width: Float): Int {
+        val capacity = (width / (32f * fontScale.coerceAtLeast(1f))).toInt().coerceAtLeast(1)
+        return ((count + capacity - 1) / capacity).coerceAtLeast(1)
+    }
+
+    fun groupShiftsHeight(count: Int, width: Float): Float =
+        if (count == 0) 24f * fontScale
+        else groupRows(count, width) * (groupContentHeight * fontScale + 4f)
+
+    fun groupShifts(
+        context: Context,
+        groups: List<WidgetGroupShift>,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+    ) {
+        // 每行等分整行宽度；班组较多时换行，保留全部班组。
+        val rows = groupRows(groups.size, width)
+        val columns = (groups.size + rows - 1) / rows
+        val labelSize = groupLabelSize
+        val captionSize = groupCaptionSize
+        val contentHeight = groupContentHeight
+        val rowHeight = minOf(height / rows, contentHeight * fontScale + 4f)
+        val fit = minOf(fontScale, ((rowHeight - 4f) / contentHeight).coerceAtLeast(0.1f))
+        val contentTop = y + (height - rows * rowHeight) / 2f
+        groups.forEachIndexed { index, shift ->
+            val row = index / columns
+            val rowColumns = minOf(columns, groups.size - row * columns)
+            val columnWidth = width / rowColumns
+            val top = contentTop + row * rowHeight + (rowHeight - contentHeight * fit) / 2f
+            val labelY = top + labelSize * 0.6f * fit
+            val shiftY = top + (labelSize * 1.2f + 2f + captionSize * 0.6f) * fit
+            val centerX = x + (index % columns + 0.5f) * columnWidth
+            text(
+                shift.group.name,
+                centerX,
+                labelY,
+                labelSize,
+                colors.onSurface,
+                columnWidth - 4f,
+                localScale = fit,
+            )
+            val shiftColor =
+                shift.template?.let {
+                    lerp(ShiftPalette.color(it.colorArgb), colors.onSurface, 0.62f)
+                } ?: colors.onSurfaceVariantSummary
+            text(
+                shift.template?.name ?: context.getString(R.string.no_schedule),
+                centerX,
+                shiftY,
+                captionSize,
+                shiftColor,
+                columnWidth - 4f,
+                localScale = fit,
+            )
+        }
+    }
+
+    fun dayBackground(
+        template: ShiftTemplate?,
+        fade: Float,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+    ) {
+        val shift = template?.let { ShiftPalette.color(it.colorArgb) }
+        val background =
+            shift?.copy(alpha = 0.13f)?.compositeOver(colors.surfaceContainer)
+                ?: colors.surfaceVariant
+        surface(x, y, width, height, 14f, background.copy(alpha = background.alpha * fade))
+    }
+
+    fun dayContent(
         context: Context,
         date: Ymd,
         template: ShiftTemplate?,
@@ -286,10 +433,6 @@ private class WidgetPainter(
         height: Float,
     ) {
         val shift = template?.let { ShiftPalette.color(it.colorArgb) }
-        val background =
-            shift?.copy(alpha = 0.13f)?.compositeOver(colors.surfaceContainer)
-                ?: colors.surfaceVariant
-        surface(x, y, width, height, 14f, background.copy(alpha = background.alpha * fade))
         if (today)
             surface(
                 x + 1f,

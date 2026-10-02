@@ -3,11 +3,14 @@
     <string name="widget_week_name">本周排班</string>
     <string name="widget_month_name">排班月历</string>
     <string name="widget_week_description">显示本周七天的日期与排班</string>
+    <string name="widget_groups_today">今日班组排班</string>
     <string name="widget_month_description">完整排班月历，可切换月份</string>
     <string name="widget_today_date">%1$d月%2$d日</string>
     <string name="widget_month_title">%1$d年%2$d月</string>
     <string name="widget_previous_month">上个月</string>
     <string name="widget_next_month">下个月</string>
+    <string name="widget_previous_week">上一周</string>
+    <string name="widget_next_week">下一周</string>
     <string name="widget_previous_symbol" translatable="false">‹</string>
     <string name="widget_next_symbol" translatable="false">›</string>
     <string name="widget_preview_date">10月1日</string>

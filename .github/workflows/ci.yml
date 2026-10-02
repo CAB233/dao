@@ -26,8 +26,7 @@ jobs:
     timeout-minutes: 30
     env:
       ORG_GRADLE_PROJECT_IS_PR_BUILD: ${{ github.event_name == 'pull_request' }}
-      ORG_GRADLE_PROJECT_SIGNING_PROFILE: pr
-      ORG_GRADLE_PROJECT_KEY_ALIAS: pr-key
+      ORG_GRADLE_PROJECT_SIGNING_PROFILE: ${{ github.event_name == 'pull_request' && 'pr' || 'release' }}
 
     steps:
       - name: Checkout sources
@@ -45,9 +44,11 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
 
-      - name: Generate temporary CI keystore
+      - name: Generate temporary PR keystore
+        if: github.event_name == 'pull_request'
         env:
           ORG_GRADLE_PROJECT_KEYSTORE_FILE: ${{ runner.temp }}/pr-key.jks
+          ORG_GRADLE_PROJECT_KEY_ALIAS: pr-key
         run: |
           KEYSTORE_PASSWORD="$(openssl rand -hex 32)"
           KEY_PASSWORD="$(openssl rand -hex 32)"
@@ -61,13 +62,37 @@ jobs:
             -validity 1 \
             -storepass:env KEYSTORE_PASSWORD \
             -keypass:env KEY_PASSWORD \
-            -dname "CN=Dao CI Build" \
+            -dname "CN=Dao PR Build" \
             -storetype JKS \
             -keystore "$ORG_GRADLE_PROJECT_KEYSTORE_FILE"
 
           {
             printf 'ORG_GRADLE_PROJECT_KEYSTORE_FILE=%s\n' "$ORG_GRADLE_PROJECT_KEYSTORE_FILE"
             printf 'ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'ORG_GRADLE_PROJECT_KEY_ALIAS=%s\n' "$ORG_GRADLE_PROJECT_KEY_ALIAS"
+            printf 'ORG_GRADLE_PROJECT_KEY_PASSWORD=%s\n' "$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare release signing
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          for key in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!key}" ]]; then
+              echo "Missing release signing secret: $key" >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+          {
+            printf 'ORG_GRADLE_PROJECT_KEYSTORE_FILE=%s\n' "$KEYSTORE_FILE"
+            printf 'ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'ORG_GRADLE_PROJECT_KEY_ALIAS=%s\n' "$KEY_ALIAS"
             printf 'ORG_GRADLE_PROJECT_KEY_PASSWORD=%s\n' "$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 

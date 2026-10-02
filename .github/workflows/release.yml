@@ -1,4 +1,4 @@
-name: Build and release
+name: Release
 
 on:
   push:
@@ -28,6 +28,13 @@ jobs:
     timeout-minutes: 30
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      ORG_GRADLE_PROJECT_IS_PR_BUILD: "false"
+      ORG_GRADLE_PROJECT_SIGNING_PROFILE: release
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_FILE: ${{ github.workspace }}/release.jks
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     steps:
       - name: Checkout release tag
@@ -48,7 +55,7 @@ jobs:
             exit 1
           fi
 
-          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+          version_name="$(sed -n 's/^[[:space:]]*val appVersionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           if [[ -z "$version_name" || "$RELEASE_TAG" != "v$version_name" ]]; then
             echo "Tag $RELEASE_TAG does not match app version v$version_name." >&2
             exit 1
@@ -64,19 +71,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Prepare release signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > dao-release.jks
-          {
-            printf 'storeFile=dao-release.jks\n'
-            printf 'storePassword=%s\n' "$STORE_PASSWORD"
-            printf 'keyAlias=%s\n' "$KEY_ALIAS"
-            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
-          } > keystore.properties
+          for key in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!key}" ]]; then
+              echo "Missing release signing secret: RELEASE_$key" >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
 
       - name: Build release APK
         run: ./gradlew :app:assembleRelease

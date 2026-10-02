@@ -10,9 +10,8 @@
 local.properties
 
 # Keystore files
-/keystore.properties
-*.jks
-*.keystore
+/*.keystore.properties
+/*.jks
 
 # Android release outputs
 app/release/

@@ -193,8 +193,9 @@ Android 应用「**倒班表**」（app_name 与界面标题都用这个；names
 - miuix-icons（`MiuixIcons.Regular.*` 那套图标）与 miuix-preference（`WindowDropdownDialog` 单选弹窗）版本号跟 miuix 一致
 - kotlinx-collections-immutable 0.4.0（数据模型的不可变集合）+ lifecycle-runtime-compose 2.9.4（`collectAsStateWithLifecycle`）
 - minSdk 24，compileSdk/targetSdk 37；依赖一律走 `gradle/libs.versions.toml`
-- 应用版本：`app/build.gradle.kts` 的 `defaultConfig { versionCode / versionName }`。
-  发新版要**同时**改 `versionCode`（+1，否则装不上更新）和 `versionName`；关于页/设置页显示的版本是从 PackageManager 读的，不用手改。
+- 应用版本：`app/build.gradle.kts` 头部的 `appVersionCode` / `appVersionName`，由 `defaultConfig` 引用。
+  发新版要**同时**改 `appVersionCode`（+1，否则装不上更新）和 `appVersionName`；关于页/设置页显示的版本是从 PackageManager 读的，不用手改。
+- 构建参数集中在 `app/build.gradle.kts` 头部：namespace、版本、SDK、Java、ABI、语言及签名属性名。`-PIS_PR_BUILD=true` 使用 `win.zuoye.dao.pr`，默认使用正式包名 `win.zuoye.dao`；`-PDAO_PACKAGE_NAME=...` 可指定包名，namespace 始终沿用 `win.zuoye.dao`。`BuildConfig.IS_PR_BUILD` 提供构建标记，PR 的 APK 文件名前缀为 `Dao-PR`。
 
 ## 构建与测试命令
 
@@ -207,7 +208,10 @@ Kotlin 源码和 Gradle Kotlin 脚本统一使用 ktfmt 的 KotlinLang 风格（
 ./gradlew :app:assembleDebug
 
 # 发布（签名配置见下）
-./gradlew :app:assembleRelease  # → app/build/outputs/apk/release/app-release.apk
+./gradlew :app:assembleRelease  # → app/build/outputs/apk/release/Dao-<版本>-release.apk
+
+# PR 构建（独立包名，可与正式版同时安装）
+./gradlew :app:assembleDebug :app:assembleRelease -PIS_PR_BUILD=true
 ```
 
 - 只需要由人进行安装和测试。
@@ -225,6 +229,7 @@ Kotlin 源码和 Gradle Kotlin 脚本统一使用 ktfmt 的 KotlinLang 风格（
 
 ## 发布签名
 
-- 密钥 `dao-release.jks` + 口令文件 `keystore.properties` 都在**项目根目录**，且**已 gitignore**（别提交、别丢：
-  丢了就无法用同一签名发更新）。`app/build.gradle.kts` 读 `keystore.properties` 生成 `signingConfigs.release`；
-  缺少该文件时 release 产物不签名（输出 `app-release-unsigned.apk`，装不上）。
+- 本地正式签名使用根目录的 `release.keystore.properties` + `release.jks`，本地 PR 签名使用 `pr.keystore.properties` + `pr.jks`；这些文件已 gitignore，须妥善保留以便使用同一签名发更新。口令文件字段为 `storeFile` / `storePassword` / `keyAlias` / `keyPassword`。
+- `SIGNING_PROFILE` 独立控制签名：默认 `release`，`-PIS_PR_BUILD=true` 时默认 `pr`，`-PSIGNING_PROFILE=pr` 可让普通包名的 CI 构建使用 PR 密钥。AGP 原生 `signingConfigs` 使用所选密钥统一签名 Debug 与 Release；四项配置为 `KEYSTORE_FILE` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD`，通过 `providers.gradleProperty` / `providers.environmentVariable` 读取，优先级为 Gradle 属性、同名环境变量、所选本地口令文件的对应字段。
+- 普通 CI / PR 工作流固定选择 `pr`，每次运行通过 `openssl` 生成随机口令，并用 `keytool` 生成 RSA 2048、有效期 1 天的临时 JKS；签名值通过 `ORG_GRADLE_PROJECT_KEYSTORE_FILE` / `ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD` / `ORG_GRADLE_PROJECT_KEY_ALIAS` / `ORG_GRADLE_PROJECT_KEY_PASSWORD` 传给 Gradle，仅构建和上传 Release APK。每次运行的证书不同，连续安装 CI 产物时需先卸载旧 CI 包。
+- 正式发布工作流固定选择 `release`，读取 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` Secrets 并校验完整性，将 Base64 密钥还原到 `release.jks`，其余配置通过环境变量传给原生签名配置。本地密钥缺失时使用默认 Debug 签名。

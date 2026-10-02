@@ -1,9 +1,12 @@
-name: Build APKs
+name: Nightly
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'skills-lock.json'
   pull_request:
     branches:
       - main
@@ -18,11 +21,13 @@ concurrency:
 
 jobs:
   build:
-    name: Build debug and release APKs
+    name: Build release APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      ORG_GRADLE_PROJECT_IS_PR_BUILD: ${{ github.event_name == 'pull_request' }}
+      ORG_GRADLE_PROJECT_SIGNING_PROFILE: pr
+      ORG_GRADLE_PROJECT_KEY_ALIAS: pr-key
 
     steps:
       - name: Checkout sources
@@ -40,34 +45,36 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
 
-      - name: Prepare shared signing
-        if: ${{ env.KEYSTORE_BASE64 != '' }}
+      - name: Generate temporary CI keystore
         env:
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_KEYSTORE_FILE: ${{ runner.temp }}/pr-key.jks
         run: |
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > dao-release.jks
+          KEYSTORE_PASSWORD="$(openssl rand -hex 32)"
+          KEY_PASSWORD="$(openssl rand -hex 32)"
+          export KEYSTORE_PASSWORD KEY_PASSWORD
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+
+          keytool -genkeypair -noprompt \
+            -alias "$ORG_GRADLE_PROJECT_KEY_ALIAS" \
+            -keyalg RSA -keysize 2048 \
+            -validity 1 \
+            -storepass:env KEYSTORE_PASSWORD \
+            -keypass:env KEY_PASSWORD \
+            -dname "CN=Dao CI Build" \
+            -storetype JKS \
+            -keystore "$ORG_GRADLE_PROJECT_KEYSTORE_FILE"
+
           {
-            printf 'storeFile=dao-release.jks\n'
-            printf 'storePassword=%s\n' "$STORE_PASSWORD"
-            printf 'keyAlias=%s\n' "$KEY_ALIAS"
-            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
-          } > keystore.properties
+            printf 'ORG_GRADLE_PROJECT_KEYSTORE_FILE=%s\n' "$ORG_GRADLE_PROJECT_KEYSTORE_FILE"
+            printf 'ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'ORG_GRADLE_PROJECT_KEY_PASSWORD=%s\n' "$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
-      - name: Build debug and release APKs
-        run: ./gradlew :app:assembleDebug :app:assembleRelease --build-cache
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v7
-        with:
-          path: app/build/outputs/apk/debug/Dao-*.apk
-          if-no-files-found: error
-          retention-days: 7
-          archive: false
+      - name: Build release APK
+        run: ./gradlew :app:assembleRelease --build-cache
 
       - name: Upload release APK
-        if: ${{ env.KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v7
         with:
           path: app/build/outputs/apk/release/Dao-*.apk

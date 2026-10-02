@@ -1023,7 +1023,7 @@ private fun GroupSettingsTab(
 
 /** 默认班组单选弹窗：按班组名称选择，默认班组的基准日期会用于日历推导。 */
 @Composable
-private fun DefaultGroupDialog(
+internal fun DefaultGroupDialog(
     groups: ImmutableList<SchemeGroup>,
     currentId: Long?,
     show: Boolean,

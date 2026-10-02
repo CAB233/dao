@@ -88,6 +88,7 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
 import win.zuoye.dao.data.LegalHolidays
 import win.zuoye.dao.data.PlanDocument
+import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
@@ -95,6 +96,7 @@ import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.domain.resolveShift
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.scheme.DefaultGroupDialog
 
 /** 可浏览的月份范围：2000-01 .. 2100-12 */
 private const val BASE_YEAR = 2000
@@ -106,6 +108,7 @@ fun HomeScreen(
     doc: PlanDocument,
     onExportPlan: () -> Unit,
     onOpenPlan: () -> Unit,
+    onDefaultGroupChange: (Long, Long) -> Unit,
 ) {
     var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -205,6 +208,7 @@ fun HomeScreen(
                         today = today,
                         currentMinute = currentMinute,
                         onOpenPlan = onOpenPlan,
+                        onDefaultGroupChange = onDefaultGroupChange,
                         viewMonth = viewMonth,
                         pagerState = pagerState,
                         roster = roster,
@@ -248,6 +252,7 @@ fun HomeScreen(
                         today = today,
                         currentMinute = currentMinute,
                         onOpenPlan = onOpenPlan,
+                        onDefaultGroupChange = onDefaultGroupChange,
                         viewMonth = viewMonth,
                         pagerState = pagerState,
                         roster = roster,
@@ -279,6 +284,7 @@ private fun HomeCalendarPane(
     today: Ymd,
     currentMinute: Int,
     onOpenPlan: () -> Unit,
+    onDefaultGroupChange: (Long, Long) -> Unit,
     viewMonth: Int,
     pagerState: PagerState,
     roster: Roster,
@@ -298,6 +304,7 @@ private fun HomeCalendarPane(
             today = today,
             currentMinute = currentMinute,
             onClick = onOpenPlan,
+            onDefaultGroupChange = onDefaultGroupChange,
         )
         Text(
             stringResource(R.string.month_title, viewMonth),
@@ -485,15 +492,19 @@ private fun GroupScheduleRows(
     }
 }
 
-/** 主页上的当前倒班状态卡片；点击后进入方案列表或直接编辑使用中的方案。 */
+/** 当前倒班状态卡片；点击编辑方案，长按快速选择默认班组。 */
 @Composable
 private fun RosterStatusCard(
     doc: PlanDocument,
     today: Ymd,
     currentMinute: Int,
     onClick: () -> Unit,
+    onDefaultGroupChange: (Long, Long) -> Unit,
 ) {
     val activeScheme = doc.activeScheme()
+    var showDefaultGroupDialog by remember(activeScheme?.id) { mutableStateOf(false) }
+    // 保留打开时的方案，供弹窗关闭动画继续显示，并固定本次选择对应的方案 id。
+    var shownScheme by remember { mutableStateOf<Scheme?>(null) }
     val todayShift = resolveShift(doc, today.epochDay)
     val previousShift = resolveShift(doc, today.epochDay - 1)
     val isWorking =
@@ -530,7 +541,17 @@ private fun RosterStatusCard(
         // 按压位置决定倾斜方向：左侧与右侧按压会产生不同的反馈。
         pressFeedbackType = PressFeedbackType.Tilt,
         showIndication = true,
+        holdDownState = showDefaultGroupDialog,
         onClick = onClick,
+        onLongPress =
+            if (activeScheme?.groups?.isNotEmpty() == true) {
+                {
+                    shownScheme = activeScheme
+                    showDefaultGroupDialog = true
+                }
+            } else {
+                null
+            },
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(112.dp)) {
             Box(
@@ -583,6 +604,19 @@ private fun RosterStatusCard(
                 fontWeight = FontWeight.Medium,
             )
         }
+    }
+
+    shownScheme?.let { scheme ->
+        DefaultGroupDialog(
+            groups = scheme.groups,
+            currentId = scheme.defaultGroupId,
+            show = showDefaultGroupDialog,
+            onSelect = { groupId ->
+                onDefaultGroupChange(scheme.id, groupId)
+                showDefaultGroupDialog = false
+            },
+            onDismiss = { showDefaultGroupDialog = false },
+        )
     }
 }
 

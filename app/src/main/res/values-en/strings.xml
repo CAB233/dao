@@ -256,7 +256,7 @@
   <string name="plan_label">Plan: %1$s</string>
   <string name="holiday_work_badge">Work</string>
   <string name="holiday_rest_badge">Off</string>
-  <string name="date_schedule">%1$d-%2$02d-%3$02d schedule · %4$s</string>
+  <string name="date_schedule">%1$d-%2$02d-%3$02d · %4$s</string>
   <string name="makeup_workday">%1$s · Adjusted workday</string>
   <string name="legal_holiday">%1$s · Public holiday</string>
   <string name="shift_override">(Shift override)</string>

@@ -250,7 +250,7 @@
   <string name="plan_label">方案：%1$s</string>
   <string name="holiday_work_badge">班</string>
   <string name="holiday_rest_badge">休</string>
-  <string name="date_schedule">%1$d年%2$d月%3$d日排班 · 周%4$s</string>
+  <string name="date_schedule">%1$d年%2$d月%3$d日 · 周%4$s</string>
   <string name="makeup_workday">%1$s · 调休上班</string>
   <string name="legal_holiday">%1$s · 法定假日</string>
   <string name="shift_override">（换班覆盖）</string>

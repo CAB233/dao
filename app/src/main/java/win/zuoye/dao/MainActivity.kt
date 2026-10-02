@@ -515,6 +515,32 @@ private fun MainTabs(
                                                 openSchemeEditor(activeScheme, false)
                                             }
                                         },
+                                        onDefaultGroupChange = { schemeId, groupId ->
+                                            onMutate { currentDocument ->
+                                                if (currentDocument.activeSchemeId != schemeId) {
+                                                    return@onMutate currentDocument
+                                                }
+                                                currentDocument.copy(
+                                                    schemes =
+                                                        currentDocument.schemes
+                                                            .map { scheme ->
+                                                                if (
+                                                                    scheme.id == schemeId &&
+                                                                        scheme.groups.any {
+                                                                            it.id == groupId
+                                                                        }
+                                                                ) {
+                                                                    scheme.copy(
+                                                                        defaultGroupId = groupId
+                                                                    )
+                                                                } else {
+                                                                    scheme
+                                                                }
+                                                            }
+                                                            .toImmutableList()
+                                                )
+                                            }
+                                        },
                                     )
                                 MainTab.Config ->
                                     PlanEditScreen(

@@ -138,23 +138,28 @@ object RosterWidgets {
     ) {
         val manager = AppWidgetManager.getInstance(context)
         val today = Ymd.today()
+        val currentWeek = widgetWeekStart(today, document.weekStartDay)
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
         ids.forEach { id ->
             val month =
                 preferences
                     .getInt("month_$id", today.widgetMonth())
                     .coerceIn(FIRST_WIDGET_MONTH, LAST_WIDGET_MONTH)
+            val weekKey = "week_$id"
             val week =
                 Ymd.fromEpochDay(
                     moveWidgetWeek(
                         widgetWeekStart(
-                            Ymd.fromEpochDay(preferences.getLong("week_$id", today.epochDay)),
+                            Ymd.fromEpochDay(preferences.getLong(weekKey, currentWeek)),
                             document.weekStartDay,
                         ),
                         0,
                         document.weekStartDay,
                     )
                 )
+            if (week.epochDay == currentWeek && preferences.contains(weekKey)) {
+                preferences.edit { remove(weekKey) }
+            }
             val options = manager.getAppWidgetOptions(id)
             val fallbackHeight = if (kind == RosterWidgetKind.WEEK) 90f else 320f
             val portrait =

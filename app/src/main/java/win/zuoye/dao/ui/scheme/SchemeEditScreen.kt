@@ -141,7 +141,7 @@ fun SchemeEditScreen(
     val initialDraft =
         remember(scheme.id) {
             if (isNewScheme) {
-                doc.copy(schemes = doc.schemes.toPersistentList().add(scheme))
+                doc.copy(schemes = doc.schemes.toPersistentList().adding(scheme))
             } else {
                 doc
             }
@@ -717,7 +717,7 @@ fun SchemeEditScreen(
                             templates =
                                 draftDocument.templates
                                     .toPersistentList()
-                                    .add(
+                                    .adding(
                                         ShiftTemplate(
                                             id = System.currentTimeMillis(),
                                             name = name,

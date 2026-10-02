@@ -589,7 +589,7 @@ private fun MainTabs(
                                         }
                                         .toImmutableList()
                                 } else {
-                                    currentDocument.schemes.toPersistentList().add(editedScheme)
+                                    currentDocument.schemes.toPersistentList().adding(editedScheme)
                                 },
                             activeSchemeId =
                                 if (alreadyExists) {

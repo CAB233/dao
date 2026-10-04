@@ -94,7 +94,3 @@ Kotlin 源码和 Gradle Kotlin 脚本统一使用 ktfmt 的 KotlinLang 风格（
 2. **保留用户已有的未提交改动**；不使用 `git reset --hard` / `git checkout --` 等破坏性操作。
 3. **不修改、不输出 `local.properties`**（含 sdk.dir 等内容）。
 4. 完成后先报告：改了什么 + 验证结果（构建/测试输出），再谈后续。
-5. 除非用户在当前请求中明确授权，**不执行 `git add` / `git commit` / `git push`**。
-6. 需要提交时，commit message 用 `<scope>: <summary>`，scope 取：
-   `feat`(新功能) `fix`(修补 bug) `docs`(文档) `style`(格式) `refactor`(重构) `chore`(构建/辅助工具) `revert`(回退) `perf`(性能优化) `test`(测试) `improvement`(改进) `build`(打包) `ci`(持续集成)。
-   主题行 ≤72 字符、sentence case、无句尾句号；body 简洁，只讲代码里看不出的根因与取舍，**绝不逐文件复述 diff**。

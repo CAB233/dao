@@ -93,10 +93,7 @@ fun SharePlanScreen(
 
     val payload = remember(doc, selectedScheme?.id) { doc.toShare(selectedScheme?.id) }
     val payloadText = remember(payload) { PlanShareCodec.encodePayload(payload) }
-    val shareText =
-        remember(doc, selectedScheme?.id, shareHeader) {
-            PlanShareCodec.shareText(doc, shareHeader, selectedScheme?.id)
-        }
+    val shareText = remember(payloadText, shareHeader) { "$shareHeader\n$payloadText" }
     val qrCode = remember(payloadText) { encodeQrCode(payloadText) }
 
     Scaffold(

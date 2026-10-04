@@ -19,12 +19,7 @@ data class PlanShare(
     val templates: ImmutableList<ShiftTemplate> = persistentListOf(),
     val schemes: ImmutableList<Scheme> = persistentListOf(),
     val activeSchemeId: Long? = null,
-) {
-    companion object {
-        /** 聊天文本里的标记行，便于一眼认出/定位 */
-        const val PREFIX = "[DAO-PLAN]"
-    }
-}
+)
 
 /** 紧凑分享载荷编解码：短字段 JSON → deflate → base64url， 供二维码、剪贴板和系统文本分享使用。 */
 object PlanShareCodec {
@@ -47,10 +42,7 @@ object PlanShareCodec {
         explicitNulls = false
     }
 
-    private val fullJson = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val legacyJson = Json { ignoreUnknownKeys = true }
 
     @OptIn(ExperimentalEncodingApi::class)
     private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
@@ -96,12 +88,6 @@ object PlanShareCodec {
             )
         val raw = compactJson.encodeToString(compact).encodeToByteArray()
         return PAYLOAD_PREFIX + base64.encode(deflate(raw))
-    }
-
-    /** 完整 JSON：用于文件互操作和人工备份。 */
-    fun encodeJson(payload: PlanShare): String {
-        require(payload.isValid()) { "倒班方案包含无效数据" }
-        return fullJson.encodeToString(PlanShareSurrogate.from(payload))
     }
 
     /** 解析紧凑载荷（带不带 `DAO1:` 前缀都行） */
@@ -180,18 +166,10 @@ object PlanShareCodec {
         }
         val surrogate =
             runCatching {
-                fullJson.decodeFromString<PlanShareSurrogate>(text.trim())
+                legacyJson.decodeFromString<PlanShareSurrogate>(text.trim())
             }
                 .getOrNull() ?: return null
         return surrogate.toPlanShare().takeIf { it.isValid() }
-    }
-
-    fun shareText(doc: PlanDocument, localizedHeader: String, schemeId: Long? = null): String {
-        val payload = doc.toShare(schemeId)
-        val sb = StringBuilder()
-        sb.append(localizedHeader).append('\n')
-        sb.append(encodePayload(payload))
-        return sb.toString()
     }
 
     private fun deflate(input: ByteArray): ByteArray {
@@ -276,7 +254,7 @@ object PlanShareCodec {
 }
 
 @Serializable
-private data class PlanShareSurrogate(
+private class PlanShareSurrogate(
     val templates: List<ShiftTemplate> = emptyList(),
     val schemes: List<Scheme> = emptyList(),
     val activeSchemeId: Long? = null,
@@ -287,15 +265,6 @@ private data class PlanShareSurrogate(
             schemes = schemes.toImmutableList(),
             activeSchemeId = activeSchemeId,
         )
-
-    companion object {
-        fun from(payload: PlanShare): PlanShareSurrogate =
-            PlanShareSurrogate(
-                templates = payload.templates,
-                schemes = payload.schemes,
-                activeSchemeId = payload.activeSchemeId,
-            )
-    }
 }
 
 /** 取出可分享的部分；给定 [schemeId] 时只带这个方案以及它用到的班次 */

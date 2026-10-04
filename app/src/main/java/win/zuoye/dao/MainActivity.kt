@@ -353,7 +353,7 @@ class MainActivity : ComponentActivity() {
                                         doc = doc,
                                         current = baseTab,
                                         onSelectTab = { baseTab = it },
-                                        onExportPlan = { navigateTo(AppRoute.SharePlan) },
+                                        onSharePlan = { navigateTo(AppRoute.SharePlan) },
                                         onOpenAbout = { navigateTo(AppRoute.About) },
                                         onImportPlan = { importPlan(it) },
                                         onMutate = mainViewModel::mutate,
@@ -432,7 +432,7 @@ private fun MainTabs(
     doc: PlanDocument,
     current: MainTab,
     onSelectTab: (MainTab) -> Unit,
-    onExportPlan: () -> Unit,
+    onSharePlan: () -> Unit,
     onOpenAbout: () -> Unit,
     onImportPlan: (PlanShare) -> Unit,
     onMutate: (transform: (PlanDocument) -> PlanDocument) -> Unit,
@@ -506,7 +506,7 @@ private fun MainTabs(
                                 MainTab.Home ->
                                     HomeScreen(
                                         doc = doc,
-                                        onExportPlan = onExportPlan,
+                                        onSharePlan = onSharePlan,
                                         onOpenPlan = {
                                             val activeScheme = doc.activeScheme()
                                             if (activeScheme == null) {

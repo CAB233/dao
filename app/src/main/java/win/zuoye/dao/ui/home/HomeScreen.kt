@@ -106,7 +106,7 @@ private const val MONTH_COUNT = 101 * 12
 @Composable
 fun HomeScreen(
     doc: PlanDocument,
-    onExportPlan: () -> Unit,
+    onSharePlan: () -> Unit,
     onOpenPlan: () -> Unit,
     onDefaultGroupChange: (Long, Long) -> Unit,
 ) {
@@ -159,7 +159,7 @@ fun HomeScreen(
                 largeTitle = stringResource(R.string.app_name),
                 scrollBehavior = scrollBehavior,
                 actions = {
-                    IconButton(onClick = onExportPlan) {
+                    IconButton(onClick = onSharePlan) {
                         Icon(
                             MiuixIcons.Regular.Share,
                             contentDescription = stringResource(R.string.share_plan_description),

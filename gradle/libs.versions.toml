@@ -1,5 +1,6 @@
 [versions]
 agp = "9.4.1"
+ndk = "30.0.16248370"
 coreKtx = "1.19.1"
 lifecycle = "2.11.0"
 work = "2.12.0"

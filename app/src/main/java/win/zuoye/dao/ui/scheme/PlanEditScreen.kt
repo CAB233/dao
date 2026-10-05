@@ -29,12 +29,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -83,6 +81,7 @@ import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
+import win.zuoye.dao.ui.components.rememberFabVisible
 import win.zuoye.dao.ui.scan.ScanCaptureActivity
 
 /** 未指派时用的占位模板 id（模型里没有 null，指向不存在的模板即可显示「点击选择」） */
@@ -554,29 +553,4 @@ private fun SchemeCard(
             }
         }
     }
-}
-
-/**
- * 滚动时收起 FAB：往下滚藏起来，往回滚（或回到顶部）再露出来。
- *
- * 传一个单调递增的"滚动位置"就行——LazyColumn 用 `index * 大数 + offset` 合成， 普通 Column 直接给
- * `ScrollState.value`。判定在协程里做，不参与组合期读取。
- */
-@Composable
-private fun rememberFabVisible(scrollPosition: () -> Int): Boolean {
-    var visible by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        var previous = scrollPosition()
-        snapshotFlow { scrollPosition() }
-            .collect { current ->
-                when {
-                    current == 0 -> visible = true
-                    current > previous -> visible = false
-                    current < previous -> visible = true
-                }
-                previous = current
-            }
-    }
-    return visible
 }

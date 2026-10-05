@@ -37,25 +37,11 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.theme.AppTheme
-import zxingcpp.BarcodeReader
 
 /** CameraX 管理相机生命周期，ZXing-C++ 在单独线程分析取景框内的亮度数据。 */
 class ScanCaptureActivity : ComponentActivity() {
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val resultDelivered = AtomicBoolean(false)
-    private val reader by lazy {
-        BarcodeReader(
-            BarcodeReader.Options(
-                formats = setOf(BarcodeReader.Format.QR_CODE),
-                tryHarder = true,
-                tryRotate = true,
-                tryInvert = true,
-                tryDownscale = true,
-                maxNumberOfSymbols = 1,
-                textMode = BarcodeReader.TextMode.PLAIN,
-            )
-        )
-    }
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var preview: Preview? = null
@@ -182,7 +168,7 @@ class ScanCaptureActivity : ComponentActivity() {
         try {
             if (resultDelivered.get() || image.cropRect.isEmpty) return
             image.setCropRect(frameCrop(image.cropRect, image.imageInfo.rotationDegrees, size))
-            val text = reader.read(image).firstOrNull { it.error == null }?.text
+            val text = NativeQrReader.read(image)
             if (!text.isNullOrBlank() && resultDelivered.compareAndSet(false, true)) {
                 ContextCompat.getMainExecutor(this).execute {
                     if (!isFinishing && !isDestroyed) {

@@ -1,0 +1,9 @@
+{
+  "uniqueId": "libzueci:native",
+  "artifactVersion": "1.0.1",
+  "name": "libzueci",
+  "description": "Character set conversion bundled in ZXing-C++, including Bjoern Hoehrmann's UTF-8 decoder.",
+  "website": "https://sourceforge.net/projects/libzueci/",
+  "developers": [{ "name": "gitlost" }, { "name": "Bjoern Hoehrmann" }],
+  "licenses": ["BSD-3-Clause", "MIT"]
+}

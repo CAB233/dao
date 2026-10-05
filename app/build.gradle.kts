@@ -16,6 +16,10 @@ val androidMinSdkVersion = 24
 val androidTargetSdkVersion = 37
 val javaLanguageVersion = 21
 val androidJavaVersion = JavaVersion.toVersion(javaLanguageVersion)
+val nativeNdkVersion = "28.2.13676358"
+val nativeCmakeVersion = "3.22.1"
+val zxingCppVersion = libs.versions.zxingCpp.get()
+val zxingCppSourceSha256 = "7286b1e6ade66fe82b7c8208b4595deeb55d6486b410834fdc65702f46650542"
 val releaseLocales = listOf("zh", "en")
 val isPrBuild = providers.gradleProperty("IS_PR_BUILD").map(String::toBoolean).orElse(false).get()
 val defaultAppPackageName = if (isPrBuild) "$appNamespace.pr" else appNamespace
@@ -56,8 +60,11 @@ val signingKeyPassword = signingProperties[signingKeyPasswordProperty]
 
 ktfmt { kotlinLangStyle() }
 
+aboutLibraries { collect { configPath = file("config") } }
+
 android {
     namespace = appNamespace
+    ndkVersion = nativeNdkVersion
     compileSdk { version = release(androidCompileSdkVersion) }
 
     defaultConfig {
@@ -67,6 +74,23 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
+        externalNativeBuild {
+            cmake {
+                arguments(
+                    "-DANDROID_STL=c++_static",
+                    "-DDAO_ZXING_VERSION=$zxingCppVersion",
+                    "-DDAO_ZXING_SHA256=$zxingCppSourceSha256",
+                )
+                targets("dao_qr")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = nativeCmakeVersion
+        }
     }
 
     splits {
@@ -151,6 +175,5 @@ dependencies {
     implementation(libs.miuix.nav)
     implementation(libs.tyme)
     implementation(libs.zxing.core)
-    implementation(libs.zxing.cpp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -70,6 +70,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Install native build tools
+        run: |
+          dao_ndk_version="$(sed -n 's/^val nativeNdkVersion = "\([^"]*\)".*/\1/p' app/build.gradle.kts)"
+          dao_cmake_version="$(sed -n 's/^val nativeCmakeVersion = "\([^"]*\)".*/\1/p' app/build.gradle.kts)"
+          sdkmanager "ndk;${dao_ndk_version:?Missing nativeNdkVersion}" "cmake;${dao_cmake_version:?Missing nativeCmakeVersion}"
+
       - name: Prepare release signing
         run: |
           for key in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do

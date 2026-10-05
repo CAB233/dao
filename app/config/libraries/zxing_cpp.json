@@ -1,0 +1,13 @@
+{
+  "uniqueId": "zxing-cpp:native",
+  "artifactVersion": "3.1.1",
+  "name": "ZXing-C++",
+  "description": "QR-only native decoder built from pinned ZXing-C++ sources.",
+  "website": "https://github.com/zxing-cpp/zxing-cpp",
+  "developers": [
+    {
+      "name": "ZXing-C++ contributors"
+    }
+  ],
+  "licenses": ["Apache-2.0"]
+}

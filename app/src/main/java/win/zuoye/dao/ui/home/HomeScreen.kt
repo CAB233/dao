@@ -201,43 +201,51 @@ fun HomeScreen(
             WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         BoxWithConstraints(Modifier.padding(padding).fillMaxSize()) {
+            val calendarPane: @Composable (Modifier) -> Unit = { modifier ->
+                HomeCalendarPane(
+                    doc = doc,
+                    today = today,
+                    currentMinute = currentMinute,
+                    onOpenPlan = onOpenPlan,
+                    onDefaultGroupChange = onDefaultGroupChange,
+                    viewMonth = viewMonth,
+                    pagerState = pagerState,
+                    roster = roster,
+                    textMeasurer = textMeasurer,
+                    weekStartDay = weekStartDay,
+                    weekdays = weekdays,
+                    strings = calendarStrings,
+                    showHolidays = showHolidays,
+                    showLunar = showLunar,
+                    selectedDate = selectedDate,
+                    onDayClick = onDayClick,
+                    modifier = modifier,
+                )
+            }
+            val summaryPane: @Composable (Modifier) -> Unit = { modifier ->
+                HomeSummaryPane(
+                    doc = doc,
+                    roster = roster,
+                    today = today,
+                    date = scheduleDate,
+                    showHolidays = showHolidays,
+                    modifier = modifier,
+                )
+            }
             if (maxWidth >= 720.dp) {
                 Row(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-                    HomeCalendarPane(
-                        doc = doc,
-                        today = today,
-                        currentMinute = currentMinute,
-                        onOpenPlan = onOpenPlan,
-                        onDefaultGroupChange = onDefaultGroupChange,
-                        viewMonth = viewMonth,
-                        pagerState = pagerState,
-                        roster = roster,
-                        textMeasurer = textMeasurer,
-                        weekStartDay = weekStartDay,
-                        weekdays = weekdays,
-                        strings = calendarStrings,
-                        showHolidays = showHolidays,
-                        showLunar = showLunar,
-                        selectedDate = selectedDate,
-                        onDayClick = onDayClick,
-                        modifier =
-                            Modifier.weight(1.45f)
-                                .verticalScroll(scrollState)
-                                .scrollEndHaptic()
-                                .overScrollVertical(),
+                    calendarPane(
+                        Modifier.weight(1.45f)
+                            .verticalScroll(scrollState)
+                            .scrollEndHaptic()
+                            .overScrollVertical()
                     )
-                    HomeSummaryPane(
-                        doc = doc,
-                        roster = roster,
-                        today = today,
-                        date = scheduleDate,
-                        showHolidays = showHolidays,
-                        modifier =
-                            Modifier.weight(1f)
-                                .widthIn(max = 420.dp)
-                                .verticalScroll(summaryScrollState)
-                                .scrollEndHaptic()
-                                .overScrollVertical(),
+                    summaryPane(
+                        Modifier.weight(1f)
+                            .widthIn(max = 420.dp)
+                            .verticalScroll(summaryScrollState)
+                            .scrollEndHaptic()
+                            .overScrollVertical()
                     )
                 }
             } else {
@@ -247,31 +255,8 @@ fun HomeScreen(
                         .scrollEndHaptic()
                         .overScrollVertical()
                 ) {
-                    HomeCalendarPane(
-                        doc = doc,
-                        today = today,
-                        currentMinute = currentMinute,
-                        onOpenPlan = onOpenPlan,
-                        onDefaultGroupChange = onDefaultGroupChange,
-                        viewMonth = viewMonth,
-                        pagerState = pagerState,
-                        roster = roster,
-                        textMeasurer = textMeasurer,
-                        weekStartDay = weekStartDay,
-                        weekdays = weekdays,
-                        strings = calendarStrings,
-                        showHolidays = showHolidays,
-                        showLunar = showLunar,
-                        selectedDate = selectedDate,
-                        onDayClick = onDayClick,
-                    )
-                    HomeSummaryPane(
-                        doc = doc,
-                        roster = roster,
-                        today = today,
-                        date = scheduleDate,
-                        showHolidays = showHolidays,
-                    )
+                    calendarPane(Modifier)
+                    summaryPane(Modifier)
                 }
             }
         }

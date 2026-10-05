@@ -46,8 +46,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import top.yukonga.miuix.kmp.basic.Button
@@ -82,7 +80,7 @@ import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.ui.components.rememberFabVisible
-import win.zuoye.dao.ui.scan.ScanCaptureActivity
+import win.zuoye.dao.ui.scan.ScanContract
 
 /** 未指派时用的占位模板 id（模型里没有 null，指向不存在的模板即可显示「点击选择」） */
 internal const val UNASSIGNED = 0L
@@ -190,7 +188,7 @@ private fun SchemeListScreen(
 
     val scanLauncher =
         rememberLauncherForActivityResult(ScanContract()) { result ->
-            result.contents?.let { importFrom(it) }
+            result?.let { importFrom(it) }
         }
 
     NavigationBackHandler(
@@ -406,16 +404,7 @@ private fun SchemeListScreen(
                 )
                 TextButton(
                     text = stringResource(R.string.create_qr),
-                    onClick = {
-                        scanLauncher.launch(
-                            ScanOptions().apply {
-                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                setBeepEnabled(false)
-                                setOrientationLocked(true)
-                                setCaptureActivity(ScanCaptureActivity::class.java)
-                            }
-                        )
-                    },
+                    onClick = { scanLauncher.launch(Unit) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Button(

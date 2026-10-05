@@ -48,8 +48,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -99,7 +97,7 @@ import win.zuoye.dao.data.primaryAnchorEpochDay
 import win.zuoye.dao.ui.ShiftPalette
 import win.zuoye.dao.ui.components.TemplateEditorDialog
 import win.zuoye.dao.ui.components.TemplateTimePickerStyle
-import win.zuoye.dao.ui.scan.ScanCaptureActivity
+import win.zuoye.dao.ui.scan.ScanContract
 import win.zuoye.dao.ui.scheme.AnchorDialog
 import win.zuoye.dao.ui.scheme.SchemeEditScreen
 import win.zuoye.dao.ui.scheme.UNASSIGNED
@@ -218,9 +216,7 @@ fun OnboardingScreen(
         }
     }
     val scanLauncher =
-        rememberLauncherForActivityResult(ScanContract()) { result ->
-            result.contents?.let(importFrom)
-        }
+        rememberLauncherForActivityResult(ScanContract()) { result -> result?.let(importFrom) }
 
     val cycleDays: Int? = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
 
@@ -237,15 +233,7 @@ fun OnboardingScreen(
                 when (createMethod) {
                     CreateMethod.MANUAL -> manualMode = true
                     CreateMethod.CLIPBOARD -> importFrom(context.clipboardText())
-                    CreateMethod.QR_CODE ->
-                        scanLauncher.launch(
-                            ScanOptions().apply {
-                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                setBeepEnabled(false)
-                                setOrientationLocked(true)
-                                setCaptureActivity(ScanCaptureActivity::class.java)
-                            }
-                        )
+                    CreateMethod.QR_CODE -> scanLauncher.launch(Unit)
                     null -> Unit
                 }
             Step.TEMPLATES -> {

@@ -314,4 +314,6 @@
   <string name="project_immutable_collections">kotlinx.collections.immutable</string>
   <string name="license_apache_2">Apache License 2.0</string>
   <string name="scan_back">返回</string>
+  <string name="scan_permission_denied">请允许使用相机以扫码导入方案</string>
+  <string name="scan_camera_unavailable">相机暂时无法使用，请稍后重试</string>
 </resources>

@@ -128,6 +128,10 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.aboutlibraries.core)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.compose)
     implementation(libs.androidx.navigationevent.compose)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui)
@@ -147,6 +151,6 @@ dependencies {
     implementation(libs.miuix.nav)
     implementation(libs.tyme)
     implementation(libs.zxing.core)
-    implementation(libs.zxing.android.embedded)
+    implementation(libs.zxing.cpp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

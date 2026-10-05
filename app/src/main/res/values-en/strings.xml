@@ -322,4 +322,6 @@
   <string name="project_immutable_collections">kotlinx.collections.immutable</string>
   <string name="license_apache_2">Apache License 2.0</string>
   <string name="scan_back">Back</string>
+  <string name="scan_permission_denied">Allow camera access to scan and import a plan</string>
+  <string name="scan_camera_unavailable">Camera unavailable. Please try again later.</string>
 </resources>

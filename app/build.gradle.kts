@@ -8,67 +8,32 @@ plugins {
     alias(libs.plugins.aboutlibraries)
 }
 
-val appNamespace = "win.zuoye.dao"
 val appVersionCode = 15
 val appVersionName = "0.5.1"
 val androidCompileSdkVersion = 37
 val androidMinSdkVersion = 24
 val androidTargetSdkVersion = 37
 val javaLanguageVersion = 21
-val androidJavaVersion = JavaVersion.toVersion(javaLanguageVersion)
-val nativeNdkVersion = "28.2.13676358"
-val nativeCmakeVersion = "3.22.1"
-val zxingCppVersion = libs.versions.zxingCpp.get()
-val zxingCppSourceSha256 = "7286b1e6ade66fe82b7c8208b4595deeb55d6486b410834fdc65702f46650542"
-val releaseLocales = listOf("zh", "en")
 val isPrBuild = providers.gradleProperty("IS_PR_BUILD").map(String::toBoolean).orElse(false).get()
-val defaultAppPackageName = if (isPrBuild) "$appNamespace.pr" else appNamespace
-val appPackageName =
-    providers.gradleProperty("DAO_PACKAGE_NAME").orElse(defaultAppPackageName).get()
-val apkBaseName = if (isPrBuild) "Dao-PR" else "Dao"
 val signingProfile =
     providers.gradleProperty("SIGNING_PROFILE").orElse(if (isPrBuild) "pr" else "release").get()
-
 require(signingProfile in setOf("release", "pr")) { "SIGNING_PROFILE must be release or pr" }
-
-val signingStoreFileProperty = "KEYSTORE_FILE"
-val signingStorePasswordProperty = "KEYSTORE_PASSWORD"
-val signingKeyAliasProperty = "KEY_ALIAS"
-val signingKeyPasswordProperty = "KEY_PASSWORD"
-val keystorePropertiesFile = rootProject.file("$signingProfile.keystore.properties")
-val keystoreProperties =
-    Properties().apply {
-        if (keystorePropertiesFile.exists()) {
-            keystorePropertiesFile.inputStream().use { load(it) }
-        }
-    }
-val localSigningProperties =
-    mapOf(
-        signingStoreFileProperty to keystoreProperties.getProperty("storeFile"),
-        signingStorePasswordProperty to keystoreProperties.getProperty("storePassword"),
-        signingKeyAliasProperty to keystoreProperties.getProperty("keyAlias"),
-        signingKeyPasswordProperty to keystoreProperties.getProperty("keyPassword"),
-    )
-
-val signingProperties = localSigningProperties.mapValues { (name, localValue) ->
-    providers.gradleProperty(name).orElse(providers.environmentVariable(name)).orNull ?: localValue
-}
-val signingStoreFile = signingProperties[signingStoreFileProperty]?.let { rootProject.file(it) }
-val signingStorePassword = signingProperties[signingStorePasswordProperty]
-val signingKeyAlias = signingProperties[signingKeyAliasProperty]
-val signingKeyPassword = signingProperties[signingKeyPasswordProperty]
 
 ktfmt { kotlinLangStyle() }
 
 aboutLibraries { collect { configPath = file("config") } }
 
 android {
-    namespace = appNamespace
-    ndkVersion = nativeNdkVersion
+    namespace = "win.zuoye.dao"
+    ndkVersion = libs.versions.ndk.get()
     compileSdk { version = release(androidCompileSdkVersion) }
 
     defaultConfig {
-        applicationId = appPackageName
+        applicationId =
+            providers
+                .gradleProperty("DAO_PACKAGE_NAME")
+                .orElse(if (isPrBuild) "win.zuoye.dao.pr" else "win.zuoye.dao")
+                .get()
         minSdk = androidMinSdkVersion
         targetSdk = androidTargetSdkVersion
         versionCode = appVersionCode
@@ -78,20 +43,14 @@ android {
             cmake {
                 arguments(
                     "-DANDROID_STL=c++_static",
-                    "-DDAO_ZXING_VERSION=$zxingCppVersion",
-                    "-DDAO_ZXING_SHA256=$zxingCppSourceSha256",
+                    "-DDAO_ZXING_VERSION=${libs.versions.zxingCpp.get()}",
                 )
                 targets("dao_qr")
             }
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = nativeCmakeVersion
-        }
-    }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
 
     splits {
         abi {
@@ -103,12 +62,33 @@ android {
     }
 
     signingConfigs {
+        val keystoreProperties =
+            Properties().apply {
+                val keystorePropertiesFile = rootProject.file("$signingProfile.keystore.properties")
+                if (keystorePropertiesFile.exists()) {
+                    keystorePropertiesFile.inputStream().use { load(it) }
+                }
+            }
+        val signingProperties =
+            mapOf(
+                    "KEYSTORE_FILE" to keystoreProperties.getProperty("storeFile"),
+                    "KEYSTORE_PASSWORD" to keystoreProperties.getProperty("storePassword"),
+                    "KEY_ALIAS" to keystoreProperties.getProperty("keyAlias"),
+                    "KEY_PASSWORD" to keystoreProperties.getProperty("keyPassword"),
+                )
+                .mapValues { (name, localValue) ->
+                    providers
+                        .gradleProperty(name)
+                        .orElse(providers.environmentVariable(name))
+                        .orNull ?: localValue
+                }
+        val signingStoreFile = signingProperties["KEYSTORE_FILE"]?.let { rootProject.file(it) }
         if (signingStoreFile?.isFile == true) {
             create(signingProfile) {
                 storeFile = signingStoreFile
-                storePassword = signingStorePassword
-                keyAlias = signingKeyAlias
-                keyPassword = signingKeyPassword
+                storePassword = signingProperties["KEYSTORE_PASSWORD"]
+                keyAlias = signingProperties["KEY_ALIAS"]
+                keyPassword = signingProperties["KEY_PASSWORD"]
             }
         }
     }
@@ -117,12 +97,20 @@ android {
         val selectedSigningConfig =
             signingConfigs.findByName(signingProfile) ?: signingConfigs.getByName("debug")
         configureEach { signingConfig = selectedSigningConfig }
+        debug {
+            externalNativeBuild {
+                cmake {
+                    arguments += listOf("-DCMAKE_CXX_FLAGS_DEBUG=-Og", "-DCMAKE_C_FLAGS_DEBUG=-Og")
+                }
+            }
+        }
         release {
             vcsInfo.include = false
             optimization { enable = true }
         }
     }
     compileOptions {
+        val androidJavaVersion = JavaVersion.toVersion(javaLanguageVersion)
         sourceCompatibility = androidJavaVersion
         targetCompatibility = androidJavaVersion
     }
@@ -135,8 +123,9 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("release")) { variant ->
-        variant.androidResources.localeFilters.addAll(releaseLocales)
+        variant.androidResources.localeFilters.addAll(listOf("zh", "en"))
     }
+    val apkBaseName = if (isPrBuild) "Dao-PR" else "Dao"
     onVariants { variant ->
         variant.outputs.forEach { output ->
             output.outputFileName.set(

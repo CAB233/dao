@@ -9,8 +9,8 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_C_LINK_OPTIONS_IPO "-fuse-ld=lld")
 set(CMAKE_CXX_LINK_OPTIONS_IPO "-fuse-ld=lld")
 
-if(NOT DAO_ZXING_VERSION OR NOT DAO_ZXING_SHA256)
-    message(FATAL_ERROR "ZXing-C++ version and SHA-256 must be supplied by Gradle")
+if(NOT DAO_ZXING_VERSION)
+    message(FATAL_ERROR "ZXing-C++ version must be supplied by Gradle")
 endif()
 
 # Build only QR readers. Keep character decoding and all QR detection options.
@@ -27,11 +27,24 @@ endforeach()
 include(FetchContent)
 FetchContent_Declare(zxing
     URL "https://codeload.github.com/zxing-cpp/zxing-cpp/tar.gz/refs/tags/v${DAO_ZXING_VERSION}"
-    URL_HASH "SHA256=${DAO_ZXING_SHA256}"
     SOURCE_SUBDIR core
     TLS_VERIFY ON
 )
 FetchContent_MakeAvailable(zxing)
+
+# ZXing appends per-source -Os after target options. Keep release -Oz effective.
+get_target_property(zxing_source_dir ZXing SOURCE_DIR)
+get_target_property(zxing_sources ZXing SOURCES)
+foreach(source IN LISTS zxing_sources)
+    if(source MATCHES "\\.cpp$")
+        get_filename_component(source_path "${source}" ABSOLUTE BASE_DIR "${zxing_source_dir}")
+        get_source_file_property(source_flags "${source_path}" TARGET_DIRECTORY ZXing COMPILE_FLAGS)
+        if(source_flags STREQUAL "-Os")
+            set_source_files_properties("${source_path}" TARGET_DIRECTORY ZXing
+                PROPERTIES COMPILE_FLAGS -Oz)
+        endif()
+    endif()
+endforeach()
 
 add_library(dao_qr SHARED QrReader.cpp)
 target_link_libraries(dao_qr PRIVATE ZXing::ZXing)

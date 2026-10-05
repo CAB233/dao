@@ -48,11 +48,8 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
 
-      - name: Install native build tools
-        run: |
-          dao_ndk_version="$(sed -n 's/^val nativeNdkVersion = "\([^"]*\)".*/\1/p' app/build.gradle.kts)"
-          dao_cmake_version="$(sed -n 's/^val nativeCmakeVersion = "\([^"]*\)".*/\1/p' app/build.gradle.kts)"
-          sdkmanager "ndk;${dao_ndk_version:?Missing nativeNdkVersion}" "cmake;${dao_cmake_version:?Missing nativeCmakeVersion}"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
 
       - name: Generate temporary PR keystore
         if: github.event_name == 'pull_request'

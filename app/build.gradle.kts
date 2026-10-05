@@ -174,6 +174,6 @@ dependencies {
     implementation(libs.miuix.ui)
     implementation(libs.miuix.nav)
     implementation(libs.tyme)
-    implementation(libs.zxing.core)
+    implementation(libs.nayuki.qrcodegen)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

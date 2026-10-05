@@ -1,14 +1,11 @@
 package win.zuoye.dao.ui.scheme
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -23,7 +20,6 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
@@ -32,7 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -46,16 +41,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -80,8 +72,6 @@ import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.ColorPalette
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -91,7 +81,6 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
@@ -117,7 +106,8 @@ import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.data.primaryAnchorEpochDay
-import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.components.TemplateEditorDialog
+import win.zuoye.dao.ui.components.rememberFabVisible
 import win.zuoye.dao.ui.onboarding.AssignmentRow
 import win.zuoye.dao.ui.onboarding.DeleteTemplateDialog
 import win.zuoye.dao.ui.onboarding.TemplatePickDialog
@@ -1136,31 +1126,6 @@ internal fun AnchorDialog(
 }
 
 /**
- * 滚动时收起 FAB：往下滚藏起来，往回滚（或回到顶部）再露出来。
- *
- * 传一个单调递增的"滚动位置"就行——LazyColumn 用 `index * 大数 + offset` 合成， 普通 Column 直接给
- * `ScrollState.value`。判定在协程里做，不参与组合期读取。
- */
-@Composable
-private fun rememberFabVisible(scrollPosition: () -> Int): Boolean {
-    var visible by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        var previous = scrollPosition()
-        snapshotFlow { scrollPosition() }
-            .collect { current ->
-                when {
-                    current == 0 -> visible = true
-                    current > previous -> visible = false
-                    current < previous -> visible = true
-                }
-                previous = current
-            }
-    }
-    return visible
-}
-
-/**
  * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
  * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
  * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
@@ -1197,337 +1162,4 @@ private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSo
         }
     }
     return interactionSource
-}
-
-/** 时间滚轮的行高：miuix 默认 45dp，这里跟日期弹窗保持一致，数字别挨得太近 */
-private val TIME_ITEM_HEIGHT = 48.dp
-
-/**
- * 新建/编辑班次模板：名称（右边的圆点是当前颜色，点开是颜色页）+ 休班开关
- * + 同一卡片内的开始/结束时间入口，各自打开时间弹窗。existing = null 表示新建。
- */
-@Composable
-private fun TemplateEditorDialog(
-    show: Boolean,
-    existing: ShiftTemplate?,
-    usedColors: List<Int>,
-    onSave:
-        (name: String, startMinute: Int, endMinute: Int, colorArgb: Int, isRest: Boolean) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val defaultRestName = stringResource(R.string.shift_rest)
-    val fieldBackground = MiuixTheme.colorScheme.surfaceContainer
-    // 不在这里 return：常驻组合、交给 OverlayDialog 按 show 播进出动画
-    var name by remember(existing) { mutableStateOf(existing?.name ?: "") }
-    var startH by
-        remember(existing) { mutableIntStateOf(existing?.let { it.startMinute / 60 } ?: 8) }
-    var startM by
-        remember(existing) { mutableIntStateOf(existing?.let { it.startMinute % 60 } ?: 0) }
-    var endH by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute / 60 } ?: 15) }
-    var endM by remember(existing) { mutableIntStateOf(existing?.let { it.endMinute % 60 } ?: 0) }
-    var color by
-        remember(existing) {
-            mutableIntStateOf(
-                existing?.colorArgb
-                    ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
-                    ?: ShiftPalette.presets.first()
-            )
-        }
-    // 保留最后编辑的时间端点，让时间弹窗关闭时仍能播放退出动画。
-    var editingEnd by remember(existing) { mutableStateOf(false) }
-    var showTimeDialog by remember(existing) { mutableStateOf(false) }
-    var isRest by remember(existing) { mutableStateOf(existing?.isRest == true) }
-    var showColorDialog by remember(existing) { mutableStateOf(false) }
-
-    // 每次打开都按 existing 重新初始化一次。弹窗为了退出动画是常驻组合的，
-    // 只靠 remember(existing) 会在"新建 → 关闭 → 再新建"时留下上一次填的内容
-    // （existing 一直是 null，key 没变），也会留下上次取消掉的编辑。
-    LaunchedEffect(show, existing) {
-        if (!show) return@LaunchedEffect
-        name = existing?.name ?: ""
-        startH = existing?.let { it.startMinute / 60 } ?: 8
-        startM = existing?.let { it.startMinute % 60 } ?: 0
-        endH = existing?.let { it.endMinute / 60 } ?: 15
-        endM = existing?.let { it.endMinute % 60 } ?: 0
-        color =
-            existing?.colorArgb
-                ?: ShiftPalette.presets.firstOrNull { it !in usedColors }
-                ?: ShiftPalette.presets.first()
-        editingEnd = false
-        showTimeDialog = false
-        isRest = existing?.isRest == true
-        showColorDialog = false
-    }
-
-    OverlayDialog(
-        show = show,
-        title =
-            stringResource(
-                if (existing == null) R.string.shift_add_title else R.string.shift_edit_title
-            ),
-        summary = stringResource(R.string.shift_editor_summary),
-        onDismissRequest = onDismiss,
-    ) {
-        // 长内容 Dialog：miuix 的 WindowDialog 不限 content 高度，
-        // 所以给内容一个上限、让滚动区自己滚，按钮作为非加权子项固定在底部。
-        Column(Modifier.heightIn(max = 500.dp).imePadding()) {
-            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                TextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = stringResource(R.string.shift_name),
-                    colors = TextFieldDefaults.textFieldColors(backgroundColor = fieldBackground),
-                    trailingIcon = {
-                        // 颜色收进名称框右边这个圆点里，点它进颜色页
-                        IconButton(onClick = { showColorDialog = true }) {
-                            Box(
-                                Modifier.size(24.dp)
-                                    .background(ShiftPalette.color(color), CircleShape)
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(12.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.defaultColors(
-                            color = fieldBackground,
-                            contentColor = MiuixTheme.colorScheme.onSurface,
-                        ),
-                ) {
-                    BasicComponent(
-                        title = stringResource(R.string.shift_rest),
-                        onClick = { isRest = !isRest },
-                        endActions = {
-                            Switch(checked = isRest, onCheckedChange = { isRest = it })
-                        },
-                    )
-                    AnimatedVisibility(
-                        visible = !isRest,
-                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                    ) {
-                        Column {
-                            BasicComponent(
-                                title = stringResource(R.string.shift_start_time),
-                                enabled = !isRest,
-                                holdDownState = showTimeDialog && !editingEnd,
-                                onClick = {
-                                    editingEnd = false
-                                    showTimeDialog = true
-                                },
-                                endActions = {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = ShiftTemplate.format(startH * 60 + startM),
-                                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                        )
-                                        Icon(
-                                            imageVector = MiuixIcons.Basic.ArrowRight,
-                                            contentDescription = null,
-                                            tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                    }
-                                },
-                            )
-                            BasicComponent(
-                                title = stringResource(R.string.shift_end_time),
-                                enabled = !isRest,
-                                holdDownState = showTimeDialog && editingEnd,
-                                onClick = {
-                                    editingEnd = true
-                                    showTimeDialog = true
-                                },
-                                endActions = {
-                                    val end = ShiftTemplate.format(endH * 60 + endM)
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text =
-                                                if (endH * 60 + endM < startH * 60 + startM) {
-                                                    stringResource(R.string.shift_next_day, end)
-                                                } else {
-                                                    end
-                                                },
-                                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                        )
-                                        Icon(
-                                            imageVector = MiuixIcons.Basic.ArrowRight,
-                                            contentDescription = null,
-                                            tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_save),
-                    enabled = isRest || name.isNotBlank(),
-                    onClick = {
-                        onSave(
-                            name.trim().ifBlank { defaultRestName },
-                            if (isRest) 0 else startH * 60 + startM,
-                            if (isRest) 0 else endH * 60 + endM,
-                            color,
-                            isRest,
-                        )
-                    },
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-
-    ShiftTimeDialog(
-        show = show && !isRest && showTimeDialog,
-        title =
-            stringResource(if (editingEnd) R.string.shift_end_time else R.string.shift_start_time),
-        currentMinute = if (editingEnd) endH * 60 + endM else startH * 60 + startM,
-        onDismiss = { showTimeDialog = false },
-        onConfirm = { minute ->
-            if (editingEnd) {
-                endH = minute / 60
-                endM = minute % 60
-            } else {
-                startH = minute / 60
-                startM = minute % 60
-            }
-            showTimeDialog = false
-        },
-    )
-
-    // 颜色弹窗与主弹窗同时存在时，主弹窗收起就一起收
-    ColorDialog(
-        show = show && showColorDialog,
-        current = color,
-        onDismiss = { showColorDialog = false },
-        onConfirm = {
-            color = it
-            showColorDialog = false
-        },
-    )
-}
-
-@Composable
-private fun ShiftTimeDialog(
-    show: Boolean,
-    title: String,
-    currentMinute: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit,
-) {
-    var hour by remember { mutableIntStateOf(currentMinute / 60) }
-    var minute by remember { mutableIntStateOf(currentMinute % 60) }
-    LaunchedEffect(show) {
-        if (show) {
-            hour = currentMinute / 60
-            minute = currentMinute % 60
-        }
-    }
-    OverlayDialog(show = show, title = title, onDismissRequest = onDismiss) {
-        Column(Modifier.heightIn(max = 500.dp)) {
-            Row(
-                modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                NumberPicker(
-                    value = hour,
-                    onValueChange = { hour = it },
-                    range = 0..23,
-                    wrapAround = true,
-                    label = { "%02d".format(it) },
-                    itemHeight = TIME_ITEM_HEIGHT,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(":", color = MiuixTheme.colorScheme.onSurface)
-                NumberPicker(
-                    value = minute,
-                    onValueChange = { minute = it },
-                    range = 0..59,
-                    wrapAround = true,
-                    label = { "%02d".format(it) },
-                    itemHeight = TIME_ITEM_HEIGHT,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_confirm),
-                    onClick = { onConfirm(hour * 60 + minute) },
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-/** 颜色页使用 miuix [ColorPalette] 色板。确定时把透明度收成 1—— 班次色要画在日历格上，半透明会跟底色混在一起。 */
-@Composable
-private fun ColorDialog(
-    show: Boolean,
-    current: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit,
-) {
-    // 同主弹窗：每次打开都从当前颜色重新开始，别让上次取消的改动留在里面
-    var draft by remember(current) { mutableStateOf(Color(current)) }
-    LaunchedEffect(show, current) { if (show) draft = Color(current) }
-
-    OverlayDialog(
-        show = show,
-        title = stringResource(R.string.color_select),
-        onDismissRequest = onDismiss,
-    ) {
-        // 调色盘本身挺高，长内容按 Dialog 规范交给滚动区
-        Column(Modifier.heightIn(max = 500.dp)) {
-            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                ColorPalette(
-                    color = draft,
-                    onColorChanged = { draft = it },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_confirm),
-                    onClick = { onConfirm(draft.copy(alpha = 1f).toArgb()) },
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
 }

@@ -6,7 +6,7 @@ work = "2.12.0"
 navigationEvent = "1.1.2"
 activityCompose = "1.13.0"
 coreSplashscreen = "1.2.0"
-zxing = "3.5.4"
+qrcodegen = "1.8.0"
 zxingCpp = "3.1.1"
 cameraX = "1.6.2"
 kotlin = "2.4.20"
@@ -28,7 +28,7 @@ androidx-work-runtime = { group = "androidx.work", name = "work-runtime", versio
 androidx-navigationevent-compose = { group = "androidx.navigationevent", name = "navigationevent-compose", version.ref = "navigationEvent" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
-zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+nayuki-qrcodegen = { group = "io.nayuki", name = "qrcodegen", version.ref = "qrcodegen" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraX" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraX" }

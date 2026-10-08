@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.aboutlibraries)
 }
 
-val appVersionCode = 15
-val appVersionName = "0.5.1"
+val appVersionCode = 16
+val appVersionName = "0.6.0"
 val androidCompileSdkVersion = 37
 val androidMinSdkVersion = 24
 val androidTargetSdkVersion = 37

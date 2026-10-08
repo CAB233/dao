@@ -22,8 +22,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Gate the release on the tag being reachable from main. Pushing a tag on a
+  # side branch must not publish a release, so this job only reports ancestry
+  # and the release job below is skipped when the tag is not on main.
+  check:
+    name: Check tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    outputs:
+      on_main: ${{ steps.ancestry.outputs.on_main }}
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Check the tag
+        id: ancestry
+        run: |
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          if git merge-base --is-ancestor HEAD refs/remotes/origin/main; then
+            echo "on_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Tag $RELEASE_TAG is not on main; skipping the release build."
+          fi
+
   release:
     name: Build and publish release
+    needs: check
+    if: needs.check.outputs.on_main == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

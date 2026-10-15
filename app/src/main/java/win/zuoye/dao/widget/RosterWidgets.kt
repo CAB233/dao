@@ -210,8 +210,10 @@ object RosterWidgets {
                     2f,
                     sqrt(500_000f / sizes.sumOf { (it.width * it.height).toDouble() }.toFloat()),
                 )
+            // 与尺寸无关的部分（排班索引、农历/节日文案、今日班组排班）整个更新只算一次
+            val inputs = WidgetRenderInputs.of(context, document, today)
             val views = sizes.associateWith { size ->
-                createViews(context, document, kind, id, today, month, week, size, scale)
+                createViews(context, document, kind, id, today, month, week, size, scale, inputs)
             }
             val remoteViews =
                 if (Build.VERSION.SDK_INT >= 31 && exactSizes.isNotEmpty()) RemoteViews(views)
@@ -231,9 +233,11 @@ object RosterWidgets {
         week: Ymd,
         size: SizeF,
         scale: Float,
+        inputs: WidgetRenderInputs,
     ): RemoteViews {
         val layout = widgetLayout(size.height)
-        val rendering = renderRosterWidget(context, document, today, month, week, size, scale)
+        val rendering =
+            renderRosterWidget(context, document, today, month, week, size, scale, layout, inputs)
         return RemoteViews(context.packageName, R.layout.roster_widget).apply {
             setImageViewBitmap(R.id.widget_calendar, rendering.bitmap)
             setViewVisibility(R.id.widget_loading, View.GONE)

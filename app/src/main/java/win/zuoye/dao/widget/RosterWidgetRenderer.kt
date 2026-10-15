@@ -34,12 +34,53 @@ import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.domain.Roster
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.faded
 
 internal data class WidgetRendering(
     val bitmap: Bitmap,
     val description: String,
     val actionColor: Int,
 )
+
+/** 日期格一行需要的全部数据：底色循环与文字循环共用，不再各查一遍。 */
+private data class WidgetDayRow(
+    val date: Ymd,
+    val template: ShiftTemplate?,
+    val holiday: LegalHolidays.HolidayDay?,
+    val detail: String?,
+    val fade: Float,
+)
+
+/** 一次小组件更新里与尺寸无关的部分：排班索引、农历/节日文案、今日班组排班，整个更新只算一次。 */
+internal class WidgetRenderInputs(
+    val roster: Roster,
+    val labels: WidgetDateLabels,
+    val todayTemplate: ShiftTemplate?,
+    val todayTitle: String,
+    val todayTime: String,
+    val groupShifts: List<WidgetGroupShift>,
+) {
+    companion object {
+        fun of(context: Context, document: PlanDocument, today: Ymd): WidgetRenderInputs {
+            val roster = Roster.of(document)
+            val todayTemplate = roster.templateFor(today.epochDay)
+            return WidgetRenderInputs(
+                roster = roster,
+                labels =
+                    WidgetDateLabels(
+                        context,
+                        document.calendarViewMode.showHolidays,
+                        document.calendarViewMode.showLunar,
+                        today.year,
+                    ),
+                todayTemplate = todayTemplate,
+                todayTitle = context.getString(R.string.widget_today_date, today.month, today.day),
+                todayTime = todayTemplate.timeText(context),
+                groupShifts = widgetGroupShifts(document, today, roster),
+            )
+        }
+    }
+}
 
 /** RemoteViews 承载位图；使用 miuix 公开的配色、字体尺度和路径 API 绘制日历。 */
 internal fun renderRosterWidget(
@@ -50,6 +91,8 @@ internal fun renderRosterWidget(
     week: Ymd,
     size: SizeF,
     scale: Float,
+    layout: WidgetLayout,
+    inputs: WidgetRenderInputs,
 ): WidgetRendering {
     val dark =
         when (document.themeMode) {
@@ -76,15 +119,12 @@ internal fun renderRosterWidget(
         CardDefaults.CornerRadius.value,
         colors.surfaceContainer,
     )
-    val roster = Roster.of(document)
-    val currentTemplate = roster.templateFor(today.epochDay)
-    val title = context.getString(R.string.widget_today_date, today.month, today.day)
-    val time = currentTemplate.timeText(context)
-    val layout = widgetLayout(size.height)
+    val roster = inputs.roster
+    val title = inputs.todayTitle
+    val time = inputs.todayTime
     val monthly = layout.navigationKind == RosterWidgetKind.MONTH
     val compactWeek = layout == WidgetLayout.COMPACT_WEEK
-    val groupShifts =
-        if (layout.hasGroups) widgetGroupShifts(document, today, roster) else emptyList()
+    val groupShifts = if (layout.hasGroups) inputs.groupShifts else emptyList()
     if (layout.hasHeader) {
         val headerWidth = (size.width - 24f - 80f).coerceAtLeast(1f)
         painter.header(title, time, headerWidth)
@@ -114,13 +154,18 @@ internal fun renderRosterWidget(
         else 0f
     val cellHeight = ((gridSpace - footerSpace - footerGap) / rows).coerceAtLeast(1f)
     val weekdays = context.resources.getStringArray(R.array.weekday_short)
-    val labels =
-        WidgetDateLabels(
-            context,
-            document.calendarViewMode.showHolidays,
-            document.calendarViewMode.showLunar,
-            today.year,
+    val showHolidays = document.calendarViewMode.showHolidays
+    // 日期格数据（班次、节日、农历/节日文字、淡化系数）一次算好，两个绘制循环共用
+    val dayRows = dates.map { date ->
+        val holiday = LegalHolidays.of(date.epochDay).takeIf { showHolidays }
+        WidgetDayRow(
+            date = date,
+            template = roster.templateFor(date.epochDay),
+            holiday = holiday,
+            detail = inputs.labels.label(date, holiday),
+            fade = if (monthly && date.widgetMonth() != month && date != today) 0.35f else 1f,
         )
+    }
     val description = StringBuilder().append(title).append(' ').append(time)
     if (showMonthBackground) description.append(' ').append(monthTitle)
     repeat(7) { column ->
@@ -134,10 +179,10 @@ internal fun renderRosterWidget(
         )
     }
     // 日期格底色 → 月份背景数字 → 日期与班次文字，保持前景信息清晰。
-    dates.forEachIndexed { index, date ->
+    dayRows.forEachIndexed { index, day ->
         painter.dayBackground(
-            roster.templateFor(date.epochDay),
-            if (monthly && date.widgetMonth() != month && date != today) 0.35f else 1f,
+            day.template,
+            day.fade,
             12f + index % 7 * cellWidth + 1.5f,
             gridTop + index / 7 * cellHeight + 1.5f,
             (cellWidth - 3f).coerceAtLeast(1f),
@@ -152,20 +197,16 @@ internal fun renderRosterWidget(
             size.width - 24f,
             rows * cellHeight,
         )
-    dates.forEachIndexed { index, date ->
-        val template = roster.templateFor(date.epochDay)
-        val holiday =
-            LegalHolidays.of(date.epochDay).takeIf { document.calendarViewMode.showHolidays }
-        val detail = labels.label(date)
+    dayRows.forEachIndexed { index, day ->
         painter.dayContent(
             context,
-            date,
-            template,
+            day.date,
+            day.template,
             // 一行高度优先展示日期与班次；拉高组件后恢复农历/节日名称。
-            detail.takeUnless { compactWeek },
-            holiday,
-            date == today,
-            if (monthly && date.widgetMonth() != month && date != today) 0.35f else 1f,
+            day.detail.takeUnless { compactWeek },
+            day.holiday,
+            day.date == today,
+            day.fade,
             12f + index % 7 * cellWidth + 1.5f,
             gridTop + index / 7 * cellHeight + 1.5f,
             (cellWidth - 3f).coerceAtLeast(1f),
@@ -173,13 +214,13 @@ internal fun renderRosterWidget(
         )
         description
             .append("; ")
-            .append(context.getString(R.string.widget_today_date, date.month, date.day))
+            .append(context.getString(R.string.widget_today_date, day.date.month, day.date.day))
             .append(' ')
-            .append(template?.name ?: context.getString(R.string.no_schedule))
+            .append(day.template?.name ?: context.getString(R.string.no_schedule))
             .append(' ')
-            .append(template.timeText(context))
-        detail?.let { description.append(' ').append(it) }
-        holiday?.let {
+            .append(day.template.timeText(context))
+        day.detail?.let { description.append(' ').append(it) }
+        day.holiday?.let {
             description
                 .append(' ')
                 .append(
@@ -230,6 +271,9 @@ internal fun renderRosterWidget(
     }
     return WidgetRendering(bitmap, description.toString(), colors.onSurfaceVariantActions.toArgb())
 }
+
+/** 班次色画在卡片底色上的墨色版本：与 onSurface 混 62%，保证小字号对比度。 */
+private fun shiftInk(color: Color, onSurface: Color): Color = lerp(color, onSurface, 0.62f)
 
 private fun ShiftTemplate?.timeText(context: Context): String {
     if (this == null) return context.getString(R.string.no_schedule)
@@ -310,7 +354,7 @@ private class WidgetPainter(
 
     fun monthBackground(month: Int, x: Float, y: Float, width: Float, height: Float) {
         val number = month.toString()
-        val color = colors.onSurface.copy(alpha = colors.onSurface.alpha * 0.065f)
+        val color = colors.onSurface.faded(0.065f)
         configureText(1f, color, true, localScale = 1f)
         val metrics = textPaint.fontMetrics
         val size =
@@ -333,14 +377,11 @@ private class WidgetPainter(
         localScale: Float = fontScale,
     ) {
         configureText(size, color, bold, localScale)
+        val limit = maxWidth.coerceAtLeast(1f)
+        // 绝大多数文字都没超宽，先量一次就省掉 ellipsize 的字符串分配
         val fitted =
-            TextUtils.ellipsize(
-                    value,
-                    textPaint,
-                    maxWidth.coerceAtLeast(1f),
-                    TextUtils.TruncateAt.END,
-                )
-                .toString()
+            if (textPaint.measureText(value) <= limit) value
+            else TextUtils.ellipsize(value, textPaint, limit, TextUtils.TruncateAt.END).toString()
         textPaint.textAlign = if (centered) Paint.Align.CENTER else Paint.Align.LEFT
         val baseline = centerY - (textPaint.fontMetrics.ascent + textPaint.fontMetrics.descent) / 2f
         canvas.drawText(fitted, x, baseline, textPaint)
@@ -390,9 +431,8 @@ private class WidgetPainter(
                 localScale = fit,
             )
             val shiftColor =
-                shift.template?.let {
-                    lerp(ShiftPalette.color(it.colorArgb), colors.onSurface, 0.62f)
-                } ?: colors.onSurfaceVariantSummary
+                shift.template?.let { shiftInk(ShiftPalette.color(it.colorArgb), colors.onSurface) }
+                    ?: colors.onSurfaceVariantSummary
             text(
                 shift.template?.name ?: context.getString(R.string.no_schedule),
                 centerX,
@@ -423,7 +463,7 @@ private class WidgetPainter(
             width,
             height,
             dayCornerRadius,
-            background.copy(alpha = background.alpha * fade),
+            background.faded(fade),
         )
     }
 
@@ -458,7 +498,7 @@ private class WidgetPainter(
         val total = daySize * 1.2f + (lineCount - 1) * (captionSize * 1.2f + 1f)
         val fitScale = minOf(fontScale, ((height - 6f) / total).coerceAtLeast(0.1f))
         var nextY = y + (height - total * fitScale) / 2f
-        val dayColor = colors.onSurface.copy(alpha = colors.onSurface.alpha * fade)
+        val dayColor = colors.onSurface.faded(fade)
         text(
             date.day.toString(),
             x + width / 2,
@@ -471,10 +511,7 @@ private class WidgetPainter(
         )
         nextY += (daySize * 1.2f + 1f) * fitScale
         template?.let {
-            val nameColor =
-                lerp(shift!!, colors.onSurface, 0.62f).let { color ->
-                    color.copy(alpha = color.alpha * fade)
-                }
+            val nameColor = shiftInk(shift!!, colors.onSurface).faded(fade)
             text(
                 it.name,
                 x + width / 2,
@@ -492,9 +529,7 @@ private class WidgetPainter(
                 x + width / 2,
                 nextY + captionSize * 0.6f * fitScale,
                 captionSize,
-                colors.onSurfaceVariantSummary.copy(
-                    alpha = colors.onSurfaceVariantSummary.alpha * fade
-                ),
+                colors.onSurfaceVariantSummary.faded(fade),
                 width - 4f,
                 localScale = fitScale,
             )
@@ -513,7 +548,7 @@ private class WidgetPainter(
                 badgeSize,
                 badgeSize,
                 3f,
-                backgroundColor.copy(alpha = backgroundColor.alpha * fade),
+                backgroundColor.faded(fade),
             )
             text(
                 context.getString(
@@ -523,7 +558,7 @@ private class WidgetPainter(
                 badgeX + badgeSize / 2,
                 badgeY + badgeSize / 2,
                 captionSize,
-                foregroundColor.copy(alpha = foregroundColor.alpha * fade),
+                foregroundColor.faded(fade),
                 badgeSize - 2f,
                 true,
                 localScale = minOf(1f, badgeSize / 13f),
@@ -539,8 +574,12 @@ private class WidgetPainter(
     ) {
         textPaint.textSize = size * localScale
         textPaint.color = color.toArgb()
-        textPaint.typeface =
-            if (bold) Typeface.create("sans-serif", Typeface.BOLD)
-            else Typeface.create("sans-serif", Typeface.NORMAL)
+        textPaint.typeface = if (bold) boldTypeface else normalTypeface
+    }
+
+    private companion object {
+        // 一个月视图要画近百段文字，Typeface 每次重建既慢又产生垃圾
+        private val boldTypeface = Typeface.create("sans-serif", Typeface.BOLD)
+        private val normalTypeface = Typeface.create("sans-serif", Typeface.NORMAL)
     }
 }

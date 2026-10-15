@@ -68,10 +68,16 @@ class UpdateDownloadWorker(
                 sha256 = inputData.getString(KEY_SHA256),
             )
         return try {
+            // 每 1% 都写一次 WorkManager DB 并重建前台通知太浪费，按 5% 节流（首帧与完成仍会上报）
+            var lastReported = -1
             val apk =
                 AppUpdater.downloadApk(applicationContext, update) { progress ->
-                    setProgress(workDataOf(KEY_PROGRESS to (progress ?: -1)))
-                    setForeground(downloadForegroundInfo(progress))
+                    val value = progress ?: -1
+                    if (value < 0 || value == 100 || value - lastReported >= 5) {
+                        lastReported = value
+                        setProgress(workDataOf(KEY_PROGRESS to value))
+                        setForeground(downloadForegroundInfo(progress))
+                    }
                 }
             showDownloadComplete(version, apk)
             Result.success(workDataOf(KEY_OUTPUT_PATH to apk.absolutePath))
@@ -183,8 +189,11 @@ class UpdateDownloadWorker(
     private val notificationManager: NotificationManager
         get() = applicationContext.getSystemService(NotificationManager::class.java)
 
+    /** 通知渠道只需建一次，但进度回调每次都经过 [downloadForegroundInfo]。 */
+    @Volatile private var channelsReady = false
+
     private fun ensureNotificationChannels() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (channelsReady || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         notificationManager.createNotificationChannels(
             listOf(
                 NotificationChannel(
@@ -199,6 +208,7 @@ class UpdateDownloadWorker(
                 ),
             )
         )
+        channelsReady = true
     }
 
     companion object {

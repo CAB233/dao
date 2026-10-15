@@ -33,3 +33,6 @@ object ShiftPalette {
 
     fun color(argb: Int): Color = Color(argb)
 }
+
+/** 透明度整体乘一个系数（替代 Modifier.alpha，省掉一格一个离屏图层）；日历与桌面小组件共用。 */
+internal fun Color.faded(f: Float): Color = copy(alpha = alpha * f)

@@ -1,9 +1,11 @@
 package win.zuoye.dao.share
 
-import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.createBitmap
 import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
 import io.nayuki.qrcodegen.QrSegment
@@ -39,19 +41,20 @@ fun encodeQrCode(content: String, sizePx: Int = 640): ImageBitmap? {
     val scale = sizePx / (matrix.size + QUIET_ZONE_MODULES * 2)
     if (scale == 0) return null
     val padding = (sizePx - matrix.size * scale) / 2
-    val pixels = IntArray(sizePx * sizePx) { Color.WHITE }
+    // 直接画到位图上：省掉一个 sizePx² 的 IntArray 和一次整块像素拷贝
+    val bitmap = createBitmap(sizePx, sizePx)
+    val canvas = Canvas(bitmap)
+    canvas.drawColor(Color.WHITE)
+    val paint = Paint().apply { color = Color.BLACK }
     // 整数倍放大并居中，保留至少四个模块宽的白色静区。
     for (y in 0 until matrix.size) {
-        val top = padding + y * scale
+        val top = (padding + y * scale).toFloat()
         for (x in 0 until matrix.size) {
             if (matrix.getModule(x, y)) {
-                val left = padding + x * scale
-                for (dy in 0 until scale) {
-                    val start = (top + dy) * sizePx + left
-                    pixels.fill(Color.BLACK, start, start + scale)
-                }
+                val left = (padding + x * scale).toFloat()
+                canvas.drawRect(left, top, left + scale, top + scale, paint)
             }
         }
     }
-    return Bitmap.createBitmap(pixels, sizePx, sizePx, Bitmap.Config.ARGB_8888).asImageBitmap()
+    return bitmap.asImageBitmap()
 }

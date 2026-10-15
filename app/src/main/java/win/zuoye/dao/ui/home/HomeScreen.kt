@@ -1,14 +1,8 @@
 package win.zuoye.dao.ui.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -33,7 +27,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -50,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -61,14 +55,12 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tyme.solar.SolarDay
 import java.util.Calendar
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -77,7 +69,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Share
-import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
@@ -87,15 +78,23 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
 import win.zuoye.dao.data.LegalHolidays
+import win.zuoye.dao.data.LunarStrings
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
+import win.zuoye.dao.data.holidayNameRes
+import win.zuoye.dao.data.lunarDate
+import win.zuoye.dao.data.lunarLabel
+import win.zuoye.dao.data.stringRes
 import win.zuoye.dao.domain.Roster
-import win.zuoye.dao.domain.resolveShift
 import win.zuoye.dao.ui.HolidayPalette
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.components.CornerFab
+import win.zuoye.dao.ui.components.localizedTimeRangeText
+import win.zuoye.dao.ui.components.rememberHoldDownSource
+import win.zuoye.dao.ui.faded
 import win.zuoye.dao.ui.scheme.DefaultGroupDialog
 
 /** 可浏览的月份范围：2000-01 .. 2100-12 */
@@ -138,7 +137,22 @@ fun HomeScreen(
     val weekStartDay = doc.weekStartDay.coerceIn(0, weekdays.lastIndex)
     val showHolidays = doc.calendarViewMode.showHolidays
     val showLunar = doc.calendarViewMode.showLunar
-    val calendarStrings = calendarStrings()
+    // 页面每分钟 tick 一次会带动重组；字符串表按资源对象缓存，别每次重建 23 条节日名
+    val resources = LocalResources.current
+    val calendarStrings =
+        remember(resources) {
+            CalendarStrings(
+                lunar =
+                    LunarStrings(
+                        months = resources.getStringArray(R.array.lunar_month_names).toList(),
+                        days = resources.getStringArray(R.array.lunar_day_names).toList(),
+                        leap = resources.getString(R.string.lunar_leap),
+                        format =
+                            resources.getString(R.string.lunar_date, "%1\$s", "%2\$s", "%3\$s"),
+                    ),
+                holidayNames = HOLIDAY_NAME_IDS.associateWith { resources.getString(it) },
+            )
+        }
 
     // 排班索引整个页面共用一份，预组合的三页不会各建一份
     val roster = remember(doc) { Roster.of(doc) }
@@ -170,30 +184,18 @@ fun HomeScreen(
         },
         floatingActionButton = {
             // 查看其它月份或选中非今日日期时，页面在顶部才显示「今」
-            // 外边距放在 AnimatedVisibility 之外，保证缩放动画以圆心为中心
-            Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
-                AnimatedVisibility(
-                    visible = (!isCurrentMonth || scheduleDate != today) && isAtTop,
-                    enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                    exit = fadeOut() + scaleOut(targetScale = 0.8f),
-                ) {
-                    FloatingActionButton(
-                        onClick = {
-                            selectedDate = null
-                            coroutineScope.launch { pagerState.animateScrollToPage(initialPage) }
-                        },
-                        // 关闭阴影：默认的 shadowElevation 会建离屏图层，动画时明显卡顿
-                        shadowElevation = 0.dp,
-                        minWidth = 54.dp,
-                        minHeight = 54.dp,
-                    ) {
-                        Text(
-                            stringResource(R.string.today_short),
-                            fontSize = 22.sp,
-                            color = MiuixTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
+            CornerFab(
+                visible = (!isCurrentMonth || scheduleDate != today) && isAtTop,
+                onClick = {
+                    selectedDate = null
+                    coroutineScope.launch { pagerState.animateScrollToPage(initialPage) }
+                },
+            ) {
+                Text(
+                    stringResource(R.string.today_short),
+                    fontSize = 22.sp,
+                    color = MiuixTheme.colorScheme.onPrimary,
+                )
             }
         },
         // 底部空间由外层底栏占据，这里不再重复算导航栏内边距
@@ -286,6 +288,7 @@ private fun HomeCalendarPane(
     Column(modifier) {
         RosterStatusCard(
             doc = doc,
+            roster = roster,
             today = today,
             currentMinute = currentMinute,
             onClick = onOpenPlan,
@@ -481,6 +484,7 @@ private fun GroupScheduleRows(
 @Composable
 private fun RosterStatusCard(
     doc: PlanDocument,
+    roster: Roster,
     today: Ymd,
     currentMinute: Int,
     onClick: () -> Unit,
@@ -490,8 +494,11 @@ private fun RosterStatusCard(
     var showDefaultGroupDialog by remember(activeScheme?.id) { mutableStateOf(false) }
     // 保留打开时的方案，供弹窗关闭动画继续显示，并固定本次选择对应的方案 id。
     var shownScheme by remember { mutableStateOf<Scheme?>(null) }
-    val todayShift = resolveShift(doc, today.epochDay)
-    val previousShift = resolveShift(doc, today.epochDay - 1)
+    // 页面每分钟 tick 一次，这里跟着重组；排班推导只依赖方案与日期，缓存起来别每次重算
+    val (todayShift, previousShift) =
+        remember(roster, today) {
+            roster.resolve(today.epochDay) to roster.resolve(today.epochDay - 1)
+        }
     val isWorking =
         todayShift?.template?.let { template ->
             !template.isRest &&
@@ -807,142 +814,52 @@ private fun buildMonthSlots(
                 isToday = isToday,
                 fade = if (!inMonth && !isToday) 0.35f else 1f,
                 holiday = LegalHolidays.of(date.epochDay).takeIf { showHolidays },
-                lunarLabel = lunar?.takeIf { showLunar }?.let { lunarLabel(it, strings) }.orEmpty(),
+                lunarLabel =
+                    lunar?.takeIf { showLunar }?.let { lunarLabel(it, strings.lunar) }.orEmpty(),
                 holidayName =
                     lunar
                         ?.takeIf { showHolidays }
-                        ?.let { holidayName(date, it, today.year) }
+                        ?.let { holidayNameRes(date, it, today.year) }
                         ?.let(strings.holidayNames::get),
             )
     }
     return slots
 }
 
-private data class LunarDate(
-    val month: Int,
-    val day: Int,
-    val isLeapMonth: Boolean,
-    val daysInMonth: Int,
-)
-
 private data class CalendarStrings(
-    val lunarMonths: List<String>,
-    val lunarDays: List<String>,
-    val lunarLeap: String,
-    val lunarFormat: String,
+    val lunar: LunarStrings,
     val holidayNames: Map<Int, String>,
 )
 
-@Composable
-private fun calendarStrings() =
-    CalendarStrings(
-        lunarMonths = stringArrayResource(R.array.lunar_month_names).toList(),
-        lunarDays = stringArrayResource(R.array.lunar_day_names).toList(),
-        lunarLeap = stringResource(R.string.lunar_leap),
-        lunarFormat = stringResource(R.string.lunar_date, "%1\$s", "%2\$s", "%3\$s"),
-        holidayNames =
-            listOf(
-                    R.string.holiday_new_year,
-                    R.string.holiday_spring_festival,
-                    R.string.holiday_lantern_festival,
-                    R.string.holiday_dragon_heads_raising,
-                    R.string.holiday_qingming,
-                    R.string.holiday_labor_day,
-                    R.string.holiday_dragon_boat,
-                    R.string.holiday_qixi,
-                    R.string.holiday_ghost_festival,
-                    R.string.holiday_mid_autumn,
-                    R.string.holiday_double_ninth,
-                    R.string.holiday_laba,
-                    R.string.holiday_new_year_eve,
-                    R.string.holiday_national_day,
-                    R.string.holiday_valentines,
-                    R.string.holiday_womens_day,
-                    R.string.holiday_april_fools,
-                    R.string.holiday_childrens_day,
-                    R.string.holiday_halloween,
-                    R.string.holiday_christmas,
-                    R.string.holiday_mothers_day,
-                    R.string.holiday_fathers_day,
-                    R.string.holiday_thanksgiving,
-                )
-                .associateWith { stringResource(it) },
+/** 需要按名字显示的节日；顺序只影响缓存表的构建，不影响显示。 */
+private val HOLIDAY_NAME_IDS =
+    listOf(
+        R.string.holiday_new_year,
+        R.string.holiday_spring_festival,
+        R.string.holiday_lantern_festival,
+        R.string.holiday_dragon_heads_raising,
+        R.string.holiday_qingming,
+        R.string.holiday_labor_day,
+        R.string.holiday_dragon_boat,
+        R.string.holiday_qixi,
+        R.string.holiday_ghost_festival,
+        R.string.holiday_mid_autumn,
+        R.string.holiday_double_ninth,
+        R.string.holiday_laba,
+        R.string.holiday_new_year_eve,
+        R.string.holiday_national_day,
+        R.string.holiday_valentines,
+        R.string.holiday_womens_day,
+        R.string.holiday_april_fools,
+        R.string.holiday_childrens_day,
+        R.string.holiday_halloween,
+        R.string.holiday_christmas,
+        R.string.holiday_mothers_day,
+        R.string.holiday_fathers_day,
+        R.string.holiday_thanksgiving,
     )
-
-private fun lunarDate(date: Ymd): LunarDate {
-    val lunar = SolarDay.fromYmd(date.year, date.month, date.day).getLunarDay()
-    val lunarMonth = lunar.getLunarMonth()
-    return LunarDate(
-        month = kotlin.math.abs(lunar.month),
-        day = lunar.day,
-        isLeapMonth = lunar.month < 0,
-        daysInMonth = lunarMonth.getDayCount(),
-    )
-}
-
-private fun lunarLabel(lunar: LunarDate, strings: CalendarStrings): String {
-    val dayName = strings.lunarDays.getOrElse(lunar.day - 1) { lunar.day.toString() }
-    if (lunar.day != 1) return dayName
-    val leapPrefix = if (lunar.isLeapMonth) strings.lunarLeap else ""
-    val monthName = strings.lunarMonths.getOrElse(lunar.month - 1) { lunar.month.toString() }
-    return strings.lunarFormat
-        .replace("%1\$s", leapPrefix)
-        .replace("%2\$s", monthName)
-        .replace("%3\$s", dayName)
-}
-
-/** 节日信息只在当前年和下一年显示；法定节假日优先于通用节日名称。 */
-private fun holidayName(date: Ymd, lunar: LunarDate, currentYear: Int): Int? {
-    LegalHolidays.of(date.epochDay)
-        ?.takeIf { it.isNameDay }
-        ?.let {
-            return it.name.stringRes()
-        }
-    if (date.year !in currentYear..(currentYear + 1) || lunar.isLeapMonth) return null
-
-    return when {
-        date.month == 1 && date.day == 1 -> R.string.holiday_new_year
-        lunar.month == 1 && lunar.day == 1 -> R.string.holiday_spring_festival
-        lunar.month == 1 && lunar.day == 15 -> R.string.holiday_lantern_festival
-        lunar.month == 2 && lunar.day == 2 -> R.string.holiday_dragon_heads_raising
-        lunar.month == 5 && lunar.day == 5 -> R.string.holiday_dragon_boat
-        lunar.month == 7 && lunar.day == 7 -> R.string.holiday_qixi
-        lunar.month == 7 && lunar.day == 15 -> R.string.holiday_ghost_festival
-        lunar.month == 8 && lunar.day == 15 -> R.string.holiday_mid_autumn
-        lunar.month == 9 && lunar.day == 9 -> R.string.holiday_double_ninth
-        lunar.month == 12 && lunar.day == 8 -> R.string.holiday_laba
-        lunar.month == 12 && lunar.day >= lunar.daysInMonth -> R.string.holiday_new_year_eve
-        date.month == 2 && date.day == 14 -> R.string.holiday_valentines
-        date.month == 3 && date.day == 8 -> R.string.holiday_womens_day
-        date.month == 4 && date.day == 1 -> R.string.holiday_april_fools
-        date.month == 6 && date.day == 1 -> R.string.holiday_childrens_day
-        date.month == 10 && date.day == 31 -> R.string.holiday_halloween
-        date.month == 12 && date.day == 25 -> R.string.holiday_christmas
-        date.month == 5 && date.weekdayIndex == 6 && date.day in 8..14 ->
-            R.string.holiday_mothers_day
-        date.month == 6 && date.weekdayIndex == 6 && date.day in 15..21 ->
-            R.string.holiday_fathers_day
-        date.month == 11 && date.weekdayIndex == 3 && date.day in 22..28 ->
-            R.string.holiday_thanksgiving
-        else -> null
-    }
-}
-
-private fun LegalHolidays.HolidayName.stringRes(): Int =
-    when (this) {
-        LegalHolidays.HolidayName.NEW_YEAR -> R.string.holiday_new_year
-        LegalHolidays.HolidayName.SPRING_FESTIVAL -> R.string.holiday_spring_festival
-        LegalHolidays.HolidayName.QINGMING -> R.string.holiday_qingming
-        LegalHolidays.HolidayName.LABOR_DAY -> R.string.holiday_labor_day
-        LegalHolidays.HolidayName.DRAGON_BOAT -> R.string.holiday_dragon_boat
-        LegalHolidays.HolidayName.MID_AUTUMN -> R.string.holiday_mid_autumn
-        LegalHolidays.HolidayName.NATIONAL_DAY -> R.string.holiday_national_day
-    }
 
 private fun darken(c: Color, f: Float = 0.62f) = Color(c.red * f, c.green * f, c.blue * f, 1f)
-
-/** 透明度整体乘一个系数（替代 Modifier.alpha，省掉一格一个离屏图层） */
-private fun Color.faded(f: Float): Color = copy(alpha = alpha * f)
 
 /**
  * squircle 满格块（对齐 miuix 组件的连续圆角）。 今天 = 常规底色 + 主题色描边着重（不随其他月淡化）；普通日 = 班次浅色底；无班次 = 浅灰块。
@@ -1097,56 +1014,4 @@ private fun CalendarCell(
             }
         }
     }
-}
-
-/**
- * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
- * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
- * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在状态解除后释放）。
- */
-@Composable
-private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
-    val interactionSource = remember { MutableInteractionSource() }
-    val active = remember { mutableStateOf<HoldDownInteraction.HoldDown?>(null) }
-
-    LaunchedEffect(holdDownState, interactionSource) {
-        suspend fun release() {
-            active.value?.let { current ->
-                interactionSource.emit(HoldDownInteraction.Release(current))
-                active.value = null
-            }
-        }
-        if (holdDownState) {
-            release()
-            val interaction = HoldDownInteraction.HoldDown()
-            active.value = interaction
-            interactionSource.emit(interaction)
-        } else {
-            release()
-        }
-    }
-
-    // 日期格移出组合时也要释放交互，避免残留高亮
-    DisposableEffect(interactionSource) {
-        onDispose {
-            active.value?.let { current ->
-                interactionSource.tryEmit(HoldDownInteraction.Release(current))
-            }
-            active.value = null
-        }
-    }
-    return interactionSource
-}
-
-@Composable
-private fun ShiftTemplate.localizedTimeRangeText(): String {
-    if (isRest) return stringResource(R.string.shift_rest_time)
-    val end = ShiftTemplate.format(endMinute)
-    val localizedEnd =
-        if (crossesMidnight()) {
-            stringResource(R.string.shift_next_day, end)
-        } else {
-            end
-        }
-    return "${ShiftTemplate.format(startMinute)}–$localizedEnd"
 }

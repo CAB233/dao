@@ -2,11 +2,13 @@ package win.zuoye.dao.domain
 
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
+import win.zuoye.dao.data.IdSource
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.defaultGroup
+import win.zuoye.dao.data.usedIds
 
 /** 导入结果，用于给用户一个明确反馈 */
 data class ImportResult(
@@ -32,13 +34,7 @@ fun PlanDocument.importPlan(
 ): Pair<PlanDocument, ImportResult> {
     if (payload.templates.isEmpty() && payload.schemes.isEmpty()) return this to ImportResult()
 
-    val usedIds = (templates.map { it.id } + schemes.map { it.id }).toMutableSet()
-    var nextId = maxOf(now, usedIds.maxOrNull() ?: 0L) + 1
-    fun newId(): Long {
-        while (nextId in usedIds) nextId++
-        usedIds += nextId
-        return nextId++
-    }
+    val newIds = IdSource(usedIds(), now)
 
     // ---- 班次模板 ----
     // 持久化结构本身就是不可变集合；这里先落到 PersistentList，改完再原样当作 ImmutableList 存回
@@ -52,7 +48,7 @@ fun PlanDocument.importPlan(
             templateIdMap[incoming.id] = existing.id
             templatesReused++
         } else {
-            val id = newId()
+            val id = newIds.nextId()
             mergedTemplates = mergedTemplates.adding(incoming.copy(id = id))
             templateIdMap[incoming.id] = id
             templatesAdded++
@@ -82,7 +78,7 @@ fun PlanDocument.importPlan(
             schemesSkipped++
             return@forEach
         }
-        val id = newId()
+        val id = newIds.nextId()
         mergedSchemes =
             mergedSchemes.adding(
                 incoming.copy(

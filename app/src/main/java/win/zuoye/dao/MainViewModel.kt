@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import win.zuoye.dao.data.IdSource
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanRepository
 import win.zuoye.dao.data.PlanShare
@@ -25,6 +26,7 @@ import win.zuoye.dao.data.PlanStore
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
+import win.zuoye.dao.data.usedIds
 import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.domain.importPlan
 import win.zuoye.dao.update.AppUpdater
@@ -126,7 +128,11 @@ class MainViewModel(
         groupName: String,
     ) {
         mutate { current ->
-            val id = System.currentTimeMillis()
+            val now = System.currentTimeMillis()
+            // 新班次模板也要计入已用 id，避免方案/班组 id 与它们撞车
+            val newIds = IdSource(current.usedIds() + templates.map { it.id }, now)
+            val schemeId = newIds.nextId()
+            val groupId = newIds.nextId()
             current.copy(
                 templates = templates,
                 schemes =
@@ -134,23 +140,23 @@ class MainViewModel(
                         .toPersistentList()
                         .adding(
                             Scheme(
-                                id = id,
+                                id = schemeId,
                                 name = planName,
                                 cycleDays = cycleDays,
                                 dayTemplateIds = dayTemplateIds,
-                                createdAt = id,
+                                createdAt = now,
                                 groups =
                                     persistentListOf(
                                         SchemeGroup(
-                                            id = id,
+                                            id = groupId,
                                             name = groupName,
                                             anchorEpochDay = anchorEpochDay,
                                         )
                                     ),
-                                defaultGroupId = id,
+                                defaultGroupId = groupId,
                             )
                         ),
-                activeSchemeId = id,
+                activeSchemeId = schemeId,
                 onboardingDone = true,
             )
         }

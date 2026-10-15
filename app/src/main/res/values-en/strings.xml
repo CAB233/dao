@@ -4,7 +4,6 @@
   <string name="plan_data_recovered_with_backup">The schedule data file was corrupted. It was backed up as %1$s, and the app recovered with an empty configuration.</string>
   <string name="app_name">Shift Calendar</string>
   <string name="action_back">Back</string>
-  <string name="action_back_to_plan_list">Back to plans</string>
   <string name="action_cancel">Cancel</string>
   <string name="action_confirm">OK</string>
   <string name="action_save">Save</string>
@@ -16,8 +15,6 @@
   <string name="action_next">Next</string>
   <string name="action_previous">Previous</string>
   <string name="action_done">Done</string>
-  <string name="action_not_save">Don’t save</string>
-  <string name="action_save_and_exit">Save and exit</string>
   <string name="action_skip_configuration">Skip setup</string>
   <string name="action_add_shift">Add shift</string>
   <string name="action_add_plan">Add plan</string>
@@ -46,7 +43,6 @@
     <item>Show all</item>
   </string-array>
   <string name="settings_plans">Shift plans</string>
-  <string name="settings_plans_summary">Create, import, select or edit a plan</string>
   <string name="settings_check_updates">Check for updates</string>
   <string name="settings_check_updates_summary">Check for and get the latest version after startup</string>
   <string name="settings_update_channel">Update channel</string>
@@ -199,7 +195,6 @@
   <string name="plan_edit_title">Edit plan</string>
   <string name="plan_name">Plan name</string>
   <string name="plan_tab_templates">Shifts</string>
-  <string name="plan_select_prompt">Select a plan to edit</string>
   <string name="plan_tab_schedule">Schedule</string>
   <string name="plan_tab_groups">Groups</string>
   <string name="plan_delete">Delete plan</string>
@@ -212,9 +207,6 @@
   <string name="group_anchor">Reference date</string>
   <string name="cycle_days">Cycle length</string>
   <string name="cycle_days_label">Cycle length (1–99)</string>
-  <string name="unsaved_exit_title">Save changes before exiting?</string>
-  <string name="unsaved_new_summary">This plan hasn’t been created. All edits will be discarded if you don’t save.</string>
-  <string name="unsaved_summary">Your edits will be discarded if you don’t save.</string>
   <string name="delete_plan_title">Delete “%1$s”?</string>
   <plurals name="days_count">
     <item quantity="one">%1$d day</item>
@@ -313,14 +305,7 @@
   <string name="version_text">v%1$s</string>
   <string name="open_repository">Open project repository</string>
   <string name="not_implemented">“%1$s” is not available yet</string>
-  <string name="license_summary">License: %1$s</string>
-  <string name="project_androidx">AndroidX and Jetpack Compose</string>
-  <string name="project_kotlin">Kotlin and kotlinx.serialization</string>
-  <string name="project_zxing">ZXing and zxing-android-embedded</string>
   <string name="step_progress">%1$d/%2$d %3$s</string>
-  <string name="project_miuix">miuix</string>
-  <string name="project_immutable_collections">kotlinx.collections.immutable</string>
-  <string name="license_apache_2">Apache License 2.0</string>
   <string name="scan_back">Back</string>
   <string name="scan_permission_denied">Allow camera access to scan and import a plan</string>
   <string name="scan_camera_unavailable">Camera unavailable. Please try again later.</string>

@@ -1,14 +1,6 @@
 package win.zuoye.dao.ui.scheme
 
-import android.content.ClipboardManager
-import android.content.Context
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +44,6 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Checkbox
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -72,15 +63,20 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
+import win.zuoye.dao.data.IdSource
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
-import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
+import win.zuoye.dao.data.usedIds
+import win.zuoye.dao.data.withoutSchemes
+import win.zuoye.dao.share.clipboardText
+import win.zuoye.dao.ui.components.CornerFab
+import win.zuoye.dao.ui.components.DialogActions
 import win.zuoye.dao.ui.components.rememberFabVisible
-import win.zuoye.dao.ui.scan.ScanContract
+import win.zuoye.dao.ui.components.rememberPlanImportActions
 
 /** 未指派时用的占位模板 id（模型里没有 null，指向不存在的模板即可显示「点击选择」） */
 internal const val UNASSIGNED = 0L
@@ -129,7 +125,6 @@ private fun SchemeListScreen(
     val context = LocalContext.current
     val defaultPlanName = stringResource(R.string.default_plan_name, doc.schemes.size + 1)
     val defaultGroupName = stringResource(R.string.default_group_name, 1)
-    val importUnrecognized = stringResource(R.string.import_unrecognized)
     val activePlanRequired = stringResource(R.string.active_plan_required)
     val copySuffix = stringResource(R.string.plan_copy_suffix)
     var selecting by remember { mutableStateOf(false) }
@@ -154,42 +149,35 @@ private fun SchemeListScreen(
     }
 
     fun createScheme() {
-        val id = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        val newIds = IdSource(doc.usedIds(), now)
+        val schemeId = newIds.nextId()
+        val groupId = newIds.nextId()
         val today = Ymd.today()
         val scheme =
             Scheme(
-                id = id,
+                id = schemeId,
                 name = defaultPlanName,
                 cycleDays = 1,
                 dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
-                createdAt = id,
+                createdAt = now,
                 groups =
                     persistentListOf(
                         SchemeGroup(
-                            id = id,
+                            id = groupId,
                             name = defaultGroupName,
                             anchorEpochDay = today.epochDay,
                         )
                     ),
-                defaultGroupId = id,
+                defaultGroupId = groupId,
             )
         onCreate(scheme)
     }
 
-    fun importFrom(text: String?) {
-        val payload = text?.let(PlanShareCodec::decode)
-        if (payload == null) {
-            Toast.makeText(context, importUnrecognized, Toast.LENGTH_SHORT).show()
-        } else {
-            showAddMenu = false
-            onImportPlan(payload)
-        }
+    val planImport = rememberPlanImportActions { payload ->
+        showAddMenu = false
+        onImportPlan(payload)
     }
-
-    val scanLauncher =
-        rememberLauncherForActivityResult(ScanContract()) { result ->
-            result?.let { importFrom(it) }
-        }
 
     NavigationBackHandler(
         state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
@@ -235,36 +223,19 @@ private fun SchemeListScreen(
                             onClick = {
                                 val ids = selectedIds
                                 onMutate { plan ->
-                                    val usedIds = buildSet {
-                                        plan.schemes.forEach { scheme ->
-                                            add(scheme.id)
-                                            scheme.groups.forEach { add(it.id) }
-                                        }
-                                    }
-                                        .toMutableSet()
-                                    var nextId =
-                                        maxOf(
-                                            System.currentTimeMillis(),
-                                            (usedIds.maxOrNull() ?: 0L) + 1L,
-                                        )
-                                    fun newId(): Long {
-                                        while (nextId in usedIds) nextId++
-                                        return nextId.also {
-                                            usedIds += it
-                                            nextId++
-                                        }
-                                    }
-
+                                    val newIds = IdSource(plan.usedIds())
                                     val copies =
                                         plan.schemes
                                             .filter { it.id in ids }
                                             .map { source ->
                                                 val groupIds =
-                                                    source.groups.associate { it.id to newId() }
+                                                    source.groups.associate {
+                                                        it.id to newIds.nextId()
+                                                    }
                                                 source.copy(
-                                                    id = newId(),
+                                                    id = newIds.nextId(),
                                                     name = source.name + copySuffix,
-                                                    createdAt = newId(),
+                                                    createdAt = newIds.nextId(),
                                                     groups =
                                                         source.groups
                                                             .map { group ->
@@ -303,27 +274,14 @@ private fun SchemeListScreen(
             )
         },
         floatingActionButton = {
-            // 和主页「今」按钮同一套做法：关阴影（默认阴影会建离屏图层）
+            // 和主页「今」按钮同一套做法
             if (!selecting) {
-                Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
-                    AnimatedVisibility(
-                        visible = fabVisible,
-                        enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                        exit = fadeOut() + scaleOut(targetScale = 0.8f),
-                    ) {
-                        FloatingActionButton(
-                            onClick = { showAddMenu = true },
-                            shadowElevation = 0.dp,
-                            minWidth = 54.dp,
-                            minHeight = 54.dp,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Add,
-                                contentDescription = stringResource(R.string.action_add_plan),
-                                tint = MiuixTheme.colorScheme.onPrimary,
-                            )
-                        }
-                    }
+                CornerFab(visible = fabVisible, onClick = { showAddMenu = true }) {
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Add,
+                        contentDescription = stringResource(R.string.action_add_plan),
+                        tint = MiuixTheme.colorScheme.onPrimary,
+                    )
                 }
             }
         },
@@ -399,12 +357,12 @@ private fun SchemeListScreen(
                 )
                 TextButton(
                     text = stringResource(R.string.create_clipboard),
-                    onClick = { importFrom(context.clipboardText()) },
+                    onClick = { planImport.importText(context.clipboardText()) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TextButton(
                     text = stringResource(R.string.create_qr),
-                    onClick = { scanLauncher.launch(Unit) },
+                    onClick = { planImport.scan() },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Button(
@@ -429,50 +387,21 @@ private fun SchemeListScreen(
             summary = stringResource(R.string.delete_irreversible_period),
             onDismissRequest = { showDeleteSelected = false },
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = { showDeleteSelected = false },
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_delete),
-                    onClick = {
-                        // 先抓一份选中集合：onMutate 交给协程稍后执行，exitSelection() 会先把它清空
-                        val ids = selectedIds
-                        showDeleteSelected = false
-                        onMutate { plan ->
-                            val remaining =
-                                plan.schemes.filterNot { it.id in ids }.toImmutableList()
-                            plan.copy(
-                                schemes = remaining,
-                                // 使用中的那个被删掉时，顺位到剩下的第一个
-                                activeSchemeId =
-                                    plan.activeSchemeId?.takeIf { id ->
-                                        remaining.any { it.id == id }
-                                    } ?: remaining.firstOrNull()?.id,
-                            )
-                        }
-                        exitSelection()
-                    },
-                    colors =
-                        ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            DialogActions(
+                confirmText = stringResource(R.string.action_delete),
+                destructive = true,
+                onDismiss = { showDeleteSelected = false },
+                onConfirm = {
+                    // 先抓一份选中集合：onMutate 交给协程稍后执行，exitSelection() 会先把它清空
+                    val ids = selectedIds
+                    showDeleteSelected = false
+                    onMutate { plan -> plan.withoutSchemes(ids) }
+                    exitSelection()
+                },
+            )
         }
     }
 }
-
-/** 读取剪贴板第一段文本，供分享载荷导入。 */
-private fun Context.clipboardText(): String =
-    (getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
-        ?.primaryClip
-        ?.takeIf { it.itemCount > 0 }
-        ?.getItemAt(0)
-        ?.coerceToText(this)
-        ?.toString()
-        .orEmpty()
 
 /** 一个方案卡片（尺寸对齐系统闹钟列表）：标题（+「使用中」小字）， 右侧是使用中开关；关闭的方案整体变灰；多选模式下右侧用复选框替换开关。 */
 @Composable

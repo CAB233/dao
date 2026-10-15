@@ -35,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.ColorPalette
@@ -46,7 +45,6 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -395,28 +393,5 @@ private fun ColorDialog(
                 onConfirm = { onConfirm(draft.copy(alpha = 1f).toArgb()) },
             )
         }
-    }
-}
-
-@Composable
-private fun DialogActions(
-    confirmText: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-    enabled: Boolean = true,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(
-            text = stringResource(R.string.action_cancel),
-            onClick = onDismiss,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(
-            text = confirmText,
-            enabled = enabled,
-            onClick = onConfirm,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            modifier = Modifier.weight(1f),
-        )
     }
 }

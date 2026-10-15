@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -75,6 +76,7 @@ import win.zuoye.dao.data.PlanShare
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.ThemeMode
+import win.zuoye.dao.data.withoutSchemes
 import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.ui.about.AboutScreen
 import win.zuoye.dao.ui.about.OpenSourceLicensesScreen
@@ -629,19 +631,7 @@ private fun MainTabs(
                 },
                 onDelete = {
                     onMutate { currentDocument ->
-                        val remaining =
-                            currentDocument.schemes
-                                .filterNot { it.id == editorScheme.id }
-                                .toImmutableList()
-                        currentDocument.copy(
-                            schemes = remaining,
-                            activeSchemeId =
-                                if (currentDocument.activeSchemeId == editorScheme.id) {
-                                    remaining.firstOrNull()?.id
-                                } else {
-                                    currentDocument.activeSchemeId
-                                },
-                        )
+                        currentDocument.withoutSchemes(setOf(editorScheme.id))
                     }
                     closeSchemeEditor()
                 },
@@ -657,6 +647,16 @@ private enum class MainTab {
     Settings,
 }
 
+/** 底栏与宽屏侧栏共用的一份标签定义。 */
+private data class MainTabItem(val tab: MainTab, val icon: ImageVector, val labelRes: Int)
+
+private val MAIN_TAB_ITEMS =
+    listOf(
+        MainTabItem(MainTab.Home, MiuixIcons.Regular.Home, R.string.nav_home),
+        MainTabItem(MainTab.Config, MiuixIcons.Regular.Edit, R.string.nav_config),
+        MainTabItem(MainTab.Settings, MiuixIcons.Regular.Settings, R.string.nav_settings),
+    )
+
 /** 主界面底栏：主页 / 配置 / 设置。 必须放在各页面 [top.yukonga.miuix.kmp.basic.Scaffold] 的 bottomBar 插槽里。 */
 @Composable
 private fun MainBottomBar(
@@ -665,27 +665,15 @@ private fun MainBottomBar(
     enabled: Boolean = true,
 ) {
     NavigationBar {
-        NavigationBarItem(
-            selected = selected == MainTab.Home,
-            onClick = { onSelect(MainTab.Home) },
-            icon = MiuixIcons.Regular.Home,
-            label = stringResource(R.string.nav_home),
-            enabled = enabled,
-        )
-        NavigationBarItem(
-            selected = selected == MainTab.Config,
-            onClick = { onSelect(MainTab.Config) },
-            icon = MiuixIcons.Regular.Edit,
-            label = stringResource(R.string.nav_config),
-            enabled = enabled,
-        )
-        NavigationBarItem(
-            selected = selected == MainTab.Settings,
-            onClick = { onSelect(MainTab.Settings) },
-            icon = MiuixIcons.Regular.Settings,
-            label = stringResource(R.string.nav_settings),
-            enabled = enabled,
-        )
+        MAIN_TAB_ITEMS.forEach { item ->
+            NavigationBarItem(
+                selected = selected == item.tab,
+                onClick = { onSelect(item.tab) },
+                icon = item.icon,
+                label = stringResource(item.labelRes),
+                enabled = enabled,
+            )
+        }
     }
 }
 
@@ -700,27 +688,15 @@ private fun MainNavigationRail(
     enabled: Boolean = true,
 ) {
     NavigationRail {
-        NavigationRailItem(
-            selected = selected == MainTab.Home,
-            onClick = { onSelect(MainTab.Home) },
-            icon = MiuixIcons.Regular.Home,
-            label = stringResource(R.string.nav_home),
-            enabled = enabled,
-        )
-        NavigationRailItem(
-            selected = selected == MainTab.Config,
-            onClick = { onSelect(MainTab.Config) },
-            icon = MiuixIcons.Regular.Edit,
-            label = stringResource(R.string.nav_config),
-            enabled = enabled,
-        )
-        NavigationRailItem(
-            selected = selected == MainTab.Settings,
-            onClick = { onSelect(MainTab.Settings) },
-            icon = MiuixIcons.Regular.Settings,
-            label = stringResource(R.string.nav_settings),
-            enabled = enabled,
-        )
+        MAIN_TAB_ITEMS.forEach { item ->
+            NavigationRailItem(
+                selected = selected == item.tab,
+                onClick = { onSelect(item.tab) },
+                icon = item.icon,
+                label = stringResource(item.labelRes),
+                enabled = enabled,
+            )
+        }
     }
 }
 

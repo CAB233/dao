@@ -5,6 +5,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.Serializable
 
 /** 班次模板（"基本天"）：定义一次、全程复用。时间为当天 0:00 起的分钟数，end < start 表示跨零点夜班。 */
@@ -101,4 +102,15 @@ data class PlanDocument(
     fun activeScheme(): Scheme? = schemes.firstOrNull { it.id == activeSchemeId }
 
     fun templateById(id: Long): ShiftTemplate? = templates.firstOrNull { it.id == id }
+}
+
+/** 删除若干方案；「使用中」的若被删掉，顺位到剩下的第一个（没被删就保持不变）。 */
+fun PlanDocument.withoutSchemes(ids: Set<Long>): PlanDocument {
+    val remaining = schemes.filterNot { it.id in ids }.toImmutableList()
+    return copy(
+        schemes = remaining,
+        activeSchemeId =
+            activeSchemeId?.takeIf { id -> remaining.any { it.id == id } }
+                ?: remaining.firstOrNull()?.id,
+    )
 }

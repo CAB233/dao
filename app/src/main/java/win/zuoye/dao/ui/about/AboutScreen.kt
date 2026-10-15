@@ -52,12 +52,12 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
+import win.zuoye.dao.ui.components.Chevron
 
 /** 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。 开源许可由 AboutLibraries 在构建时根据实际依赖自动生成。 */
 @Composable
@@ -180,14 +180,7 @@ private fun AboutEntry(
     BasicComponent(
         title = title,
         summary = summary,
-        endActions = {
-            Icon(
-                imageVector = MiuixIcons.Basic.ArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp, 18.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            )
-        },
+        endActions = { Chevron() },
         onClick = onClick,
     )
 }

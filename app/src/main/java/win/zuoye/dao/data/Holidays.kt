@@ -1,6 +1,5 @@
 package win.zuoye.dao.data
 
-import com.tyme.holiday.LegalHoliday
 import com.tyme.solar.SolarDay
 
 /** 法定节假日由 Tyme 内置数据提供。 Tyme 的 LegalHoliday 同时包含放假日与调休上班日。 */
@@ -28,16 +27,18 @@ object LegalHolidays {
         val date = Ymd.fromEpochDay(epochDay)
         val solar = SolarDay.fromYmd(date.year, date.month, date.day)
         val holiday = solar.getLegalHoliday() ?: return null
-        val name = holiday.getName().toHolidayName() ?: return null
+        // Tyme 的名字只取一次：下面两个映射都要用
+        val rawName = holiday.getName()
+        val name = rawName.toHolidayName() ?: return null
         return HolidayDay(
             name = name,
             isMakeupWorkday = holiday.isWork(),
-            isNameDay = !holiday.isWork() && isHolidayNameDay(solar, holiday),
+            isNameDay = !holiday.isWork() && isHolidayNameDay(solar, rawName),
         )
     }
 
-    private fun isHolidayNameDay(solar: SolarDay, holiday: LegalHoliday): Boolean =
-        when (holiday.getName()) {
+    private fun isHolidayNameDay(solar: SolarDay, rawName: String): Boolean =
+        when (rawName) {
             "元旦" -> solar.month == 1 && solar.day == 1
             "春节" -> solar.getLunarDay().let { it.month == 1 && it.day == 1 }
             "清明节" ->

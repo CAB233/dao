@@ -1,15 +1,9 @@
 package win.zuoye.dao.ui.scheme
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +26,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -75,7 +68,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.NumberPicker
@@ -89,16 +81,15 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.R
+import win.zuoye.dao.data.IdSource
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
@@ -106,8 +97,13 @@ import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.defaultGroup
 import win.zuoye.dao.data.primaryAnchorEpochDay
+import win.zuoye.dao.data.usedIds
+import win.zuoye.dao.ui.components.Chevron
+import win.zuoye.dao.ui.components.CornerFab
+import win.zuoye.dao.ui.components.DialogActions
 import win.zuoye.dao.ui.components.TemplateEditorDialog
 import win.zuoye.dao.ui.components.rememberFabVisible
+import win.zuoye.dao.ui.components.rememberHoldDownSource
 import win.zuoye.dao.ui.onboarding.AssignmentRow
 import win.zuoye.dao.ui.onboarding.DeleteTemplateDialog
 import win.zuoye.dao.ui.onboarding.TemplatePickDialog
@@ -236,11 +232,12 @@ fun SchemeEditScreen(
         groupCountText = count.toString()
         updateScheme { current ->
             val existing = current.groups
+            val newIds = IdSource(draftDocument.usedIds())
             val next =
                 List(count) { index ->
                         existing.getOrNull(index)
                             ?: SchemeGroup(
-                                id = System.currentTimeMillis() + index,
+                                id = newIds.nextId(),
                                 name = defaultGroupNames[index],
                                 anchorEpochDay =
                                     existing.firstOrNull()?.anchorEpochDay ?: Ymd.today().epochDay,
@@ -379,28 +376,18 @@ fun SchemeEditScreen(
         floatingActionButton = {
             // 「班次模板」页签下，加号在右下角；滚动时收起
             if (tabIndex == 0) {
-                Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
-                    AnimatedVisibility(
-                        visible = fabVisible,
-                        enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                        exit = fadeOut() + scaleOut(targetScale = 0.8f),
-                    ) {
-                        FloatingActionButton(
-                            onClick = {
-                                editingTemplate = null
-                                showEditor = true
-                            },
-                            shadowElevation = 0.dp,
-                            minWidth = 54.dp,
-                            minHeight = 54.dp,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Add,
-                                contentDescription = stringResource(R.string.action_add_shift),
-                                tint = MiuixTheme.colorScheme.onPrimary,
-                            )
-                        }
-                    }
+                CornerFab(
+                    visible = fabVisible,
+                    onClick = {
+                        editingTemplate = null
+                        showEditor = true
+                    },
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Add,
+                        contentDescription = stringResource(R.string.action_add_shift),
+                        tint = MiuixTheme.colorScheme.onPrimary,
+                    )
                 }
             }
         },
@@ -544,42 +531,18 @@ fun SchemeEditScreen(
         }
 
         // ---- 弹层：都在 Scaffold 内部 ----
-        OverlayDialog(
+        NumberInputDialog(
             show = showGroupCountDialog,
             title = stringResource(R.string.group_count),
-            onDismissRequest = { showGroupCountDialog = false },
-        ) {
-            Column(Modifier.fillMaxWidth()) {
-                TextField(
-                    value = groupCountDraft,
-                    onValueChange = { input ->
-                        groupCountDraft = input.filter { it.isDigit() }.take(2)
-                    },
-                    label = stringResource(R.string.group_count_label),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(
-                        text = stringResource(R.string.action_cancel),
-                        onClick = { showGroupCountDialog = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        text = stringResource(R.string.action_confirm),
-                        enabled = groupCountDraft.toIntOrNull()?.let { it in 1..99 } == true,
-                        onClick = {
-                            updateGroupCount(groupCountDraft)
-                            showGroupCountDialog = false
-                        },
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
+            label = stringResource(R.string.group_count_label),
+            value = groupCountDraft,
+            onValueChange = { groupCountDraft = it },
+            onDismiss = { showGroupCountDialog = false },
+            onConfirm = {
+                updateGroupCount(groupCountDraft)
+                showGroupCountDialog = false
+            },
+        )
 
         OverlayDialog(
             show = showGroupEditor,
@@ -610,12 +573,7 @@ fun SchemeEditScreen(
                                     text = formatYmd(Ymd.fromEpochDay(groupAnchorEpochDay)),
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
-                                Icon(
-                                    imageVector = MiuixIcons.Basic.ArrowRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp, 18.dp),
-                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
+                                Chevron()
                             }
                         },
                         holdDownState = showGroupAnchorDialog,
@@ -659,40 +617,18 @@ fun SchemeEditScreen(
             },
         )
 
-        OverlayDialog(
+        NumberInputDialog(
             show = showCycleDialog,
             title = stringResource(R.string.cycle_days),
-            onDismissRequest = { showCycleDialog = false },
-        ) {
-            Column(Modifier.fillMaxWidth()) {
-                TextField(
-                    value = cycleDraft,
-                    onValueChange = { input -> cycleDraft = input.filter { it.isDigit() }.take(2) },
-                    label = stringResource(R.string.cycle_days_label),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(
-                        text = stringResource(R.string.action_cancel),
-                        onClick = { showCycleDialog = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        text = stringResource(R.string.action_confirm),
-                        enabled = cycleDraft.toIntOrNull()?.let { it in 1..99 } == true,
-                        onClick = {
-                            updateCycle(cycleDraft)
-                            showCycleDialog = false
-                        },
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
+            label = stringResource(R.string.cycle_days_label),
+            value = cycleDraft,
+            onValueChange = { cycleDraft = it },
+            onDismiss = { showCycleDialog = false },
+            onConfirm = {
+                updateCycle(cycleDraft)
+                showCycleDialog = false
+            },
+        )
 
         TemplateEditorDialog(
             show = showEditor,
@@ -703,13 +639,14 @@ fun SchemeEditScreen(
                 val editing = editingTemplate
                 draftDocument =
                     if (editing == null) {
+                        val newId = IdSource(draftDocument.usedIds()).nextId()
                         draftDocument.copy(
                             templates =
                                 draftDocument.templates
                                     .toPersistentList()
                                     .adding(
                                         ShiftTemplate(
-                                            id = System.currentTimeMillis(),
+                                            id = newId,
                                             name = name,
                                             startMinute = start,
                                             endMinute = end,
@@ -790,23 +727,15 @@ fun SchemeEditScreen(
             summary = stringResource(R.string.delete_irreversible_period),
             onDismissRequest = { showDeleteScheme = false },
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = { showDeleteScheme = false },
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_delete),
-                    onClick = {
-                        showDeleteScheme = false
-                        onDelete()
-                    },
-                    colors =
-                        ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            DialogActions(
+                confirmText = stringResource(R.string.action_delete),
+                destructive = true,
+                onDismiss = { showDeleteScheme = false },
+                onConfirm = {
+                    showDeleteScheme = false
+                    onDelete()
+                },
+            )
         }
     }
 }
@@ -883,12 +812,7 @@ private fun ShiftSettingsTab(
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
-                        Icon(
-                            imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.padding(start = 8.dp).size(12.dp, 18.dp),
-                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                        Chevron(Modifier.padding(start = 8.dp))
                     }
                 },
                 holdDownState = cycleHoldDown,
@@ -943,12 +867,7 @@ private fun GroupSettingsTab(
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
-                        Icon(
-                            imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.padding(start = 8.dp).size(12.dp, 18.dp),
-                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                        Chevron(Modifier.padding(start = 8.dp))
                     }
                 },
                 holdDownState = groupCountHoldDown,
@@ -963,12 +882,7 @@ private fun GroupSettingsTab(
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
-                        Icon(
-                            imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.padding(start = 8.dp).size(12.dp, 18.dp),
-                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                        Chevron(Modifier.padding(start = 8.dp))
                     }
                 },
                 holdDownState = defaultGroupHoldDown,
@@ -998,12 +912,7 @@ private fun GroupSettingsTab(
                             fontSize = 14.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
-                        Icon(
-                            imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.padding(start = 8.dp).size(12.dp, 18.dp),
-                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                        Chevron(Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -1108,58 +1017,43 @@ internal fun AnchorDialog(
                 )
             }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = stringResource(R.string.action_confirm),
-                    onClick = { onConfirm(Ymd(anchor.year, month, day.coerceIn(1, maxDay))) },
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            DialogActions(
+                confirmText = stringResource(R.string.action_confirm),
+                onDismiss = onDismiss,
+                onConfirm = { onConfirm(Ymd(anchor.year, month, day.coerceIn(1, maxDay))) },
+            )
         }
     }
 }
 
-/**
- * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
- * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
- * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
- */
+/** 「班组数量 / 周期天数」共用的数字输入弹窗：只收 1–99，按钮行走统一的 [DialogActions]。 */
 @Composable
-private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
-    val interactionSource = remember { MutableInteractionSource() }
-    val active = remember { mutableStateOf<HoldDownInteraction.HoldDown?>(null) }
-
-    LaunchedEffect(holdDownState, interactionSource) {
-        suspend fun release() {
-            active.value?.let { current ->
-                interactionSource.emit(HoldDownInteraction.Release(current))
-                active.value = null
-            }
-        }
-        if (holdDownState) {
-            release()
-            val interaction = HoldDownInteraction.HoldDown()
-            active.value = interaction
-            interactionSource.emit(interaction)
-        } else {
-            release()
-        }
-    }
-
-    // 行被移出组合（例如弹层关掉后整行消失）时也要释放，别把高亮留在 source 里
-    DisposableEffect(interactionSource) {
-        onDispose {
-            active.value?.let { current ->
-                interactionSource.tryEmit(HoldDownInteraction.Release(current))
-            }
-            active.value = null
+private fun NumberInputDialog(
+    show: Boolean,
+    title: String,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    OverlayDialog(show = show, title = title, onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth()) {
+            TextField(
+                value = value,
+                onValueChange = { input -> onValueChange(input.filter { it.isDigit() }.take(2)) },
+                label = label,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                insideMargin = DpSize(TextFieldDefaults.InsideMargin.width, 26.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+            DialogActions(
+                confirmText = stringResource(R.string.action_confirm),
+                enabled = value.toIntOrNull()?.let { it in 1..99 } == true,
+                onDismiss = onDismiss,
+                onConfirm = onConfirm,
+            )
         }
     }
-    return interactionSource
 }

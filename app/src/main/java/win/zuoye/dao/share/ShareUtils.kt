@@ -1,9 +1,20 @@
 package win.zuoye.dao.share
 
 import android.app.Activity
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import win.zuoye.dao.R
+
+/** 读取剪贴板第一段文本，供分享载荷导入。 */
+internal fun Context.clipboardText(): String =
+    (getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+        ?.primaryClip
+        ?.takeIf { it.itemCount > 0 }
+        ?.getItemAt(0)
+        ?.coerceToText(this)
+        ?.toString()
+        .orEmpty()
 
 /** 通过系统分享面板发送排班方案文本。 */
 object ShareUtils {

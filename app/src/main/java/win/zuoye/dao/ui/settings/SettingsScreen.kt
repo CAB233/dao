@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -29,21 +28,18 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.R
 import win.zuoye.dao.data.CalendarViewMode
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.ui.about.appVersionName
+import win.zuoye.dao.ui.components.Chevron
 import win.zuoye.dao.update.UpdateInfo
 
 /** 设置：外观、更新与关于。 */
@@ -179,14 +175,4 @@ fun SettingsScreen(
             }
         }
     }
-}
-
-@Composable
-private fun Chevron(modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = MiuixIcons.Basic.ArrowRight,
-        contentDescription = null,
-        modifier = modifier.size(12.dp, 18.dp),
-        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-    )
 }

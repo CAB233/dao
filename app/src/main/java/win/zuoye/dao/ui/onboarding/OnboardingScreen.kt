@@ -1,13 +1,8 @@
 package win.zuoye.dao.ui.onboarding
 
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,7 +54,6 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -72,12 +65,10 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.interfaces.HoldDownInteraction
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.popup.WindowDropdownDialog
 import top.yukonga.miuix.kmp.squircle.squircleBackground
@@ -86,18 +77,25 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
+import win.zuoye.dao.data.IdSource
 import win.zuoye.dao.data.PlanDocument
 import win.zuoye.dao.data.PlanShare
-import win.zuoye.dao.data.PlanShareCodec
 import win.zuoye.dao.data.Scheme
 import win.zuoye.dao.data.SchemeGroup
 import win.zuoye.dao.data.ShiftTemplate
 import win.zuoye.dao.data.Ymd
 import win.zuoye.dao.data.primaryAnchorEpochDay
+import win.zuoye.dao.data.usedIds
+import win.zuoye.dao.share.clipboardText
 import win.zuoye.dao.ui.ShiftPalette
+import win.zuoye.dao.ui.components.Chevron
+import win.zuoye.dao.ui.components.CornerFab
+import win.zuoye.dao.ui.components.DialogActions
 import win.zuoye.dao.ui.components.TemplateEditorDialog
 import win.zuoye.dao.ui.components.TemplateTimePickerStyle
-import win.zuoye.dao.ui.scan.ScanContract
+import win.zuoye.dao.ui.components.localizedTimeRangeText
+import win.zuoye.dao.ui.components.rememberHoldDownSource
+import win.zuoye.dao.ui.components.rememberPlanImportActions
 import win.zuoye.dao.ui.scheme.AnchorDialog
 import win.zuoye.dao.ui.scheme.SchemeEditScreen
 import win.zuoye.dao.ui.scheme.UNASSIGNED
@@ -140,7 +138,6 @@ fun OnboardingScreen(
     )
 
     val context = LocalContext.current
-    val importUnrecognized = stringResource(R.string.import_unrecognized)
     val defaultPlanName = stringResource(R.string.default_plan_name, doc.schemes.size + 1)
     val defaultGroupName = stringResource(R.string.default_group_name, 1)
     var step by remember { mutableStateOf(if (editing == null) Step.METHOD else Step.TEMPLATES) }
@@ -148,23 +145,26 @@ fun OnboardingScreen(
     var manualMode by remember { mutableStateOf(false) }
     val manualScheme =
         remember(doc, defaultPlanName, defaultGroupName) {
-            val id = System.currentTimeMillis()
+            val now = System.currentTimeMillis()
+            val newIds = IdSource(doc.usedIds(), now)
+            val schemeId = newIds.nextId()
+            val groupId = newIds.nextId()
             val today = Ymd.today().epochDay
             Scheme(
-                id = id,
+                id = schemeId,
                 name = defaultPlanName,
                 cycleDays = 1,
                 dayTemplateIds = persistentListOf(doc.templates.firstOrNull()?.id ?: UNASSIGNED),
-                createdAt = id,
+                createdAt = now,
                 groups =
                     persistentListOf(
                         SchemeGroup(
-                            id = id,
+                            id = groupId,
                             name = defaultGroupName,
                             anchorEpochDay = today,
                         )
                     ),
-                defaultGroupId = id,
+                defaultGroupId = groupId,
             )
         }
     if (manualMode) {
@@ -207,16 +207,7 @@ fun OnboardingScreen(
     var shownPickDay by remember { mutableIntStateOf(-1) }
     LaunchedEffect(pickingDay) { if (pickingDay >= 0) shownPickDay = pickingDay }
 
-    val importFrom: (String?) -> Unit = { text ->
-        val payload = text?.let(PlanShareCodec::decode)
-        if (payload == null) {
-            Toast.makeText(context, importUnrecognized, Toast.LENGTH_SHORT).show()
-        } else {
-            onImportPlan(payload)
-        }
-    }
-    val scanLauncher =
-        rememberLauncherForActivityResult(ScanContract()) { result -> result?.let(importFrom) }
+    val planImport = rememberPlanImportActions(onImportPlan)
 
     val cycleDays: Int? = cycleText.toIntOrNull()?.takeIf { it in 1..99 }
 
@@ -232,8 +223,8 @@ fun OnboardingScreen(
             Step.METHOD ->
                 when (createMethod) {
                     CreateMethod.MANUAL -> manualMode = true
-                    CreateMethod.CLIPBOARD -> importFrom(context.clipboardText())
-                    CreateMethod.QR_CODE -> scanLauncher.launch(Unit)
+                    CreateMethod.CLIPBOARD -> planImport.importText(context.clipboardText())
+                    CreateMethod.QR_CODE -> planImport.scan()
                     null -> Unit
                 }
             Step.TEMPLATES -> {
@@ -296,22 +287,18 @@ fun OnboardingScreen(
         floatingActionButton = {
             // 和方案页一样：加号在右下角（只在「班次模板」这一步出现）
             if (step == Step.TEMPLATES) {
-                Box(Modifier.padding(end = 8.dp, bottom = 12.dp)) {
-                    FloatingActionButton(
-                        onClick = {
-                            editingTemplate = null
-                            showEditor = true
-                        },
-                        shadowElevation = 0.dp,
-                        minWidth = 54.dp,
-                        minHeight = 54.dp,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Add,
-                            contentDescription = stringResource(R.string.action_add_shift),
-                            tint = MiuixTheme.colorScheme.onPrimary,
-                        )
-                    }
+                CornerFab(
+                    visible = true,
+                    onClick = {
+                        editingTemplate = null
+                        showEditor = true
+                    },
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Add,
+                        contentDescription = stringResource(R.string.action_add_shift),
+                        tint = MiuixTheme.colorScheme.onPrimary,
+                    )
                 }
             }
         },
@@ -436,10 +423,11 @@ fun OnboardingScreen(
             onSave = { name, start, end, color, isRest ->
                 val current = editingTemplate
                 if (current == null) {
+                    val newId = IdSource(doc.usedIds() + userTemplates.map { it.id }).nextId()
                     userTemplates =
                         userTemplates.adding(
                             ShiftTemplate(
-                                id = System.currentTimeMillis(),
+                                id = newId,
                                 name = name,
                                 startMinute = start,
                                 endMinute = end,
@@ -594,16 +582,6 @@ private fun StepIndicator(step: Step) {
         )
     }
 }
-
-/** 读取剪贴板第一段文本，供首次引导导入分享载荷。 */
-private fun Context.clipboardText(): String =
-    (getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
-        ?.primaryClip
-        ?.takeIf { it.itemCount > 0 }
-        ?.getItemAt(0)
-        ?.coerceToText(this)
-        ?.toString()
-        .orEmpty()
 
 /**
  * 第 1 步：定义班次模板（名称 + 时间 + 颜色），后续逐日指派时点选复用。方案页复用同一组件。
@@ -825,14 +803,7 @@ private fun AnchorPickerStep(
             BasicComponent(
                 title = stringResource(R.string.start_date),
                 summary = stringResource(R.string.cycle_first_day, formatYmd(anchor)),
-                endActions = {
-                    Icon(
-                        imageVector = MiuixIcons.Basic.ArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp, 18.dp),
-                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
-                },
+                endActions = { Chevron() },
                 holdDownState = holdDown,
                 onClick = onOpen,
             )
@@ -926,70 +897,11 @@ internal fun DeleteTemplateDialog(
             ),
         onDismissRequest = onDismiss,
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                text = stringResource(R.string.action_cancel),
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                text = stringResource(R.string.action_delete),
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
-                modifier = Modifier.weight(1f),
-            )
-        }
+        DialogActions(
+            confirmText = stringResource(R.string.action_delete),
+            destructive = true,
+            onDismiss = onDismiss,
+            onConfirm = onConfirm,
+        )
     }
-}
-
-/**
- * miuix 组件（BasicComponent / IconButton …）自带 `holdDownState` 参数，直接用那个即可； 自绘的 `clickable` 行走这里——把状态作为
- * [HoldDownInteraction] 注入 interactionSource， 再交给 `Modifier.clickable(interactionSource = …,
- * indication = LocalIndication.current, …)`， 主题里的 MiuixIndication 会据此画出按住高亮（并在弹层关闭后释放）。
- */
-@Composable
-private fun rememberHoldDownSource(holdDownState: Boolean): MutableInteractionSource {
-    val interactionSource = remember { MutableInteractionSource() }
-    val active = remember { mutableStateOf<HoldDownInteraction.HoldDown?>(null) }
-
-    LaunchedEffect(holdDownState, interactionSource) {
-        suspend fun release() {
-            active.value?.let { current ->
-                interactionSource.emit(HoldDownInteraction.Release(current))
-                active.value = null
-            }
-        }
-        if (holdDownState) {
-            release()
-            val interaction = HoldDownInteraction.HoldDown()
-            active.value = interaction
-            interactionSource.emit(interaction)
-        } else {
-            release()
-        }
-    }
-
-    // 行被移出组合（例如弹层关掉后整行消失）时也要释放，别把高亮留在 source 里
-    DisposableEffect(interactionSource) {
-        onDispose {
-            active.value?.let { current ->
-                interactionSource.tryEmit(HoldDownInteraction.Release(current))
-            }
-            active.value = null
-        }
-    }
-    return interactionSource
-}
-
-@Composable
-private fun ShiftTemplate.localizedTimeRangeText(): String {
-    if (isRest) return stringResource(R.string.shift_rest_time)
-    val end = ShiftTemplate.format(endMinute)
-    val localizedEnd =
-        if (crossesMidnight()) {
-            stringResource(R.string.shift_next_day, end)
-        } else {
-            end
-        }
-    return "${ShiftTemplate.format(startMinute)}–$localizedEnd"
 }

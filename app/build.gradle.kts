@@ -17,6 +17,7 @@ val javaLanguageVersion = 21
 val isPrBuild = providers.gradleProperty("IS_PR_BUILD").map(String::toBoolean).orElse(false).get()
 val signingProfile =
     providers.gradleProperty("SIGNING_PROFILE").orElse(if (isPrBuild) "pr" else "release").get()
+
 require(signingProfile in setOf("release", "pr")) { "SIGNING_PROFILE must be release or pr" }
 
 ktfmt { kotlinLangStyle() }

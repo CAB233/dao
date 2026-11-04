@@ -110,6 +110,7 @@ internal fun TemplateEditorDialog(
     }
 
     OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
         show = show,
         title =
             stringResource(
@@ -346,7 +347,12 @@ private fun ShiftTimeDialog(
 ) {
     var draft by remember { mutableIntStateOf(currentMinute) }
     LaunchedEffect(show) { if (show) draft = currentMinute }
-    OverlayDialog(show = show, title = title, onDismissRequest = onDismiss) {
+    OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
+        show = show,
+        title = title,
+        onDismissRequest = onDismiss,
+    ) {
         Column(Modifier.heightIn(max = 500.dp)) {
             TimePicker(
                 currentMinute = draft,
@@ -374,6 +380,7 @@ private fun ColorDialog(
     var draft by remember(current) { mutableStateOf(Color(current)) }
     LaunchedEffect(show, current) { if (show) draft = Color(current) }
     OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
         show = show,
         title = stringResource(R.string.color_select),
         onDismissRequest = onDismiss,

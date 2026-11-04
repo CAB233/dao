@@ -75,6 +75,7 @@ import win.zuoye.dao.data.withoutSchemes
 import win.zuoye.dao.share.clipboardText
 import win.zuoye.dao.ui.components.CornerFab
 import win.zuoye.dao.ui.components.DialogActions
+import win.zuoye.dao.ui.components.deviceCornerRadius
 import win.zuoye.dao.ui.components.rememberFabVisible
 import win.zuoye.dao.ui.components.rememberPlanImportActions
 
@@ -339,6 +340,7 @@ private fun SchemeListScreen(
         }
 
         OverlayDialog(
+            cornerRadius = deviceCornerRadius(),
             show = showAddMenu,
             title = stringResource(R.string.add_plan_title),
             onDismissRequest = { showAddMenu = false },
@@ -377,6 +379,7 @@ private fun SchemeListScreen(
 
         // 弹层必须在 Scaffold 的 content 里（宿主由 Scaffold 提供，放外面点不动）
         OverlayDialog(
+            cornerRadius = deviceCornerRadius(),
             show = showDeleteSelected,
             title =
                 pluralStringResource(

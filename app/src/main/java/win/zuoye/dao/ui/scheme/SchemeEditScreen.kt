@@ -102,6 +102,7 @@ import win.zuoye.dao.ui.components.Chevron
 import win.zuoye.dao.ui.components.CornerFab
 import win.zuoye.dao.ui.components.DialogActions
 import win.zuoye.dao.ui.components.TemplateEditorDialog
+import win.zuoye.dao.ui.components.deviceCornerRadius
 import win.zuoye.dao.ui.components.rememberFabVisible
 import win.zuoye.dao.ui.components.rememberHoldDownSource
 import win.zuoye.dao.ui.onboarding.AssignmentRow
@@ -545,6 +546,7 @@ fun SchemeEditScreen(
         )
 
         OverlayDialog(
+            cornerRadius = deviceCornerRadius(),
             show = showGroupEditor,
             title = stringResource(R.string.group_edit),
             onDismissRequest = { showGroupEditor = false },
@@ -722,6 +724,7 @@ fun SchemeEditScreen(
         }
 
         OverlayDialog(
+            cornerRadius = deviceCornerRadius(),
             show = showDeleteScheme,
             title = stringResource(R.string.delete_plan_title, draftScheme.name),
             summary = stringResource(R.string.delete_irreversible_period),
@@ -975,6 +978,7 @@ internal fun AnchorDialog(
     val maxDay = Ymd.daysInMonth(anchor.year, month)
 
     OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
         show = show,
         title = title ?: stringResource(R.string.start_date),
         onDismissRequest = onDismiss,
@@ -1037,7 +1041,12 @@ private fun NumberInputDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    OverlayDialog(show = show, title = title, onDismissRequest = onDismiss) {
+    OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
+        show = show,
+        title = title,
+        onDismissRequest = onDismiss,
+    ) {
         Column(Modifier.fillMaxWidth()) {
             TextField(
                 value = value,

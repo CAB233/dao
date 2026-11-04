@@ -16,6 +16,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import win.zuoye.dao.R
+import win.zuoye.dao.ui.components.deviceCornerRadius
 import win.zuoye.dao.update.UpdateInfo
 
 @Composable
@@ -26,6 +27,7 @@ fun UpdateDialog(
     onUpdate: () -> Unit,
 ) {
     OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
         show = show,
         title = stringResource(R.string.update_available_title),
         onDismissRequest = onDismiss,
@@ -60,6 +62,7 @@ fun UpdateInstallDialog(
     onInstall: () -> Unit,
 ) {
     OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
         show = show,
         title = stringResource(R.string.update_install_confirm_title),
         summary = stringResource(R.string.update_install_confirm_message),

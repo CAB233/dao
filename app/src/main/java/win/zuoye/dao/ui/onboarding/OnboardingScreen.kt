@@ -93,6 +93,7 @@ import win.zuoye.dao.ui.components.CornerFab
 import win.zuoye.dao.ui.components.DialogActions
 import win.zuoye.dao.ui.components.TemplateEditorDialog
 import win.zuoye.dao.ui.components.TemplateTimePickerStyle
+import win.zuoye.dao.ui.components.deviceCornerRadius
 import win.zuoye.dao.ui.components.localizedTimeRangeText
 import win.zuoye.dao.ui.components.rememberHoldDownSource
 import win.zuoye.dao.ui.components.rememberPlanImportActions
@@ -828,6 +829,7 @@ internal fun TemplatePickDialog(
 ) {
     if (templates.isEmpty()) {
         OverlayDialog(
+            cornerRadius = deviceCornerRadius(),
             show = show,
             title = stringResource(R.string.select_shift),
             onDismissRequest = onDismiss,
@@ -889,6 +891,7 @@ internal fun DeleteTemplateDialog(
     onConfirm: () -> Unit,
 ) {
     OverlayDialog(
+        cornerRadius = deviceCornerRadius(),
         show = show,
         title = stringResource(R.string.delete_shift_title, template.name),
         summary =

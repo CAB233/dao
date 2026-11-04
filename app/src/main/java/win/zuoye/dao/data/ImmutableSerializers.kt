@@ -70,7 +70,7 @@ private class PlanDocumentSurrogate(
     val weekStartDay: Int = 0,
     val calendarViewMode: CalendarViewMode = CalendarViewMode.ALL,
     val checkUpdatesOnLaunch: Boolean = true,
-    val updateChannel: UpdateChannel = UpdateChannel.GITHUB,
+    val updateChannel: UpdateChannel = UpdateChannel.MIRROR,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
 )
 

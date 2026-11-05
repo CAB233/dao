@@ -42,6 +42,9 @@ internal data class WidgetRendering(
     val actionColor: Int,
 )
 
+/** 班次色淡底的不透明度：与日历格保持一致，13% 在浅色和深色下都太淡。 */
+private const val SHIFT_TINT_ALPHA = 0.22f
+
 /** 日期格一行需要的全部数据：底色循环与文字循环共用，不再各查一遍。 */
 private data class WidgetDayRow(
     val date: Ymd,
@@ -454,7 +457,7 @@ private class WidgetPainter(
     ) {
         val shift = template?.let { ShiftPalette.color(it.colorArgb) }
         val background =
-            shift?.copy(alpha = 0.13f)?.compositeOver(colors.surfaceContainer)
+            shift?.copy(alpha = SHIFT_TINT_ALPHA)?.compositeOver(colors.surfaceContainer)
                 ?: colors.surfaceVariant
         surface(
             x,

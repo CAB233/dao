@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
@@ -730,6 +731,7 @@ private class GridColors(
 /** 单元格文字样式（含淡化变体），随主题预生成。 直接画文字（而不是放 Text 组合项）能把每页多组文字排版压到一次， 让文字测量缓存能跨格/跨月复用缓存。 */
 private class CellTextStyles(colors: GridColors, base: TextStyle) {
     val surfaceVariant = colors.surfaceVariant
+    val onSurface = colors.onSurface
     val primary = colors.primary
     val day = base.merge(fontSize = 17.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
     val dayToday =
@@ -752,6 +754,9 @@ private class CellTextStyles(colors: GridColors, base: TextStyle) {
 }
 
 private val CELL_RADIUS = 8.dp
+
+/** 班次色淡底的不透明度：太淡在浅色/深色下都看不出配色，22% 时名称与日期仍分别有 ≥6.4:1、≥7.7:1 */
+private const val CELL_TINT_ALPHA = 0.22f
 
 private fun monthRowCount(year: Int, month: Int, weekStartDay: Int): Int {
     val firstOffset = Math.floorMod(Ymd(year, month, 1).weekdayIndex - weekStartDay, 7)
@@ -859,8 +864,6 @@ private val HOLIDAY_NAME_IDS =
         R.string.holiday_thanksgiving,
     )
 
-private fun darken(c: Color, f: Float = 0.62f) = Color(c.red * f, c.green * f, c.blue * f, 1f)
-
 /**
  * squircle 满格块（对齐 miuix 组件的连续圆角）。 今天 = 常规底色 + 主题色描边着重（不随其他月淡化）；普通日 = 班次浅色底；无班次 = 浅灰块。
  *
@@ -879,7 +882,8 @@ private fun CalendarCell(
     val template = slot.template
     val shiftColor = template?.let { ShiftPalette.color(it.colorArgb) }
     val fade = slot.fade
-    val container = shiftColor?.copy(alpha = 0.13f)?.faded(fade) ?: text.surfaceVariant.faded(fade)
+    val container =
+        shiftColor?.copy(alpha = CELL_TINT_ALPHA)?.faded(fade) ?: text.surfaceVariant.faded(fade)
     val dayStyle =
         when {
             slot.isToday && fade < 1f -> text.dayTodayFaded
@@ -910,7 +914,8 @@ private fun CalendarCell(
         }
     val nameLayout =
         if (template != null) {
-            val nameColor = darken(shiftColor!!).faded(fade)
+            // 跟小组件同一套墨色：亮色主题往黑偏、深色主题往白偏，两种主题都保得住对比度
+            val nameColor = lerp(shiftColor!!, text.onSurface, 0.62f).faded(fade)
             val nameStyle = text.name.copy(color = nameColor)
             remember(measurer, template.name, nameStyle) {
                 measurer.measure(template.name, nameStyle, maxLines = 1)

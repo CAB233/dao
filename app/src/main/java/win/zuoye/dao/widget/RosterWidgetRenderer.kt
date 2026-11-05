@@ -71,7 +71,6 @@ internal class WidgetRenderInputs(
                         context,
                         document.calendarViewMode.showHolidays,
                         document.calendarViewMode.showLunar,
-                        today.year,
                     ),
                 todayTemplate = todayTemplate,
                 todayTitle = context.getString(R.string.widget_today_date, today.month, today.day),

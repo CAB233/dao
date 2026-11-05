@@ -819,7 +819,7 @@ private fun buildMonthSlots(
                 holidayName =
                     lunar
                         ?.takeIf { showHolidays }
-                        ?.let { holidayNameRes(date, it, today.year) }
+                        ?.let { holidayNameRes(date, it) }
                         ?.let(strings.holidayNames::get),
             )
     }

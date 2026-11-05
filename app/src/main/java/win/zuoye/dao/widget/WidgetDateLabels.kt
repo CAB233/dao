@@ -14,7 +14,6 @@ internal class WidgetDateLabels(
     private val context: Context,
     private val showHolidays: Boolean,
     private val showLunar: Boolean,
-    private val currentYear: Int,
 ) {
     private val strings =
         LunarStrings(
@@ -29,7 +28,7 @@ internal class WidgetDateLabels(
         if (!showHolidays && !showLunar) return null
         val lunar = lunarDate(date)
         if (showHolidays) {
-            holidayNameRes(date, lunar, currentYear, holiday)?.let {
+            holidayNameRes(date, lunar, holiday)?.let {
                 return context.getString(it)
             }
         }

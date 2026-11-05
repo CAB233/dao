@@ -42,11 +42,10 @@ internal fun lunarLabel(lunar: LunarDate, strings: LunarStrings): String {
         .replace("%3\$s", dayName)
 }
 
-/** 节日信息只在当前年和下一年显示；法定节假日优先于通用节日名称。 */
+/** 节日名称：Tyme 的法定节假日名称日优先，其次农历节日，最后公历固定日期与节气；不限年份。 */
 internal fun holidayNameRes(
     date: Ymd,
     lunar: LunarDate,
-    currentYear: Int,
     holiday: LegalHolidays.HolidayDay? = LegalHolidays.of(date.epochDay),
 ): Int? {
     holiday
@@ -54,10 +53,17 @@ internal fun holidayNameRes(
         ?.let {
             return it.name.stringRes()
         }
-    if (date.year !in currentYear..(currentYear + 1) || lunar.isLeapMonth) return null
+    // 闰月里的同名农历日期不算节日（闰五月初五不是端午）；公历节日与节气不受闰月影响
+    if (!lunar.isLeapMonth) {
+        lunarFestivalRes(lunar)?.let {
+            return it
+        }
+    }
+    return solarFestivalRes(date)
+}
 
-    return when {
-        date.month == 1 && date.day == 1 -> R.string.holiday_new_year
+private fun lunarFestivalRes(lunar: LunarDate): Int? =
+    when {
         lunar.month == 1 && lunar.day == 1 -> R.string.holiday_spring_festival
         lunar.month == 1 && lunar.day == 15 -> R.string.holiday_lantern_festival
         lunar.month == 2 && lunar.day == 2 -> R.string.holiday_dragon_heads_raising
@@ -68,10 +74,19 @@ internal fun holidayNameRes(
         lunar.month == 9 && lunar.day == 9 -> R.string.holiday_double_ninth
         lunar.month == 12 && lunar.day == 8 -> R.string.holiday_laba
         lunar.month == 12 && lunar.day >= lunar.daysInMonth -> R.string.holiday_new_year_eve
+        else -> null
+    }
+
+private fun solarFestivalRes(date: Ymd): Int? =
+    when {
+        isQingming(date) -> R.string.holiday_qingming
+        date.month == 1 && date.day == 1 -> R.string.holiday_new_year
         date.month == 2 && date.day == 14 -> R.string.holiday_valentines
         date.month == 3 && date.day == 8 -> R.string.holiday_womens_day
         date.month == 4 && date.day == 1 -> R.string.holiday_april_fools
+        date.month == 5 && date.day == 1 -> R.string.holiday_labor_day
         date.month == 6 && date.day == 1 -> R.string.holiday_childrens_day
+        date.month == 10 && date.day == 1 -> R.string.holiday_national_day
         date.month == 10 && date.day == 31 -> R.string.holiday_halloween
         date.month == 12 && date.day == 25 -> R.string.holiday_christmas
         date.month == 5 && date.weekdayIndex == 6 && date.day in 8..14 ->
@@ -82,6 +97,12 @@ internal fun holidayNameRes(
             R.string.holiday_thanksgiving
         else -> null
     }
+
+/** 清明是节气而不是固定日期：交给 Tyme 的节气计算，不依赖它的法定节假日数据。 */
+private fun isQingming(date: Ymd): Boolean {
+    if (date.month != 4 || date.day !in 4..6) return false
+    val term = SolarDay.fromYmd(date.year, date.month, date.day).getTermDay()
+    return term.getDayIndex() == 0 && term.getSolarTerm().getName() == "清明"
 }
 
 internal fun LegalHolidays.HolidayName.stringRes(): Int =

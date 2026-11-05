@@ -15,10 +15,6 @@ val androidMinSdkVersion = 24
 val androidTargetSdkVersion = 37
 val javaLanguageVersion = 21
 val isPrBuild = providers.gradleProperty("IS_PR_BUILD").map(String::toBoolean).orElse(false).get()
-val signingProfile =
-    providers.gradleProperty("SIGNING_PROFILE").orElse(if (isPrBuild) "pr" else "release").get()
-
-require(signingProfile in setOf("release", "pr")) { "SIGNING_PROFILE must be release or pr" }
 
 ktfmt { kotlinLangStyle() }
 
@@ -39,7 +35,6 @@ android {
         targetSdk = androidTargetSdkVersion
         versionCode = appVersionCode
         versionName = appVersionName
-        buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
         externalNativeBuild {
             cmake {
                 arguments(
@@ -65,7 +60,7 @@ android {
     signingConfigs {
         val keystoreProperties =
             Properties().apply {
-                val keystorePropertiesFile = rootProject.file("$signingProfile.keystore.properties")
+                val keystorePropertiesFile = rootProject.file("release.keystore.properties")
                 if (keystorePropertiesFile.exists()) {
                     keystorePropertiesFile.inputStream().use { load(it) }
                 }
@@ -85,7 +80,7 @@ android {
                 }
         val signingStoreFile = signingProperties["KEYSTORE_FILE"]?.let { rootProject.file(it) }
         if (signingStoreFile?.isFile == true) {
-            create(signingProfile) {
+            create("release") {
                 storeFile = signingStoreFile
                 storePassword = signingProperties["KEYSTORE_PASSWORD"]
                 keyAlias = signingProperties["KEY_ALIAS"]
@@ -96,7 +91,7 @@ android {
 
     buildTypes {
         val selectedSigningConfig =
-            signingConfigs.findByName(signingProfile) ?: signingConfigs.getByName("debug")
+            signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         configureEach { signingConfig = selectedSigningConfig }
         debug {
             externalNativeBuild {
@@ -115,10 +110,7 @@ android {
         sourceCompatibility = androidJavaVersion
         targetCompatibility = androidJavaVersion
     }
-    buildFeatures {
-        compose = true
-        buildConfig = true
-    }
+    buildFeatures { compose = true }
     androidResources { generateLocaleConfig = true }
 }
 

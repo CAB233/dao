@@ -923,7 +923,7 @@ private fun GroupSettingsTab(
     }
 }
 
-/** 默认班组单选弹窗：按班组名称选择，默认班组的基准日期会用于日历推导。 */
+/** 默认班组单选弹窗：只按班组名称选择。 */
 @Composable
 internal fun DefaultGroupDialog(
     groups: ImmutableList<SchemeGroup>,
@@ -939,7 +939,6 @@ internal fun DefaultGroupDialog(
                     groups.map { group ->
                         DropdownItem(
                             text = group.name,
-                            summary = formatYmd(Ymd.fromEpochDay(group.anchorEpochDay)),
                             selected = group.id == currentId,
                             onClick = { onSelect(group.id) },
                         )

@@ -14,6 +14,7 @@ object HolidayPalette {
 object ShiftPalette {
     val statusCardLightBackground: Color = Color(0xFFDFFAE4)
     val statusCardDarkBackground: Color = Color(0xFF1A3825)
+    val statusCardIcon: Color = Color(0xFF36D167).copy(alpha = 0.8f)
 
     val presets: List<Int> =
         listOf(

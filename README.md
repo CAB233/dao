@@ -101,7 +101,6 @@
 - [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp) - 扫码导入使用的二维码识别库
 - [QR Code generator](https://github.com/nayuki/QR-Code-generator) - 分享二维码生成库
 - [Tyme](https://github.com/6tail/tyme4kt) - 农历与法定节假日数据
-- [Noto Emoji](https://github.com/googlefonts/noto-emoji) - 首页状态图标
 - [AboutLibraries](https://github.com/mikepenz/AboutLibraries) - 开源许可清单
 - AndroidX、Jetpack Compose、CameraX、WorkManager 等 Android 官方组件
 

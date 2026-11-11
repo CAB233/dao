@@ -1,7 +1,7 @@
 package win.zuoye.dao.ui.home
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,6 +25,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +46,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
@@ -69,6 +69,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.basic.Check
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.squircle.squircleBorder
@@ -548,21 +549,22 @@ private fun RosterStatusCard(
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(112.dp)) {
             Box(
-                modifier = Modifier.fillMaxSize().offset(x = 27.dp, y = 29.dp),
+                modifier = Modifier.fillMaxSize().offset(x = 18.dp, y = 22.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Image(
-                    painter =
-                        painterResource(
-                            if (status == RosterStatus.ON_SHIFT) {
-                                R.drawable.noto_emoji_desert_island
-                            } else {
-                                R.drawable.noto_emoji_pig
-                            }
-                        ),
-                    contentDescription = null,
-                    modifier = Modifier.size(112.dp),
-                )
+                Box(
+                    modifier =
+                        Modifier.size(100.dp)
+                            .border(10.dp, ShiftPalette.statusCardIcon, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Basic.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = ShiftPalette.statusCardIcon,
+                    )
+                }
             }
 
             Column(modifier = Modifier.padding(start = 16.dp, top = 14.dp)) {

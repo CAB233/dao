@@ -21,12 +21,12 @@ internal data class LunarStrings(
 
 internal fun lunarDate(date: Ymd): LunarDate {
     val lunar = SolarDay.fromYmd(date.year, date.month, date.day).getLunarDay()
-    val lunarMonth = lunar.getLunarMonth()
+    val lunarMonth = lunar.lunarMonth
     return LunarDate(
         month = kotlin.math.abs(lunar.month),
         day = lunar.day,
         isLeapMonth = lunar.month < 0,
-        daysInMonth = lunarMonth.getDayCount(),
+        daysInMonth = lunarMonth.dayCount,
     )
 }
 
@@ -102,7 +102,7 @@ private fun solarFestivalRes(date: Ymd): Int? =
 private fun isQingming(date: Ymd): Boolean {
     if (date.month != 4 || date.day !in 4..6) return false
     val term = SolarDay.fromYmd(date.year, date.month, date.day).getTermDay()
-    return term.getDayIndex() == 0 && term.getSolarTerm().getName() == "清明"
+    return term.dayIndex == 0 && term.getSolarTerm().getName() == "清明"
 }
 
 internal fun LegalHolidays.HolidayName.stringRes(): Int =

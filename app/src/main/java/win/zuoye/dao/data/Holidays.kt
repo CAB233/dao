@@ -32,8 +32,8 @@ object LegalHolidays {
         val name = rawName.toHolidayName() ?: return null
         return HolidayDay(
             name = name,
-            isMakeupWorkday = holiday.isWork(),
-            isNameDay = !holiday.isWork() && isHolidayNameDay(solar, rawName),
+            isMakeupWorkday = holiday.work,
+            isNameDay = !holiday.work && isHolidayNameDay(solar, rawName),
         )
     }
 
@@ -42,9 +42,7 @@ object LegalHolidays {
             "元旦" -> solar.month == 1 && solar.day == 1
             "春节" -> solar.getLunarDay().let { it.month == 1 && it.day == 1 }
             "清明节" ->
-                solar.getTermDay().let {
-                    it.getDayIndex() == 0 && it.getSolarTerm().getName() == "清明"
-                }
+                solar.getTermDay().let { it.dayIndex == 0 && it.getSolarTerm().getName() == "清明" }
             "劳动节" -> solar.month == 5 && solar.day == 1
             "端午节" -> solar.getLunarDay().let { it.month == 5 && it.day == 5 }
             "中秋节",

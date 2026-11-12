@@ -58,13 +58,30 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
 import win.zuoye.dao.ui.components.Chevron
+import win.zuoye.dao.update.UpdateInfo
 
 /** 关于页：大号应用标识与版本信息置于页面头部，下方是关于入口卡片。 开源许可由 AboutLibraries 在构建时根据实际依赖自动生成。 */
 @Composable
-fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
+fun AboutScreen(
+    onBack: () -> Unit,
+    onOpenLicenses: () -> Unit,
+    updateInfo: UpdateInfo?,
+    updateCheckInProgress: Boolean,
+    updateChecked: Boolean,
+    onCheckForUpdate: () -> Unit,
+) {
     val context = LocalContext.current
     val app = remember(context) { context.loadAppInfo() }
-    AboutHomeContent(app = app, context = context, onBack = onBack, onOpenLicenses = onOpenLicenses)
+    AboutHomeContent(
+        app = app,
+        context = context,
+        onBack = onBack,
+        onOpenLicenses = onOpenLicenses,
+        updateInfo = updateInfo,
+        updateCheckInProgress = updateCheckInProgress,
+        updateChecked = updateChecked,
+        onCheckForUpdate = onCheckForUpdate,
+    )
 }
 
 @Composable
@@ -73,6 +90,10 @@ private fun AboutHomeContent(
     context: Context,
     onBack: () -> Unit,
     onOpenLicenses: () -> Unit,
+    updateInfo: UpdateInfo?,
+    updateCheckInProgress: Boolean,
+    updateChecked: Boolean,
+    onCheckForUpdate: () -> Unit,
 ) {
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
@@ -119,6 +140,23 @@ private fun AboutHomeContent(
                     Card(
                         Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
                     ) {
+                        AboutEntry(
+                            title = stringResource(R.string.about_check_update),
+                            summary =
+                                when {
+                                    updateCheckInProgress ->
+                                        stringResource(R.string.about_check_update_checking)
+                                    updateInfo != null ->
+                                        stringResource(
+                                            R.string.about_check_update_available,
+                                            updateInfo.versionName,
+                                        )
+                                    updateChecked ->
+                                        stringResource(R.string.about_check_update_latest)
+                                    else -> stringResource(R.string.about_check_update_summary)
+                                },
+                            onClick = onCheckForUpdate,
+                        )
                         AboutEntry(
                             title = stringResource(R.string.about_source),
                             summary = stringResource(R.string.about_source_summary),

@@ -373,6 +373,10 @@ class MainActivity : ComponentActivity() {
                                             if (AppRoute.Licenses !in navBackStack)
                                                 navBackStack.add(AppRoute.Licenses)
                                         },
+                                        updateInfo = uiState.updateInfo,
+                                        updateCheckInProgress = uiState.updateCheckInProgress,
+                                        updateChecked = uiState.updateChecked,
+                                        onCheckForUpdate = mainViewModel::checkForUpdateNow,
                                     )
                                 }
                                 entry<AppRoute.Licenses> {

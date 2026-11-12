@@ -300,6 +300,11 @@
   <string name="share_clip_label">Shift plan configuration</string>
   <string name="share_text_header">[%1$s] Shift plan</string>
   <string name="share_chooser_title">Share shift plan</string>
+  <string name="about_check_update">Check for updates</string>
+  <string name="about_check_update_summary">Look for a new version on GitHub or the mirror</string>
+  <string name="about_check_update_checking">Checking…</string>
+  <string name="about_check_update_latest">You are up to date</string>
+  <string name="about_check_update_available">Version v%1$s is available</string>
   <string name="about_source">View source code</string>
   <string name="about_source_summary">View the project source on GitHub</string>
   <string name="about_licenses">Open-source licenses</string>

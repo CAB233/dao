@@ -42,6 +42,8 @@ data class MainUiState(
     val updateInfo: UpdateInfo? = null,
     val showUpdateDialog: Boolean = false,
     val showUpdateInSettings: Boolean = false,
+    val updateCheckInProgress: Boolean = false,
+    val updateChecked: Boolean = false,
 )
 
 sealed interface MainEvent {
@@ -90,12 +92,28 @@ class MainViewModel(
                     updateInfo = update,
                     showUpdateDialog = update != null,
                     showUpdateInSettings = false,
+                    updateChecked = true,
                 )
             }
         } catch (error: CancellationException) {
             throw error
         } catch (_: Throwable) {
+            _uiState.update { it.copy(updateChecked = true) }
             eventChannel.send(MainEvent.UpdateCheckFailed)
+        }
+    }
+
+    /** About 页的「手动检查更新」；检查进行中时忽略重复点击。 */
+    fun checkForUpdateNow() {
+        val document = _uiState.value.document ?: return
+        if (_uiState.value.updateCheckInProgress) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(updateCheckInProgress = true) }
+            try {
+                checkForUpdate(document)
+            } finally {
+                _uiState.update { it.copy(updateCheckInProgress = false) }
+            }
         }
     }
 

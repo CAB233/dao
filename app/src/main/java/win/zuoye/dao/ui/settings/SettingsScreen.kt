@@ -40,6 +40,7 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -110,28 +111,7 @@ fun SettingsScreen(
             ) {
                 // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
                 Spacer(Modifier.height(12.dp))
-                if (updateInfo != null) {
-                    Card(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
-                    ) {
-                        BasicComponent(
-                            title = stringResource(R.string.update_available_title),
-                            summary =
-                                stringResource(
-                                    R.string.settings_update_available_summary,
-                                    updateInfo.versionName,
-                                ),
-                            startAction = { SettingsIcon(Icons.Rounded.Update) },
-                            endActions = {
-                                TextButton(
-                                    text = stringResource(R.string.action_download),
-                                    onClick = onDownloadUpdate,
-                                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                                )
-                            },
-                        )
-                    }
-                }
+                SmallTitle(text = stringResource(R.string.settings_section_appearance))
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                     OverlayDropdownPreference(
                         title = stringResource(R.string.settings_theme_mode),
@@ -165,6 +145,29 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+                SmallTitle(text = stringResource(R.string.settings_section_update))
+                if (updateInfo != null) {
+                    Card(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
+                    ) {
+                        BasicComponent(
+                            title = stringResource(R.string.update_available_title),
+                            summary =
+                                stringResource(
+                                    R.string.settings_update_available_summary,
+                                    updateInfo.versionName,
+                                ),
+                            startAction = { SettingsIcon(Icons.Rounded.Update) },
+                            endActions = {
+                                TextButton(
+                                    text = stringResource(R.string.action_download),
+                                    onClick = onDownloadUpdate,
+                                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                                )
+                            },
+                        )
+                    }
+                }
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                     BasicComponent(
                         title = stringResource(R.string.settings_check_updates),
@@ -191,6 +194,7 @@ fun SettingsScreen(
                     )
                 }
 
+                SmallTitle(text = stringResource(R.string.settings_section_other))
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                     BasicComponent(
                         title = stringResource(R.string.settings_about),

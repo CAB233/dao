@@ -26,6 +26,10 @@
   <string name="nav_home">主页</string>
   <string name="nav_config">配置</string>
   <string name="nav_settings">设置</string>
+  <string name="settings_section_appearance">个性化</string>
+  <string name="settings_section_update">更新</string>
+  <string name="settings_section_other">其他</string>
+  <string name="about_title">关于</string>
   <string name="settings_theme_mode">主题模式</string>
   <string name="settings_theme_mode_summary">选择应用的浅色或深色外观</string>
   <string-array name="theme_mode_options">

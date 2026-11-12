@@ -247,7 +247,7 @@ private fun AboutHomeContent(
                             noiseCoefficient = 0.05f,
                         )
                     } ?: Modifier,
-                title = "",
+                title = stringResource(R.string.about_title),
                 color = Color.Transparent,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

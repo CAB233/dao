@@ -558,7 +558,7 @@ private fun RosterStatusCard(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Box(
-                modifier = Modifier.matchParentSize().offset(x = 50.dp, y = 38.dp),
+                modifier = Modifier.matchParentSize().offset(x = 52.dp, y = 32.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
                 Icon(

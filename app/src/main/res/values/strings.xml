@@ -293,7 +293,7 @@
   <string name="share_clip_label">倒班方案配置</string>
   <string name="share_text_header">【%1$s】排班方案</string>
   <string name="share_chooser_title">分享排班方案</string>
-  <string name="about_check_update">手动检查更新</string>
+  <string name="about_check_update">获取更新</string>
   <string name="about_check_update_summary">从 GitHub 或镜像源获取最新版本</string>
   <string name="about_check_update_checking">正在检查…</string>
   <string name="about_check_update_latest">已是最新版本</string>

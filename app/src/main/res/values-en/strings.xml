@@ -239,6 +239,7 @@
   <string name="share_plan_description">Share shift plan</string>
   <string name="today_short">Today</string>
   <string name="month_title">%1$d</string>
+  <string name="month_title_year">%1$d/%2$d</string>
   <string name="today_schedule">Today’s schedule</string>
   <string name="no_plan">No shift plan</string>
   <string name="no_group">No group</string>

@@ -212,6 +212,7 @@ fun HomeScreen(
                     currentMinute = currentMinute,
                     onOpenPlan = onOpenPlan,
                     onDefaultGroupChange = onDefaultGroupChange,
+                    viewYear = viewYear,
                     viewMonth = viewMonth,
                     pagerState = pagerState,
                     roster = roster,
@@ -274,6 +275,7 @@ private fun HomeCalendarPane(
     currentMinute: Int,
     onOpenPlan: () -> Unit,
     onDefaultGroupChange: (Long, Long) -> Unit,
+    viewYear: Int,
     viewMonth: Int,
     pagerState: PagerState,
     roster: Roster,
@@ -297,7 +299,12 @@ private fun HomeCalendarPane(
             onDefaultGroupChange = onDefaultGroupChange,
         )
         Text(
-            stringResource(R.string.month_title, viewMonth),
+            text =
+                if (viewYear == today.year) {
+                    stringResource(R.string.month_title, viewMonth)
+                } else {
+                    stringResource(R.string.month_title_year, viewYear, viewMonth)
+                },
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),

@@ -10,14 +10,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Autorenew
+import androidx.compose.material.icons.rounded.CalendarViewWeek
+import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -28,11 +38,13 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import win.zuoye.dao.R
 import win.zuoye.dao.data.CalendarViewMode
 import win.zuoye.dao.data.PlanDocument
@@ -41,6 +53,16 @@ import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.ui.about.appVersionName
 import win.zuoye.dao.ui.components.Chevron
 import win.zuoye.dao.update.UpdateInfo
+
+@Composable
+private fun SettingsIcon(imageVector: ImageVector) {
+    Icon(
+        imageVector = imageVector,
+        contentDescription = null,
+        modifier = Modifier.padding(end = 6.dp).size(24.dp),
+        tint = MiuixTheme.colorScheme.onBackground,
+    )
+}
 
 /** 设置：外观、更新与关于。 */
 @Composable
@@ -99,6 +121,7 @@ fun SettingsScreen(
                                     R.string.settings_update_available_summary,
                                     updateInfo.versionName,
                                 ),
+                            startAction = { SettingsIcon(Icons.Rounded.Update) },
                             endActions = {
                                 TextButton(
                                     text = stringResource(R.string.action_download),
@@ -113,6 +136,7 @@ fun SettingsScreen(
                     OverlayDropdownPreference(
                         title = stringResource(R.string.settings_theme_mode),
                         summary = stringResource(R.string.settings_theme_mode_summary),
+                        startAction = { SettingsIcon(Icons.Rounded.Palette) },
                         items = themeModeOptions.toList(),
                         selectedIndex = themeModes.indexOf(doc.themeMode),
                         onSelectedIndexChange = { index ->
@@ -123,6 +147,7 @@ fun SettingsScreen(
                     OverlayDropdownPreference(
                         title = stringResource(R.string.settings_week_start),
                         summary = stringResource(R.string.settings_week_start_summary),
+                        startAction = { SettingsIcon(Icons.Rounded.CalendarViewWeek) },
                         items = weekdays.toList(),
                         selectedIndex = weekStartDay,
                         onSelectedIndexChange = onWeekStartDayChange,
@@ -131,6 +156,7 @@ fun SettingsScreen(
                     OverlayDropdownPreference(
                         title = stringResource(R.string.settings_calendar_view),
                         summary = stringResource(R.string.settings_calendar_view_summary),
+                        startAction = { SettingsIcon(Icons.Rounded.Celebration) },
                         items = calendarViewOptions.toList(),
                         selectedIndex = calendarViewModes.indexOf(doc.calendarViewMode),
                         onSelectedIndexChange = { index ->
@@ -143,6 +169,7 @@ fun SettingsScreen(
                     BasicComponent(
                         title = stringResource(R.string.settings_check_updates),
                         summary = stringResource(R.string.settings_check_updates_summary),
+                        startAction = { SettingsIcon(Icons.Rounded.Autorenew) },
                         endActions = {
                             Switch(
                                 checked = doc.checkUpdatesOnLaunch,
@@ -154,6 +181,7 @@ fun SettingsScreen(
                     OverlayDropdownPreference(
                         title = stringResource(R.string.settings_update_channel),
                         summary = stringResource(R.string.settings_update_channel_summary),
+                        startAction = { SettingsIcon(Icons.Rounded.Cloud) },
                         items = updateChannelOptions.toList(),
                         selectedIndex = updateChannels.indexOf(doc.updateChannel),
                         onSelectedIndexChange = { index ->
@@ -167,6 +195,7 @@ fun SettingsScreen(
                     BasicComponent(
                         title = stringResource(R.string.settings_about),
                         summary = stringResource(R.string.version_text, versionName),
+                        startAction = { SettingsIcon(Icons.Rounded.Info) },
                         endActions = { Chevron() },
                         onClick = onOpenAbout,
                     )

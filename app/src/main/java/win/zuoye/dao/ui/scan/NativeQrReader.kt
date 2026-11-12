@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 @Keep
 internal object NativeQrReader {
     init {
-        System.loadLibrary("dao_qr")
+        System.loadLibrary("zxingcpp_android")
     }
 
     fun read(image: ImageProxy): String? {

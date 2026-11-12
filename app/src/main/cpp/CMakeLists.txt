@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(DaoQr LANGUAGES C CXX)
+project(ZXingCppAndroid LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,9 +46,9 @@ foreach(source IN LISTS zxing_sources)
     endif()
 endforeach()
 
-add_library(dao_qr SHARED QrReader.cpp)
-target_link_libraries(dao_qr PRIVATE ZXing::ZXing)
-foreach(target ZXing dao_qr)
+add_library(zxingcpp_android SHARED QrReader.cpp)
+target_link_libraries(zxingcpp_android PRIVATE ZXing::ZXing)
+foreach(target ZXing zxingcpp_android)
     target_compile_options(${target} PRIVATE
         -ffunction-sections -fdata-sections
         "$<$<NOT:$<CONFIG:Debug>>:-Oz>"
@@ -59,6 +59,6 @@ foreach(target ZXing dao_qr)
         INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL ON
     )
 endforeach()
-target_link_options(dao_qr PRIVATE
+target_link_options(zxingcpp_android PRIVATE
     -Wl,--gc-sections -Wl,--exclude-libs,ALL -Wl,-z,max-page-size=16384
 )

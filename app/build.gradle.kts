@@ -41,7 +41,7 @@ android {
                     "-DANDROID_STL=c++_static",
                     "-DDAO_ZXING_VERSION=${libs.versions.zxingCpp.get()}",
                 )
-                targets("dao_qr")
+                targets("zxingcpp_android")
             }
         }
     }

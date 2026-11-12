@@ -367,6 +367,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 entry<AppRoute.About> {
+                                    LaunchedEffect(Unit) { mainViewModel.suppressUpdateDialog() }
                                     AboutScreen(
                                         onBack = ::popToMain,
                                         onOpenLicenses = {

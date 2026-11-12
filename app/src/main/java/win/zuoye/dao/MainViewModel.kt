@@ -84,13 +84,13 @@ class MainViewModel(
         }
     }
 
-    private suspend fun checkForUpdate(document: PlanDocument) {
+    private suspend fun checkForUpdate(document: PlanDocument, showDialog: Boolean = true) {
         try {
             val update = updateChecker.checkForUpdate(currentVersionName, document.updateChannel)
             _uiState.update {
                 it.copy(
                     updateInfo = update,
-                    showUpdateDialog = update != null,
+                    showUpdateDialog = showDialog && update != null,
                     showUpdateInSettings = false,
                     updateChecked = true,
                 )
@@ -110,10 +110,17 @@ class MainViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(updateCheckInProgress = true) }
             try {
-                checkForUpdate(document)
+                checkForUpdate(document, showDialog = false)
             } finally {
                 _uiState.update { it.copy(updateCheckInProgress = false) }
             }
+        }
+    }
+
+    /** 关于页用 summary 展示更新，进入时把待弹的更新弹窗收掉。 */
+    fun suppressUpdateDialog() {
+        if (_uiState.value.showUpdateDialog) {
+            _uiState.update { it.copy(showUpdateDialog = false) }
         }
     }
 

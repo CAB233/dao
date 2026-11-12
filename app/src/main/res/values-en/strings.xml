@@ -21,7 +21,8 @@
   <string name="empty_plans">No shift plans yet. Tap the button at the bottom right to add one</string>
   <string name="action_close_selection">Cancel selection</string>
   <string name="status_not_set">Not set</string>
-  <string name="status_not_selected">Not selected</string>
+  <string name="status_no_config">No plan configured</string>
+  <string name="status_no_config_hint">Add a plan first</string>
   <string name="nav_home">Home</string>
   <string name="nav_config">Configuration</string>
   <string name="nav_settings">Settings</string>
@@ -208,6 +209,7 @@
   <string name="cycle_days">Cycle length</string>
   <string name="cycle_days_label">Cycle length (1–99)</string>
   <string name="delete_plan_title">Delete “%1$s”?</string>
+  <string name="cycle_progress">Progress: %1$d / %2$d days</string>
   <plurals name="days_count">
     <item quantity="one">%1$d day</item>
     <item quantity="other">%1$d days</item>
@@ -244,8 +246,7 @@
   <string name="unassigned_shift">Unassigned shift</string>
   <string name="on_rest">Resting</string>
   <string name="on_shift">On shift</string>
-  <string name="off_work">Off work</string>
-  <string name="plan_label">Plan: %1$s</string>
+  <string name="off_work">Off shift</string>
   <string name="holiday_work_badge">Work</string>
   <string name="holiday_rest_badge">Off</string>
   <string name="date_schedule">%1$d-%2$02d-%3$02d · %4$s</string>

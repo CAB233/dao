@@ -1,7 +1,6 @@
 package win.zuoye.dao.ui.home
 
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,8 +24,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircleOutline
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -69,7 +70,6 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.Check
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.squircle.squircleBorder
@@ -520,17 +520,19 @@ private fun RosterStatusCard(
             else -> RosterStatus.OFF_WORK
         }
     val currentGroupName = activeScheme?.defaultGroup()?.name
-    // 使用 miuix 当前实际生效的配色；这样强制深/浅色与“跟随系统”都会同步更新。
+    val cycleDay = roster.cycleDay(today.epochDay)
+    val hasActiveScheme = activeScheme != null
+    val isDarkCard = MiuixTheme.colorScheme.background.luminance() < 0.5f
     val cardColor =
-        if (MiuixTheme.colorScheme.background.luminance() < 0.5f) {
-            ShiftPalette.statusCardDarkBackground
-        } else {
-            ShiftPalette.statusCardLightBackground
+        when {
+            !hasActiveScheme && isDarkCard -> ShiftPalette.statusCardInactiveDarkBackground
+            !hasActiveScheme -> ShiftPalette.statusCardInactiveLightBackground
+            isDarkCard -> ShiftPalette.statusCardDarkBackground
+            else -> ShiftPalette.statusCardLightBackground
         }
-
     Card(
         modifier =
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(top = 4.dp, bottom = 12.dp),
+            Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 12.dp),
         colors = CardDefaults.defaultColors(color = cardColor),
         // 按压位置决定倾斜方向：左侧与右侧按压会产生不同的反馈。
         pressFeedbackType = PressFeedbackType.Tilt,
@@ -547,34 +549,38 @@ private fun RosterStatusCard(
                 null
             },
     ) {
-        Box(modifier = Modifier.fillMaxWidth().height(112.dp)) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             Box(
-                modifier = Modifier.fillMaxSize().offset(x = 18.dp, y = 22.dp),
+                modifier = Modifier.matchParentSize().offset(x = 50.dp, y = 38.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Box(
-                    modifier =
-                        Modifier.size(100.dp)
-                            .border(10.dp, ShiftPalette.statusCardIcon, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Basic.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = ShiftPalette.statusCardIcon,
-                    )
-                }
+                Icon(
+                    imageVector =
+                        if (hasActiveScheme) {
+                            Icons.Rounded.CheckCircleOutline
+                        } else {
+                            Icons.Rounded.ErrorOutline
+                        },
+                    contentDescription = null,
+                    modifier = Modifier.size(170.dp),
+                    tint =
+                        if (hasActiveScheme) {
+                            ShiftPalette.statusCardIcon
+                        } else {
+                            ShiftPalette.statusCardIconInactive
+                        },
+                )
             }
 
-            Column(modifier = Modifier.padding(start = 16.dp, top = 14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text(
                     text =
                         stringResource(
-                            when (status) {
-                                RosterStatus.ON_SHIFT -> R.string.on_shift
-                                RosterStatus.RESTING -> R.string.on_rest
-                                RosterStatus.OFF_WORK -> R.string.off_work
+                            when {
+                                !hasActiveScheme -> R.string.status_no_config
+                                status == RosterStatus.ON_SHIFT -> R.string.on_shift
+                                status == RosterStatus.RESTING -> R.string.on_rest
+                                else -> R.string.off_work
                             }
                         ),
                     fontSize = 22.sp,
@@ -583,21 +589,18 @@ private fun RosterStatusCard(
                 Spacer(Modifier.height(1.dp))
                 Text(
                     text =
-                        stringResource(
-                            R.string.plan_label,
-                            activeScheme?.name ?: stringResource(R.string.status_not_selected),
-                        ),
+                        cycleDay?.let {
+                            stringResource(R.string.cycle_progress, it, roster.cycleLength)
+                        } ?: stringResource(R.string.status_no_config_hint),
                     fontSize = 15.sp,
                 )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = currentGroupName ?: stringResource(R.string.no_group),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                )
             }
-
-            Text(
-                text = currentGroupName ?: stringResource(R.string.no_group),
-                modifier =
-                    Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 10.dp),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-            )
         }
     }
 

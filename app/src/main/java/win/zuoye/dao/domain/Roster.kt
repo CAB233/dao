@@ -61,6 +61,17 @@ private constructor(
         return ResolvedShift(template, isOverride = false)
     }
 
+    /** 当天在本周期中的序号（1 起）；没有周期或默认班组锚点时为 null。 */
+    fun cycleDay(epochDay: Long): Int? {
+        val anchor = defaultAnchorEpochDay ?: return null
+        if (cycleDays <= 0) return null
+        return Math.floorMod(epochDay - anchor, cycleDays.toLong()).toInt() + 1
+    }
+
+    /** 周期总天数；没有激活方案时为 0。 */
+    val cycleLength: Int
+        get() = cycleDays
+
     companion object {
         fun of(doc: PlanDocument): Roster {
             val scheme = doc.activeScheme()

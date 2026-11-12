@@ -73,6 +73,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
@@ -247,7 +248,7 @@ private fun AboutHomeContent(
                             noiseCoefficient = 0.05f,
                         )
                     } ?: Modifier,
-                title = stringResource(R.string.about_title),
+                title = "",
                 color = Color.Transparent,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -283,6 +284,8 @@ private fun AboutHomeContent(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     )
                 }
+
+                item { SmallTitle(text = stringResource(R.string.about_title)) }
 
                 item {
                     Card(

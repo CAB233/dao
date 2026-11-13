@@ -28,6 +28,7 @@ jobs:
       contents: read
     outputs:
       on_main: ${{ steps.tag.outputs.on_main }}
+      version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Checkout tag
         uses: actions/checkout@v6
@@ -48,6 +49,7 @@ jobs:
             echo "Tag $tag does not match app version v$version_name." >&2
             exit 1
           fi
+          echo "version=$version_name" >> "$GITHUB_OUTPUT"
 
           git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
           if git merge-base --is-ancestor HEAD refs/remotes/origin/main; then
@@ -139,13 +141,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v8
         with:
-          name: apk
-          path: dist
-
-      - name: Collect APKs
-        run: |
-          find dist -name "Dao-*.apk" -exec cp {} . \;
-          ls -l Dao-*.apk
+          name: Dao-${{ needs.check.outputs.version }}.apk
 
       - name: Attest release APK
         uses: actions/attest@v4

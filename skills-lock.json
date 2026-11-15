@@ -1,23 +1,23 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "git-commit": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
       "skillPath": "skills/git-commit/SKILL.md",
-      "computedHash": "2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21"
+      "computedHash": "90716f49501831c6c0679509b295495021eae83923d6a39035ce7c2d9cd2e8f2"
     },
-    "miuix": {
-      "source": "limczhh/miuix-skill",
+    "miuix-ui": {
+      "source": "cyf112233/miuix-agent-skill",
       "sourceType": "github",
       "skillPath": "SKILL.md",
-      "computedHash": "c481f30d5f6b83dfd3e5657f52d9cdb2e3cf05d375f89fc52ae4df9db1ecc9bb"
+      "computedHash": "d65b351626dc38cc493454f572fed61e0f405f6f1bdd8eafb0ae5b37fa8e5034"
     },
     "r8-analyzer": {
       "source": "android/skills",
       "sourceType": "github",
       "skillPath": "performance/r8-analyzer/SKILL.md",
-      "computedHash": "69fdd394fe2b5658833a10a711511ac0ae422dfbbf1d981ce08a7fa9bbcf54df"
+      "computedHash": "7139e6cfb74aca9174eedf11d04b203b6cb908031a3171485ce4ddceb2b73f95"
     }
   }
 }

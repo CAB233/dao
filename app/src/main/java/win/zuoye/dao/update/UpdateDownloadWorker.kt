@@ -60,6 +60,7 @@ class UpdateDownloadWorker(
         val version = inputData.getString(KEY_VERSION) ?: return Result.failure()
         val url = inputData.getString(KEY_URL) ?: return Result.failure()
         setForeground(downloadForegroundInfo(progress = null))
+        UpdateDownloadStore.running(progress = null)
         val update =
             UpdateInfo(
                 versionName = version,
@@ -77,17 +78,21 @@ class UpdateDownloadWorker(
                         lastReported = value
                         setProgress(workDataOf(KEY_PROGRESS to value))
                         setForeground(downloadForegroundInfo(progress))
+                        UpdateDownloadStore.running(progress)
                     }
                 }
+            UpdateDownloadStore.record(applicationContext, apk)
             showDownloadComplete(version, apk)
             Result.success(workDataOf(KEY_OUTPUT_PATH to apk.absolutePath))
         } catch (error: CancellationException) {
             throw error
         } catch (_: Throwable) {
             if (runAttemptCount < 2) {
+                UpdateDownloadStore.failed()
                 Result.retry()
             } else {
                 showDownloadFailed()
+                UpdateDownloadStore.failed()
                 Result.failure()
             }
         }

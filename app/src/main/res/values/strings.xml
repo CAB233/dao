@@ -69,7 +69,8 @@
   <string name="update_notification_complete_title">更新已下载</string>
   <string name="update_notification_complete">版本 v%1$s 准备就绪，点击以安装</string>
   <string name="update_notification_failed_title">更新下载失败</string>
-  <string name="update_notification_permission_required">需要允许通知权限，才能在后台显示更新下载进度</string>
+  <string name="update_notification_permission_required">后台下载完成后打开应用即可安装更新</string>
+  <string name="update_install_action">点击安装</string>
   <string name="update_install_confirm_title">安装更新</string>
   <string name="update_install_confirm_message">安装包已下载完成，是否现在安装？</string>
   <string name="update_check_failed">检查更新失败，请检查网络或更换更新渠道</string>

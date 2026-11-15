@@ -90,6 +90,8 @@ import win.zuoye.dao.ui.theme.AppTheme
 import win.zuoye.dao.ui.update.UpdateDialog
 import win.zuoye.dao.ui.update.UpdateInstallDialog
 import win.zuoye.dao.update.AppUpdater
+import win.zuoye.dao.update.UpdateDownloadState
+import win.zuoye.dao.update.UpdateDownloadStore
 import win.zuoye.dao.update.UpdateDownloadWorker
 import win.zuoye.dao.update.UpdateInfo
 
@@ -128,6 +130,7 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         handleUpdateInstallIntent(intent)
+        UpdateDownloadStore.restore(applicationContext)
         setContent {
             val mainViewModel: MainViewModel =
                 viewModel(factory = MainViewModel.factory(applicationContext))
@@ -173,7 +176,6 @@ class MainActivity : ComponentActivity() {
                             mainViewModel.acknowledgeCorruptionRecovery()
                         }
                     }
-                    // 底栏标签页：单一来源（可跨进程恢复），二级页面单独记
                     var baseTab by rememberSaveable { mutableStateOf(MainTab.Home) }
                     val navBackStack = rememberNavBackStack<AppRoute>(AppRoute.Main)
                     var pendingPermissionInstall by remember { mutableStateOf<File?>(null) }
@@ -183,6 +185,18 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(requestedInstallApk) {
                         if (requestedInstallApk != null) shownInstallApk = requestedInstallApk
+                    }
+                    // 没有通知权限时完成通知不可见：下次打开应用补一个安装提示。
+                    // 还没拿到「安装未知应用」权限时不主动弹，避免每次都拦路；设置页里有入口。
+                    LaunchedEffect(Unit) {
+                        val canInstall =
+                            Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                                activityContext.packageManager.canRequestPackageInstalls()
+                        if (canInstall) {
+                            UpdateDownloadStore.pending(activityContext)?.let {
+                                installRequestState.value = it
+                            }
+                        }
                     }
 
                     fun navigateTo(route: AppRoute) {
@@ -197,6 +211,7 @@ class MainActivity : ComponentActivity() {
 
                     fun openInstaller(apk: File) {
                         runCatching { AppUpdater.installApk(activityContext, apk) }
+                            .onSuccess { UpdateDownloadStore.clear(activityContext) }
                             .onFailure {
                                 Toast.makeText(
                                         activityContext,
@@ -235,6 +250,12 @@ class MainActivity : ComponentActivity() {
                                 !activityContext.packageManager.canRequestPackageInstalls()
                         ) {
                             pendingPermissionInstall = apk
+                            Toast.makeText(
+                                    activityContext,
+                                    R.string.update_install_permission_required,
+                                    Toast.LENGTH_LONG,
+                                )
+                                .show()
                             runCatching {
                                 unknownSourcesLauncher.launch(
                                     Intent(
@@ -261,9 +282,8 @@ class MainActivity : ComponentActivity() {
                         rememberLauncherForActivityResult(
                             ActivityResultContracts.RequestPermission()
                         ) { granted ->
-                            if (granted) {
-                                mainViewModel.startUpdateDownload()
-                            } else {
+                            mainViewModel.startUpdateDownload()
+                            if (!granted) {
                                 Toast.makeText(
                                         activityContext,
                                         R.string.update_notification_permission_required,
@@ -364,6 +384,10 @@ class MainActivity : ComponentActivity() {
                                         showUpdateInSettings = uiState.showUpdateInSettings,
                                         onDismissUpdate = mainViewModel::dismissUpdate,
                                         onStartUpdate = ::startUpdateDownload,
+                                        download = uiState.download,
+                                        onInstallDownloaded = { path ->
+                                            installRequestState.value = File(path)
+                                        },
                                     )
                                 }
                                 entry<AppRoute.About> {
@@ -396,7 +420,10 @@ class MainActivity : ComponentActivity() {
                     }
                     UpdateInstallDialog(
                         show = requestedInstallApk != null,
-                        onDismiss = { installRequestState.value = null },
+                        onDismiss = {
+                            installRequestState.value = null
+                            UpdateDownloadStore.clear(activityContext)
+                        },
                         onInstall = {
                             val apk = shownInstallApk ?: return@UpdateInstallDialog
                             installRequestState.value = null
@@ -448,6 +475,8 @@ private fun MainTabs(
     showUpdateInSettings: Boolean,
     onDismissUpdate: () -> Unit,
     onStartUpdate: () -> Unit,
+    download: UpdateDownloadState,
+    onInstallDownloaded: (String) -> Unit,
 ) {
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(initialPage = current.ordinal) { tabs.size }
@@ -564,6 +593,8 @@ private fun MainTabs(
                                     SettingsScreen(
                                         doc = doc,
                                         updateInfo = updateInfo.takeIf { showUpdateInSettings },
+                                        download = download,
+                                        onInstallDownloaded = onInstallDownloaded,
                                         backEnabled = pagerState.settledPage == page,
                                         onBack = { onSelectTab(MainTab.Home) },
                                         onOpenAbout = onOpenAbout,

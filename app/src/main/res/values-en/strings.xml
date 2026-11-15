@@ -69,7 +69,8 @@
   <string name="update_notification_complete_title">Update downloaded</string>
   <string name="update_notification_complete">Version v%1$s is ready. Tap to install.</string>
   <string name="update_notification_failed_title">Update download failed</string>
-  <string name="update_notification_permission_required">Allow notifications to see update download progress in the background</string>
+  <string name="update_notification_permission_required">Allow notifications to see the download, or just reopen the app when it finishes to install</string>
+  <string name="update_install_action">Tap to install</string>
   <string name="update_install_confirm_title">Install update</string>
   <string name="update_install_confirm_message">The update has finished downloading. Install it now?</string>
   <string name="update_check_failed">Could not check for updates. Check your network or choose another channel.</string>

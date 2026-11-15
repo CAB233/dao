@@ -31,6 +31,8 @@ import win.zuoye.dao.domain.ImportResult
 import win.zuoye.dao.domain.importPlan
 import win.zuoye.dao.update.AppUpdater
 import win.zuoye.dao.update.UpdateChecker
+import win.zuoye.dao.update.UpdateDownloadState
+import win.zuoye.dao.update.UpdateDownloadStore
 import win.zuoye.dao.update.UpdateDownloads
 import win.zuoye.dao.update.UpdateInfo
 import win.zuoye.dao.update.WorkManagerUpdateDownloads
@@ -44,6 +46,7 @@ data class MainUiState(
     val showUpdateInSettings: Boolean = false,
     val updateCheckInProgress: Boolean = false,
     val updateChecked: Boolean = false,
+    val download: UpdateDownloadState = UpdateDownloadState.Idle,
 )
 
 sealed interface MainEvent {
@@ -80,6 +83,11 @@ class MainViewModel(
         viewModelScope.launch {
             planStore.corruptionRecovery.collect { backup ->
                 _uiState.update { it.copy(corruptionBackup = backup) }
+            }
+        }
+        viewModelScope.launch {
+            UpdateDownloadStore.state.collect { state ->
+                _uiState.update { it.copy(download = state) }
             }
         }
     }

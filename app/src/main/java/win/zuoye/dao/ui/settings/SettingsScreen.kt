@@ -18,8 +18,11 @@ import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CalendarViewWeek
 import androidx.compose.material.icons.rounded.Celebration
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.Downloading
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -55,6 +58,7 @@ import win.zuoye.dao.data.ThemeMode
 import win.zuoye.dao.data.UpdateChannel
 import win.zuoye.dao.ui.about.appVersionName
 import win.zuoye.dao.ui.components.Chevron
+import win.zuoye.dao.update.UpdateDownloadState
 import win.zuoye.dao.update.UpdateInfo
 
 @Composable
@@ -72,6 +76,8 @@ private fun SettingsIcon(imageVector: ImageVector) {
 fun SettingsScreen(
     doc: PlanDocument,
     updateInfo: UpdateInfo?,
+    download: UpdateDownloadState,
+    onInstallDownloaded: (String) -> Unit,
     onBack: () -> Unit,
     backEnabled: Boolean = true,
     onOpenAbout: () -> Unit,
@@ -164,6 +170,60 @@ fun SettingsScreen(
                 }
 
                 item { SmallTitle(text = stringResource(R.string.settings_section_update)) }
+                if (download !is UpdateDownloadState.Idle) {
+                    item {
+                        Card(
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .padding(bottom = 12.dp)
+                        ) {
+                            when (download) {
+                                is UpdateDownloadState.Running ->
+                                    BasicComponent(
+                                        title =
+                                            stringResource(
+                                                R.string.update_notification_downloading_title
+                                            ),
+                                        summary =
+                                            download.progress?.let {
+                                                stringResource(
+                                                    R.string
+                                                        .update_notification_downloading_progress,
+                                                    it,
+                                                )
+                                            }
+                                                ?: stringResource(
+                                                    R.string.update_notification_downloading
+                                                ),
+                                        startAction = { SettingsIcon(Icons.Rounded.Downloading) },
+                                    )
+                                is UpdateDownloadState.Succeeded ->
+                                    BasicComponent(
+                                        title =
+                                            stringResource(
+                                                R.string.update_notification_complete_title
+                                            ),
+                                        summary = stringResource(R.string.update_install_action),
+                                        startAction = { SettingsIcon(Icons.Rounded.DownloadDone) },
+                                        endActions = { Chevron() },
+                                        onClick = { onInstallDownloaded(download.apkPath) },
+                                    )
+                                UpdateDownloadState.Failed ->
+                                    BasicComponent(
+                                        title =
+                                            stringResource(
+                                                R.string.update_notification_failed_title
+                                            ),
+                                        summary = stringResource(R.string.update_download_failed),
+                                        startAction = { SettingsIcon(Icons.Rounded.Refresh) },
+                                        endActions = { Chevron() },
+                                        onClick = onDownloadUpdate,
+                                    )
+                                UpdateDownloadState.Idle -> {}
+                            }
+                        }
+                    }
+                }
                 if (updateInfo != null) {
                     item {
                         Card(

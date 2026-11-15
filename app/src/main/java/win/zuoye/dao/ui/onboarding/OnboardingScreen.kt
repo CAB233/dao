@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -485,7 +484,7 @@ private fun CreateMethodStep(
         Text(
             text = stringResource(R.string.create_method_prompt),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-            fontSize = 23.sp,
+            style = MiuixTheme.textStyles.title2,
             fontWeight = FontWeight.Normal,
             textAlign = TextAlign.Center,
         )
@@ -520,7 +519,7 @@ private fun CreateMethodStep(
                     Column(Modifier.weight(1f)) {
                         Text(
                             text = stringResource(method.titleRes),
-                            fontSize = 17.sp,
+                            style = MiuixTheme.textStyles.main,
                             fontWeight = FontWeight.SemiBold,
                             color =
                                 if (isSelected) {
@@ -532,7 +531,7 @@ private fun CreateMethodStep(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = stringResource(method.summaryRes),
-                            fontSize = 13.sp,
+                            style = MiuixTheme.textStyles.footnote1,
                             color =
                                 if (isSelected) {
                                     MiuixTheme.colorScheme.onPrimary
@@ -578,7 +577,7 @@ private fun StepIndicator(step: Step) {
                 steps.size,
                 stringResource(step.labelRes),
             ),
-            fontSize = 13.sp,
+            style = MiuixTheme.textStyles.footnote1,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
     }
@@ -622,7 +621,7 @@ internal fun TemplatesStep(
             if (templates.isEmpty()) {
                 Text(
                     stringResource(R.string.empty_shifts),
-                    fontSize = 13.sp,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
                 )
@@ -651,10 +650,10 @@ internal fun TemplatesStep(
                     )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(template.name, fontSize = 16.sp)
+                        Text(template.name, style = MiuixTheme.textStyles.body1)
                         Text(
                             template.localizedTimeRangeText(),
-                            fontSize = 12.sp,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
@@ -717,14 +716,14 @@ internal fun AssignmentRow(
     ) {
         Text(
             stringResource(R.string.cycle_day, day + 1),
-            fontSize = 15.sp,
+            style = MiuixTheme.textStyles.body2,
             color = MiuixTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.weight(1f))
         if (template == null) {
             Text(
                 stringResource(R.string.tap_to_select),
-                fontSize = 13.sp,
+                style = MiuixTheme.textStyles.footnote1,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         } else {
@@ -732,11 +731,11 @@ internal fun AssignmentRow(
                 Modifier.size(12.dp).background(ShiftPalette.color(template.colorArgb), CircleShape)
             )
             Spacer(Modifier.width(8.dp))
-            Text(template.name, fontSize = 14.sp)
+            Text(template.name, style = MiuixTheme.textStyles.body2)
             Spacer(Modifier.width(6.dp))
             Text(
                 template.localizedTimeRangeText(),
-                fontSize = 12.sp,
+                style = MiuixTheme.textStyles.footnote1,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
@@ -763,6 +762,7 @@ private fun CycleAssignStep(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         // 底部由外层按钮行占据，contentPadding 只留 top
         contentPadding = PaddingValues(top = 4.dp),
+        overscrollEffect = null,
     ) {
         item {
             TextField(
@@ -811,7 +811,7 @@ private fun AnchorPickerStep(
         }
         Text(
             stringResource(R.string.anchor_explanation),
-            fontSize = 13.sp,
+            style = MiuixTheme.textStyles.footnote1,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
@@ -836,7 +836,7 @@ internal fun TemplatePickDialog(
         ) {
             Text(
                 stringResource(R.string.select_shift_empty),
-                fontSize = 14.sp,
+                style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }

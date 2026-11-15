@@ -195,7 +195,7 @@ fun HomeScreen(
             ) {
                 Text(
                     stringResource(R.string.today_short),
-                    fontSize = 22.sp,
+                    style = MiuixTheme.textStyles.title3,
                     color = MiuixTheme.colorScheme.onPrimary,
                 )
             }
@@ -305,7 +305,7 @@ private fun HomeCalendarPane(
                 } else {
                     stringResource(R.string.month_title_year, viewYear, viewMonth)
                 },
-            fontSize = 30.sp,
+            style = MiuixTheme.textStyles.title1,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         )
@@ -396,7 +396,7 @@ private fun GroupsScheduleCard(
                             weekdays[date.weekdayIndex],
                         )
                     },
-                fontSize = 17.sp,
+                style = MiuixTheme.textStyles.main,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(12.dp))
@@ -406,7 +406,7 @@ private fun GroupsScheduleCard(
                         if (it.isMakeupWorkday) R.string.makeup_workday else R.string.legal_holiday,
                         stringResource(it.name.stringRes()),
                     ),
-                    fontSize = 13.sp,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -416,7 +416,7 @@ private fun GroupsScheduleCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     stringResource(R.string.shift_override),
-                    fontSize = 12.sp,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
@@ -436,7 +436,7 @@ private fun GroupScheduleRows(
     if (groups.isEmpty()) {
         Text(
             stringResource(if (scheme == null) R.string.no_plan else R.string.no_group),
-            fontSize = 14.sp,
+            style = MiuixTheme.textStyles.body2,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
         return
@@ -462,25 +462,25 @@ private fun GroupScheduleRows(
             Text(
                 group.name,
                 modifier = Modifier.weight(1f),
-                fontSize = 16.sp,
+                style = MiuixTheme.textStyles.body1,
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     template?.name ?: stringResource(R.string.no_schedule),
-                    fontSize = 15.sp,
+                    style = MiuixTheme.textStyles.body2,
                     fontWeight = FontWeight.Medium,
                 )
                 template?.let {
                     Text(
                         it.localizedTimeRangeText(),
-                        fontSize = 12.sp,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 }
                 if (template == null) {
                     Text(
                         stringResource(R.string.unassigned_shift),
-                        fontSize = 12.sp,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 }
@@ -590,7 +590,7 @@ private fun RosterStatusCard(
                                 else -> R.string.off_work
                             }
                         ),
-                    fontSize = 22.sp,
+                    style = MiuixTheme.textStyles.title3,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(1.dp))
@@ -599,12 +599,12 @@ private fun RosterStatusCard(
                         cycleDay?.let {
                             stringResource(R.string.cycle_progress, it, roster.cycleLength)
                         } ?: stringResource(R.string.status_no_config_hint),
-                    fontSize = 15.sp,
+                    style = MiuixTheme.textStyles.body2,
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = currentGroupName ?: stringResource(R.string.no_group),
-                    fontSize = 16.sp,
+                    style = MiuixTheme.textStyles.body1,
                     fontWeight = FontWeight.Medium,
                 )
             }
@@ -688,7 +688,7 @@ private fun MonthGrid(
                     text = weekdays[(weekStartDay + column) % weekdays.size],
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    fontSize = 13.sp,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = colorScheme.onSurfaceVariantSummary,
                 )
             }

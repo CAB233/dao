@@ -1,7 +1,6 @@
 package win.zuoye.dao.ui.settings
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -13,8 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CalendarViewWeek
@@ -28,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -39,6 +38,7 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
@@ -46,6 +46,8 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import win.zuoye.dao.R
 import win.zuoye.dao.data.CalendarViewMode
 import win.zuoye.dao.data.PlanDocument
@@ -97,114 +99,143 @@ fun SettingsScreen(
     val updateChannelOptions = stringArrayResource(R.array.update_channel_options)
     val updateChannels = UpdateChannel.entries
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
-        topBar = { TopAppBar(title = stringResource(R.string.nav_settings)) },
+        topBar = {
+            TopAppBar(
+                title = stringResource(R.string.nav_settings),
+                scrollBehavior = scrollBehavior,
+            )
+        },
         contentWindowInsets =
             WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            Column(
-                Modifier.widthIn(max = 720.dp)
-                    .fillMaxSize()
-                    .align(Alignment.TopCenter)
-                    .verticalScroll(rememberScrollState())
+            LazyColumn(
+                modifier =
+                    Modifier.widthIn(max = 720.dp)
+                        .fillMaxSize()
+                        .align(Alignment.TopCenter)
+                        .overScrollVertical()
+                        .scrollEndHaptic()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                overscrollEffect = null,
             ) {
-                // 设置页行数少，按规范仍可用 Column + verticalScroll（不拆行、不改 LazyColumn）
-                Spacer(Modifier.height(12.dp))
-                SmallTitle(text = stringResource(R.string.settings_section_appearance))
-                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                    OverlayDropdownPreference(
-                        title = stringResource(R.string.settings_theme_mode),
-                        summary = stringResource(R.string.settings_theme_mode_summary),
-                        startAction = { SettingsIcon(Icons.Rounded.Palette) },
-                        items = themeModeOptions.toList(),
-                        selectedIndex = themeModes.indexOf(doc.themeMode),
-                        onSelectedIndexChange = { index ->
-                            themeModes.getOrNull(index)?.let(onThemeModeChange)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OverlayDropdownPreference(
-                        title = stringResource(R.string.settings_week_start),
-                        summary = stringResource(R.string.settings_week_start_summary),
-                        startAction = { SettingsIcon(Icons.Rounded.CalendarViewWeek) },
-                        items = weekdays.toList(),
-                        selectedIndex = weekStartDay,
-                        onSelectedIndexChange = onWeekStartDayChange,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OverlayDropdownPreference(
-                        title = stringResource(R.string.settings_calendar_view),
-                        summary = stringResource(R.string.settings_calendar_view_summary),
-                        startAction = { SettingsIcon(Icons.Rounded.Celebration) },
-                        items = calendarViewOptions.toList(),
-                        selectedIndex = calendarViewModes.indexOf(doc.calendarViewMode),
-                        onSelectedIndexChange = { index ->
-                            calendarViewModes.getOrNull(index)?.let(onCalendarViewModeChange)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                item { Spacer(Modifier.height(12.dp)) }
+
+                item { SmallTitle(text = stringResource(R.string.settings_section_appearance)) }
+                item {
+                    Card(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
+                    ) {
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.settings_theme_mode),
+                            summary = stringResource(R.string.settings_theme_mode_summary),
+                            startAction = { SettingsIcon(Icons.Rounded.Palette) },
+                            items = themeModeOptions.toList(),
+                            selectedIndex = themeModes.indexOf(doc.themeMode),
+                            onSelectedIndexChange = { index ->
+                                themeModes.getOrNull(index)?.let(onThemeModeChange)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.settings_week_start),
+                            summary = stringResource(R.string.settings_week_start_summary),
+                            startAction = { SettingsIcon(Icons.Rounded.CalendarViewWeek) },
+                            items = weekdays.toList(),
+                            selectedIndex = weekStartDay,
+                            onSelectedIndexChange = onWeekStartDayChange,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.settings_calendar_view),
+                            summary = stringResource(R.string.settings_calendar_view_summary),
+                            startAction = { SettingsIcon(Icons.Rounded.Celebration) },
+                            items = calendarViewOptions.toList(),
+                            selectedIndex = calendarViewModes.indexOf(doc.calendarViewMode),
+                            onSelectedIndexChange = { index ->
+                                calendarViewModes.getOrNull(index)?.let(onCalendarViewModeChange)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
-                SmallTitle(text = stringResource(R.string.settings_section_update))
+
+                item { SmallTitle(text = stringResource(R.string.settings_section_update)) }
                 if (updateInfo != null) {
+                    item {
+                        Card(
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .padding(bottom = 12.dp)
+                        ) {
+                            BasicComponent(
+                                title = stringResource(R.string.update_available_title),
+                                summary =
+                                    stringResource(
+                                        R.string.settings_update_available_summary,
+                                        updateInfo.versionName,
+                                    ),
+                                startAction = { SettingsIcon(Icons.Rounded.Update) },
+                                endActions = {
+                                    TextButton(
+                                        text = stringResource(R.string.action_download),
+                                        onClick = onDownloadUpdate,
+                                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+                item {
                     Card(
                         Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
                     ) {
                         BasicComponent(
-                            title = stringResource(R.string.update_available_title),
-                            summary =
-                                stringResource(
-                                    R.string.settings_update_available_summary,
-                                    updateInfo.versionName,
-                                ),
-                            startAction = { SettingsIcon(Icons.Rounded.Update) },
+                            title = stringResource(R.string.settings_check_updates),
+                            summary = stringResource(R.string.settings_check_updates_summary),
+                            startAction = { SettingsIcon(Icons.Rounded.Autorenew) },
                             endActions = {
-                                TextButton(
-                                    text = stringResource(R.string.action_download),
-                                    onClick = onDownloadUpdate,
-                                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                                Switch(
+                                    checked = doc.checkUpdatesOnLaunch,
+                                    onCheckedChange = onCheckUpdatesOnLaunchChange,
                                 )
                             },
+                            onClick = { onCheckUpdatesOnLaunchChange(!doc.checkUpdatesOnLaunch) },
+                        )
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.settings_update_channel),
+                            summary = stringResource(R.string.settings_update_channel_summary),
+                            startAction = { SettingsIcon(Icons.Rounded.Cloud) },
+                            items = updateChannelOptions.toList(),
+                            selectedIndex = updateChannels.indexOf(doc.updateChannel),
+                            onSelectedIndexChange = { index ->
+                                updateChannels.getOrNull(index)?.let(onUpdateChannelChange)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
-                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                    BasicComponent(
-                        title = stringResource(R.string.settings_check_updates),
-                        summary = stringResource(R.string.settings_check_updates_summary),
-                        startAction = { SettingsIcon(Icons.Rounded.Autorenew) },
-                        endActions = {
-                            Switch(
-                                checked = doc.checkUpdatesOnLaunch,
-                                onCheckedChange = onCheckUpdatesOnLaunchChange,
-                            )
-                        },
-                        onClick = { onCheckUpdatesOnLaunchChange(!doc.checkUpdatesOnLaunch) },
-                    )
-                    OverlayDropdownPreference(
-                        title = stringResource(R.string.settings_update_channel),
-                        summary = stringResource(R.string.settings_update_channel_summary),
-                        startAction = { SettingsIcon(Icons.Rounded.Cloud) },
-                        items = updateChannelOptions.toList(),
-                        selectedIndex = updateChannels.indexOf(doc.updateChannel),
-                        onSelectedIndexChange = { index ->
-                            updateChannels.getOrNull(index)?.let(onUpdateChannelChange)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+
+                item { SmallTitle(text = stringResource(R.string.settings_section_other)) }
+                item {
+                    Card(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)
+                    ) {
+                        BasicComponent(
+                            title = stringResource(R.string.settings_about),
+                            summary = stringResource(R.string.version_text, versionName),
+                            startAction = { SettingsIcon(Icons.Rounded.Info) },
+                            endActions = { Chevron() },
+                            onClick = onOpenAbout,
+                        )
+                    }
                 }
 
-                SmallTitle(text = stringResource(R.string.settings_section_other))
-                Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                    BasicComponent(
-                        title = stringResource(R.string.settings_about),
-                        summary = stringResource(R.string.version_text, versionName),
-                        startAction = { SettingsIcon(Icons.Rounded.Info) },
-                        endActions = { Chevron() },
-                        onClick = onOpenAbout,
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
+                item { Spacer(Modifier.height(24.dp)) }
             }
         }
     }

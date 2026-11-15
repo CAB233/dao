@@ -34,7 +34,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -297,6 +296,7 @@ private fun SchemeListScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
             contentPadding = padding,
+            overscrollEffect = null,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
             if (doc.schemes.isEmpty()) {
@@ -443,7 +443,7 @@ private fun SchemeCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = scheme.name,
-                        fontSize = 18.sp,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.SemiBold,
                         color = nameColor,
                     )
@@ -451,7 +451,7 @@ private fun SchemeCard(
                         Spacer(Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.plan_active),
-                            fontSize = 12.sp,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = MiuixTheme.colorScheme.primary,
                         )
                     }
@@ -459,7 +459,7 @@ private fun SchemeCard(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.current_default_group, defaultGroupName),
-                    fontSize = 14.sp,
+                    style = MiuixTheme.textStyles.body2,
                     color = summaryColor,
                 )
             }

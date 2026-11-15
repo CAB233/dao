@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -152,7 +151,7 @@ internal fun TemplateEditorDialog(
                         ) {
                             Text(
                                 stringResource(R.string.shift_rest),
-                                fontSize = 16.sp,
+                                style = MiuixTheme.textStyles.body1,
                                 modifier = Modifier.weight(1f),
                             )
                             Switch(checked = isRest, onCheckedChange = { isRest = it })

@@ -41,6 +41,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -53,7 +54,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -70,6 +70,7 @@ import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
@@ -311,14 +312,20 @@ fun SchemeEditScreen(
                     draftScheme.defaultGroup() != null
         }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             if (onboardingMode) {
-                TopAppBar(title = stringResource(R.string.onboarding_title))
+                TopAppBar(
+                    title = stringResource(R.string.onboarding_title),
+                    scrollBehavior = scrollBehavior,
+                )
             } else {
                 SmallTopAppBar(
                     title = stringResource(R.string.plan_edit_title),
+                    scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         IconButton(onClick = ::requestExit) {
                             Icon(
@@ -458,7 +465,12 @@ fun SchemeEditScreen(
                 }
                 Spacer(Modifier.height(16.dp))
                 // 名字行与页签固定，只滚页签内容
-                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScrollState)) {
+                Column(
+                    Modifier.weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(contentScrollState)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                ) {
                     when (tabIndex) {
                         0 ->
                             TemplatesStep(
@@ -812,7 +824,7 @@ private fun ShiftSettingsTab(
                                     ?.takeIf { it in 1..99 }
                                     ?.let { pluralStringResource(R.plurals.days_count, it, it) }
                                     ?: stringResource(R.string.status_not_set),
-                            fontSize = 14.sp,
+                            style = MiuixTheme.textStyles.body2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                         Chevron(Modifier.padding(start = 8.dp))
@@ -867,7 +879,7 @@ private fun GroupSettingsTab(
                                     ?.takeIf { it in 1..99 }
                                     ?.let { pluralStringResource(R.plurals.groups_count, it, it) }
                                     ?: stringResource(R.string.status_not_set),
-                            fontSize = 14.sp,
+                            style = MiuixTheme.textStyles.body2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                         Chevron(Modifier.padding(start = 8.dp))
@@ -882,7 +894,7 @@ private fun GroupSettingsTab(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = defaultGroup?.name ?: stringResource(R.string.status_not_set),
-                            fontSize = 14.sp,
+                            style = MiuixTheme.textStyles.body2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                         Chevron(Modifier.padding(start = 8.dp))
@@ -907,12 +919,12 @@ private fun GroupSettingsTab(
                         .padding(horizontal = 14.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = group.name, fontSize = 16.sp)
+                    Text(text = group.name, style = MiuixTheme.textStyles.body1)
                     Spacer(Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = formatYmd(Ymd.fromEpochDay(group.anchorEpochDay)),
-                            fontSize = 14.sp,
+                            style = MiuixTheme.textStyles.body2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                         Chevron(Modifier.padding(start = 8.dp))
@@ -988,14 +1000,14 @@ internal fun AnchorDialog(
                     text = stringResource(R.string.month_label),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    fontSize = 13.sp,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
                 Text(
                     text = stringResource(R.string.day_label),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    fontSize = 13.sp,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }

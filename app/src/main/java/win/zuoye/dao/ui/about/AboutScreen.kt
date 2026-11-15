@@ -58,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.entity.Library
@@ -276,6 +275,7 @@ private fun AboutHomeContent(
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                 state = listState,
                 contentPadding = padding,
+                overscrollEffect = null,
             ) {
                 item {
                     AboutHero(
@@ -372,7 +372,7 @@ private fun AboutHero(
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.app_name),
-            fontSize = 35.sp,
+            style = MiuixTheme.textStyles.title1,
             fontWeight = FontWeight.Bold,
             modifier =
                 Modifier.then(
@@ -390,7 +390,7 @@ private fun AboutHero(
         Spacer(Modifier.height(5.dp))
         Text(
             text = stringResource(R.string.version_text, app.versionName),
-            fontSize = 14.sp,
+            style = MiuixTheme.textStyles.body2,
             color = colors.onSurfaceVariantSummary,
         )
     }
@@ -468,6 +468,7 @@ internal fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
             contentPadding = padding,
+            overscrollEffect = null,
         ) {
             item { Spacer(Modifier.height(12.dp)) }
             items(libraries, key = { it.uniqueId }) { library ->
@@ -494,7 +495,7 @@ private fun LicenseCardContent(library: Library) {
             Text(
                 text = library.name,
                 modifier = Modifier.weight(1f),
-                fontSize = 17.sp,
+                style = MiuixTheme.textStyles.main,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -505,7 +506,7 @@ private fun LicenseCardContent(library: Library) {
                     Text(
                         text = version,
                         modifier = Modifier.padding(start = 12.dp),
-                        fontSize = 14.sp,
+                        style = MiuixTheme.textStyles.body2,
                         color = summaryColor,
                         maxLines = 1,
                     )
@@ -513,14 +514,14 @@ private fun LicenseCardContent(library: Library) {
         }
         Text(
             text = library.authorSummary(),
-            fontSize = 14.sp,
+            style = MiuixTheme.textStyles.body2,
             color = summaryColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = library.licenseNames(),
-            fontSize = 14.sp,
+            style = MiuixTheme.textStyles.body2,
             color = summaryColor,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

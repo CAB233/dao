@@ -249,9 +249,9 @@
   <string name="off_work">休息中</string>
   <string name="holiday_work_badge">班</string>
   <string name="holiday_rest_badge">休</string>
-  <string name="date_schedule">%1$d年%2$d月%3$d日 · 周%4$s</string>
-  <string name="makeup_workday">%1$s · 调休上班</string>
-  <string name="legal_holiday">%1$s · 法定假日</string>
+  <string name="date_schedule">%1$d年%2$d月%3$d日 周%4$s</string>
+  <string name="makeup_workday">调休上班：%1$s</string>
+  <string name="legal_holiday">法定假日：%1$s</string>
   <string name="shift_override">（换班覆盖）</string>
   <string name="lunar_date">%1$s%2$s月%3$s</string>
   <string name="lunar_leap">闰</string>
@@ -294,7 +294,7 @@
   <string name="copied_plan">已复制方案配置</string>
   <string name="system_share">系统分享</string>
   <string name="system_share_summary">调起系统分享面板发送文本</string>
-  <string name="share_subject">%1$s · 排班方案</string>
+  <string name="share_subject">【%1$s】排班方案</string>
   <string name="share_clip_label">倒班方案配置</string>
   <string name="share_text_header">【%1$s】排班方案</string>
   <string name="share_chooser_title">分享排班方案</string>
